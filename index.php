@@ -569,26 +569,30 @@ $icon = [
             <?php foreach ($p['history'] as $st):
               [$icH, $colH] = $icon[$st['action']];
               switch ($st['action']) {
-                  case 'sow':
-                      $txt = t('Sow') . ' ' . $st['start'];
-                      if (isset($st['range'])) {
-                          [$min, $minU, $max, $maxU] = $st['range'];
-                          $minDays = duration_to_days($min, $minU);
-                          $maxDays = duration_to_days($max, $maxU);
-                          $dStart = new DateTime($st['start']);
-                          $dMin   = (clone $dStart)->modify("+{$minDays} days");
-                          $dMax   = (clone $dStart)->modify("+{$maxDays} days");
-                          
-                          // Use format strings for better translation
-                          $dateRange = sprintf(t('between_dates'), $dMin->format('Y-m-d'), $dMax->format('Y-m-d'));
-                          $remainingRange = sprintf(t('remaining_range'), 
-                              $now->diff($dMin)->days, 
-                              $now->diff($dMax)->days
-                          );
-                          
-                          $txt .= ' – ' . t('Sprout') . ' ' . $dateRange . ' ' . $remainingRange;
-                      }
-                      break;
+                case 'sow':
+                    $txt = t('Sow') . ' ' . $st['start'];
+                    if (isset($st['range'])) {
+                        [$min, $minU, $max, $maxU] = $st['range'];
+                        $minDays = duration_to_days($min, $minU);
+                        $maxDays = duration_to_days($max, $maxU);
+                        $dStart = new DateTime($st['start']);
+                        $dMin   = (clone $dStart)->modify("+{$minDays} days");
+                        $dMax   = (clone $dStart)->modify("+{$maxDays} days");
+                
+                        $txt .= ' – ' . t('Sprout') . ' ' . sprintf(t('between_dates'), $dMin->format('Y-m-d'), $dMax->format('Y-m-d'));
+                
+                        if ($now > $dMax) {
+                            $txt .= ' (' . t('finished') . ')';
+                        } elseif ($now >= $dMin && $now <= $dMax) {
+                            $txt .= ' (' . t('Anytime soon') . ')';
+                        } else {
+                            $txt .= ' (' . sprintf(t('remaining_range'), 
+                                $now->diff($dMin)->days, 
+                                $now->diff($dMax)->days
+                            ) . ')';
+                        }
+                    }
+                    break;                
                   case 'soak':
                   case 'strat':
                       [$v, $u] = $st['duration'];
@@ -623,21 +627,27 @@ $icon = [
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script>
 document.addEventListener('DOMContentLoaded', () => {
-  function toggleSections() {
-    document.querySelectorAll('.status-section').forEach(el => {
-      el.style.display = 'none';
-    });
-    const selected = document.querySelector('input[name="status"]:checked');
-    if (selected) {
-      const section = document.getElementById('section-' + selected.value);
-      if (section) section.style.display = 'block';
+    function toggleSections() {
+        document.querySelectorAll('.status-section').forEach(section => {
+            const show = section.id === 'section-' + document.querySelector('input[name="status"]:checked')?.value;
+            section.style.display = show ? 'block' : 'none';
+            section.querySelectorAll('input, select').forEach(el => {
+                el.disabled = !show;
+            });
+        });
     }
-  }
-  toggleSections();
-  document.querySelectorAll('input[name="status"]').forEach(el => {
-    el.addEventListener('change', toggleSections);
-  });
+
+    toggleSections();
+    document.querySelectorAll('input[name="status"]').forEach(el => {
+        el.addEventListener('change', toggleSections);
+    });
+
+    <?php if ($isEdit): ?>
+    const offcanvas = new bootstrap.Offcanvas('#plantFormCanvas');
+    offcanvas.show();
+    <?php endif; ?>
 });
 </script>
+
 </body>
 </html>
