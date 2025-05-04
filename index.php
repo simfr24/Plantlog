@@ -181,6 +181,8 @@ $form = [
     'soak_date'    => '', 'soak_val' => 0, 'soak_unit' => 'hours',
     'strat_date'   => '', 'strat_val' => 0, 'strat_unit' => 'days',
     'sprout_date'  => '',
+    'location'     => '',
+    'notes'        => '',
 ];
 
 /* ---------- handle POST ------------------------------------------------ */
@@ -246,12 +248,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $plant = $plants[$idx];
             $plant['common'] = $form['common'];
             $plant['latin']  = $form['latin'];
+            $plant['location'] = $form['location'];
+            $plant['notes'] = $form['notes'];
             array_unshift($plant['history'], $action);
             $plants[$idx] = $plant;
         } else {
             $plants[] = [
                 'common'  => $form['common'],
                 'latin'   => $form['latin'],
+                'location'=> $form['location'],
+                'notes'   => $form['notes'],
                 'history' => [$action],
             ];
         }
@@ -271,6 +277,8 @@ if (isset($_GET['edit'])) {
         $form['latin']  = $plant['latin'];
         $first = $plant['history'][0];
         $form['status'] = $first['action'];
+        $form['location'] = $plant['location'] ?? '';
+        $form['notes'] = $plant['notes'] ?? '';
         switch ($first['action']) {
             case 'sow':
                 $form['date_sow'] = $first['start'];
@@ -407,6 +415,28 @@ $icon = [
         <input class="form-control" name="latin" value="<?= e($form['latin']) ?>" required>
       </div>
     </div>
+
+    <div class="row g-3 mt-2">
+    <div class="col-sm-6">
+      <label class="form-label">Location</label>
+      <input class="form-control" name="location" list="locations" value="<?= e($form['location']) ?>">
+      <datalist id="locations">
+        <?php
+        $seen = [];
+        foreach ($plants as $p) {
+            if (!empty($p['location']) && !in_array($p['location'], $seen, true)) {
+                echo '<option value="' . e($p['location']) . '">';
+                $seen[] = $p['location'];
+            }
+        }
+        ?>
+      </datalist>
+    </div>
+    <div class="col-sm-6">
+      <label class="form-label">Notes</label>
+      <input class="form-control" name="notes" value="<?= e($form['notes']) ?>">
+    </div>
+  </div>
 
     <h6 class="mt-4 mb-3 text-uppercase text-muted small"><?= t('Current stage') ?></h6>
     <div class="d-flex flex-wrap gap-3 mb-3">
@@ -560,6 +590,12 @@ $icon = [
           <div class="flex-grow-1">
             <div class="fw-semibold"><?= e($p['common']) ?> <small class="text-muted fst-italic">(<?= e($p['latin']) ?>)</small></div>
             <div class="small text-muted"><?= $summary ?></div>
+            <?php if (!empty($p['location'])): ?>
+              <div class="small text-muted"><i class="fas fa-location-dot me-1"></i><?= e($p['location']) ?></div>
+            <?php endif; ?>
+            <?php if (!empty($p['notes'])): ?>
+              <div class="small text-muted"><i class="fas fa-sticky-note me-1"></i><?= e($p['notes']) ?></div>
+            <?php endif; ?>
           </div>
         </button>
       </h2>
