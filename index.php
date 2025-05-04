@@ -20,86 +20,8 @@ if (isset($_GET['lang']) && in_array($_GET['lang'], $AVAILABLE_LANG, true)) {
 $lang = $_SESSION['lang'] ?? 'en';
 
 $T = [
-    'en' => [
-        'Plant Tracker'           => 'Plant Tracker',
-        'Add plant'               => 'Add plant',
-        'Basic info'              => 'Basic info',
-        'Common name'             => 'Common name',
-        'Latin name'              => 'Latin name',
-        'Current stage'           => 'Current stage',
-        'Sow'                     => 'Sow',
-        'Soak'                    => 'Soak',
-        'Strat'                   => 'Strat',
-        'Sprout'                  => 'Sprout',
-        'Sow date'                => 'Sow date',
-        'Est. sprout time (min)'  => 'Est. sprout time (min)',
-        'Est. sprout time (max)'  => 'Est. sprout time (max)',
-        'Soak start date'         => 'Soak start date',
-        'Soak duration'           => 'Soak duration',
-        'Strat start date'        => 'Strat start date',
-        'Strat duration'          => 'Strat duration',
-        'Sprouted on'             => 'Sprouted on',
-        'Save'                    => 'Save',
-        'My plants'               => 'My plants',
-        'Edit / Add stage'        => 'Edit / Add stage',
-        'Language'                => 'Language',
-        'English'                 => 'English',
-        'French'                  => 'Français',
-        'days'                    => 'days',
-        'weeks'                   => 'weeks',
-        'months'                  => 'months',
-        'hours'                   => 'hours',
-        'Overdue'                 => 'Overdue',
-        'Anytime soon'            => 'Anytime soon',
-        'left'                    => 'left',
-        'finished'                => 'finished',
-        'between'                 => 'between',
-        'ends'                    => 'ends',
-        'today'                   => 'today',
-        'and'                     => 'and',
-        'between_dates'           => 'between %s and %s',
-        'remaining_range'         => '(%d-%d days left)',
-    ],
-    'fr' => [
-        'Plant Tracker'           => 'Suivi de Plantes',
-        'Add plant'               => 'Ajouter une plante',
-        'Basic info'              => 'Informations',
-        'Common name'             => 'Nom commun',
-        'Latin name'              => 'Nom latin',
-        'Current stage'           => 'Étape actuelle',
-        'Sow'                     => 'Semis',
-        'Soak'                    => 'Trempage',
-        'Strat'                   => 'Stratification',
-        'Sprout'                  => 'Germination',
-        'Sow date'                => 'Date de semis',
-        'Est. sprout time (min)'  => 'Germination min.',
-        'Est. sprout time (max)'  => 'Germination max.',
-        'Soak start date'         => 'Début trempage',
-        'Soak duration'           => 'Durée trempage',
-        'Strat start date'        => 'Début stratification',
-        'Strat duration'          => 'Durée stratification',
-        'Sprouted on'             => 'Germé le',
-        'Save'                    => 'Enregistrer',
-        'My plants'               => 'Mes plantes',
-        'Edit / Add stage'        => 'Modifier/ajouter étape',
-        'Language'                => 'Langue',
-        'English'                 => 'Anglais',
-        'French'                  => 'Français',
-        'days'                    => 'jours',
-        'weeks'                   => 'semaines',
-        'months'                  => 'mois',
-        'hours'                   => 'heures',
-        'Overdue'                 => 'En retard',
-        'Anytime soon'            => 'Imminent',
-        'left'                    => 'restant',
-        'finished'                => 'terminé',
-        'between'                 => 'entre',
-        'ends'                    => 'fin le',
-        'today'                   => 'aujourd\'hui',
-        'and'                     => 'et',
-        'between_dates'           => 'entre %s et %s',
-        'remaining_range'         => '(entre %d et %d jours restants)',
-    ],
+    'en' => include __DIR__ . '/lang/en.php',
+    'fr' => include __DIR__ . '/lang/fr.php',
 ];
 
 function t(string $k): string
@@ -186,6 +108,23 @@ $form = [
 ];
 
 /* ---------- handle POST ------------------------------------------------ */
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['json_edit_idx'])) {
+  $idx = (int)$_POST['json_edit_idx'];
+  $json = $_POST['json_data'] ?? '';
+
+  $decoded = json_decode($json, true);
+  if (json_last_error() !== JSON_ERROR_NONE) {
+      $errors[] = 'Invalid JSON: ' . json_last_error_msg();
+  } elseif (!isset($plants[$idx])) {
+      $errors[] = 'Invalid index.';
+  } else {
+      $plants[$idx] = $decoded;
+      save_data($plants);
+      header('Location: ' . strtok($_SERVER['REQUEST_URI'], '?') . '?lang=' . $lang);
+      exit;
+  }
+}
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     foreach ($form as $k => $v) {
         if (isset($_POST[$k])) {
@@ -365,6 +304,27 @@ $icon = [
 </style>
 </head>
 <body>
+<!-- ---------- JSON EDIT MODAL ---------------------------------------- -->
+<div class="modal fade" id="jsonModal" tabindex="-1">
+  <div class="modal-dialog modal-lg modal-dialog-scrollable">
+    <div class="modal-content">
+      <form method="post" id="json-edit-form">
+        <input type="hidden" name="json_edit_idx" id="json_edit_idx">
+        <div class="modal-header">
+          <h5 class="modal-title"><?= t('Edit JSON') ?></h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <textarea name="json_data" id="json_data" class="form-control" rows="20" required></textarea>
+        </div>
+        <div class="modal-footer">
+          <button type="submit" class="btn btn-primary"><?= t('Save') ?></button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
 <!-- ---------- NAVBAR --------------------------------------------------- -->
 <nav class="navbar navbar-expand-lg navbar-light bg-light">
   <div class="container-fluid">
@@ -396,7 +356,7 @@ $icon = [
 <!-- ---------- OFFCANVAS FORM ------------------------------------------ -->
 <div class="offcanvas offcanvas-end" tabindex="-1" id="plantFormCanvas">
   <div class="offcanvas-header">
-    <h5 class="offcanvas-title"><?= $isEdit ? t('Edit / Add stage') : t('Add plant') ?></h5>
+    <h5 class="offcanvas-title"><?= $isEdit ? t('Add stage') : t('Add plant') ?></h5>
     <button type="button" class="btn-close text-reset" data-bs-dismiss="offcanvas"></button>
   </div>
   <div class="offcanvas-body">
@@ -715,9 +675,14 @@ foreach ($stageButtons as $v => [$iconClass, $color, $label]): ?>
             </li>
             <?php endforeach; ?>
           </ul>
-          <a href="?edit=<?= $i ?>&lang=<?= $lang ?>" class="btn btn-sm btn-outline-secondary mt-3">
-            <i class="fas fa-edit me-1"></i> <?= t('Edit / Add stage') ?>
+          <a href="?edit=<?= $i ?>&lang=<?= $lang ?>" class="btn btn-sm btn-outline-primary mt-3">
+            <i class="fas fa-edit me-1"></i> <?= t('Add stage') ?>
           </a>
+          <button type="button" class="btn btn-sm btn-outline-secondary mt-3 ms-2 json-edit-btn"
+                  data-idx="<?= $i ?>" data-json="<?= e(json_encode($p, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES)) ?>">
+            <i class="fas fa-code me-1"></i> <?= t('Edit JSON') ?>
+          </button>
+
         </div>
       </div>
     </div>
@@ -748,6 +713,20 @@ document.addEventListener('DOMContentLoaded', () => {
     const offcanvas = new bootstrap.Offcanvas('#plantFormCanvas');
     offcanvas.show();
     <?php endif; ?>
+
+    document.querySelectorAll('.json-edit-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const idx = btn.dataset.idx;
+      const json = btn.dataset.json;
+
+      document.getElementById('json_edit_idx').value = idx;
+      document.getElementById('json_data').value = json;
+
+      const modal = new bootstrap.Modal(document.getElementById('jsonModal'));
+      modal.show();
+    });
+  });
+
 });
 </script>
 
