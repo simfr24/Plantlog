@@ -1,5 +1,5 @@
 <?php
-/*  plant_tracker_reworked.php  –  Responsive Seed / Plant log (en/fr)
+/*  Plantlog  –  Responsive Seed / Plant log (en/fr)
     -----------------------------------------------------------------
     • Bootstrap 5.3 mobile‑first layout
     • Off‑canvas form for adding / editing plants
@@ -551,7 +551,7 @@ foreach ($stageButtons as $v => [$iconClass, $color, $label]): ?>
     // Define stage order for sorting
     $stage_order = ['soak' => 0, 'strat' => 1, 'sow' => 2, 'sprout' => 3];
 
-    usort($plants, function ($a, $b) use ($stage_order) {
+    uasort($plants, function ($a, $b) use ($stage_order) {
         $a_stage = $a['history'][0]['action'];
         $b_stage = $b['history'][0]['action'];
 
