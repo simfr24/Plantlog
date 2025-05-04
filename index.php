@@ -438,15 +438,27 @@ $icon = [
     </div>
   </div>
 
-    <h6 class="mt-4 mb-3 text-uppercase text-muted small"><?= t('Current stage') ?></h6>
-    <div class="d-flex flex-wrap gap-3 mb-3">
-    <?php foreach (['sow' => t('Sow'), 'soak' => t('Soak'), 'strat' => t('Strat'), 'sprout' => t('Sprout')] as $v => $lbl): ?>
-      <div class="form-check">
-        <input class="form-check-input" type="radio" name="status" id="st-<?= $v ?>" value="<?= $v ?>" <?= $form['status'] === $v ? 'checked' : '' ?>>
-        <label class="form-check-label" for="st-<?= $v ?>"><?= $lbl ?></label>
-      </div>
-    <?php endforeach; ?>
-    </div>
+  <h6 class="mt-4 mb-3 text-uppercase text-muted small"><?= t('Current stage') ?></h6>
+<div class="row row-cols-2 g-3 text-center mb-2">
+<?php
+$stageButtons = [
+    'strat'  => ['fa-snowflake', 'info',    t('Strat')],
+    'soak'   => ['fa-tint',      'primary', t('Soak')],
+    'sow'    => ['fa-seedling',  'success', t('Sow')],
+    'sprout' => ['fa-leaf',      'success', t('Sprout')],
+];
+foreach ($stageButtons as $v => [$iconClass, $color, $label]): ?>
+  <div class="col">
+    <input type="radio" class="btn-check" name="status" id="btn-<?= $v ?>" value="<?= $v ?>" <?= $form['status'] === $v ? 'checked' : '' ?>>
+    <label class="btn btn-outline-<?= $color ?> w-100" for="btn-<?= $v ?>">
+      <i class="fas <?= $iconClass ?> me-1"></i> <?= $label ?>
+    </label>
+  </div>
+<?php endforeach; ?>
+</div>
+
+
+
 
     <!-- sow section -->
     <div id="section-sow" class="status-section">
@@ -535,6 +547,59 @@ $icon = [
 
 <!-- ---------- PLANT LIST ---------------------------------------------- -->
 <?php if ($plants): ?>
+  <?php
+    // Define stage order for sorting
+    $stage_order = ['soak' => 0, 'strat' => 1, 'sow' => 2, 'sprout' => 3];
+
+    usort($plants, function ($a, $b) use ($stage_order) {
+        $a_stage = $a['history'][0]['action'];
+        $b_stage = $b['history'][0]['action'];
+
+        $a_stage_rank = $stage_order[$a_stage] ?? 99;
+        $b_stage_rank = $stage_order[$b_stage] ?? 99;
+
+        // First, sort by stage priority
+        if ($a_stage_rank !== $b_stage_rank) {
+            return $a_stage_rank <=> $b_stage_rank;
+        }
+
+        // Then sort by remaining days (ascending, i.e., closer deadlines first)
+        $get_remaining = function ($entry) {
+            $now = new DateTime();
+            $act = $entry['history'][0];
+            $action = $act['action'];
+
+            if ($action === 'sow' && isset($act['range'])) {
+                [$min, $minU] = [$act['range'][0], $act['range'][1]];
+                $start = new DateTime($act['start']);
+                $minDays = match ($minU) {
+                    'weeks' => $min * 7,
+                    'months' => $min * 30,
+                    default => $min,
+                };
+                $due = (clone $start)->modify("+{$minDays} days");
+                return max(0, $now->diff($due)->days);
+            } elseif (in_array($action, ['soak', 'strat'])) {
+                [$val, $unit] = $act['duration'];
+                $days = match ($unit) {
+                    'weeks' => $val * 7,
+                    'months' => $val * 30,
+                    'hours' => (int)round($val / 24),
+                    default => $val,
+                };
+                $start = new DateTime($act['start']);
+                $end = (clone $start)->modify("+{$days} days");
+                return max(0, $now->diff($end)->days);
+            } elseif ($action === 'sprout') {
+                // Consider sprouted as "completed" – give them a large number to push to bottom
+                return 9999;
+            }
+            return 9999;
+        };
+
+        return $get_remaining($a) <=> $get_remaining($b);
+    });
+    ?>
   <h2 class="h4 mb-3 mt-4"><?= t('My plants') ?></h2>
   <div class="accordion" id="plants-acc">
   <?php foreach ($plants as $i => $p):
@@ -579,7 +644,8 @@ $icon = [
                 }
                 break;
             case 'sprout':
-                $summary = t('Sprout') . ' ' . $curr['start'];
+                $summary = t('Sprouted on') . ' ' . $curr['start'];
+                $summary .= ' <span class="badge bg-success ms-2"><i class="fas fa-check"></i></span>';
                 break;
         }
   ?>
@@ -607,7 +673,7 @@ $icon = [
               switch ($st['action']) {
                 case 'sow':
                     $txt = t('Sow') . ' ' . $st['start'];
-                    if (isset($st['range'])) {
+                    if (isset($st['range']) && !array_filter($p['history'], fn($h) => $h['action'] === 'sprout' && $h !== $st)) {
                         [$min, $minU, $max, $maxU] = $st['range'];
                         $minDays = duration_to_days($min, $minU);
                         $maxDays = duration_to_days($max, $maxU);
@@ -637,7 +703,7 @@ $icon = [
                       $txt = t(ucfirst($st['action'])) . " {$v} " . t($u) . ", " . t('ends') . " $end (" . remaining_until($end) . ')';
                       break;
                   case 'sprout':
-                      $txt = t('Sprout') . ' ' . $st['start'];
+                      $txt = t('Sprouted on') . ' ' . $st['start'];
                       break;
                       default:
                       $txt = ucfirst($st['action']) . ' ' . $st['start'];
