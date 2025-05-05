@@ -229,8 +229,8 @@ def get_form_from_plant(plant):
     form = get_empty_form()
     form['common'] = plant['common']
     form['latin'] = plant['latin']
-    form['location'] = plant.get('location', '')
-    form['notes'] = plant.get('notes', '')
+    form['location'] = plant.get('location', '') or ''
+    form['notes'] = plant.get('notes') or ''
 
     first = plant['history'][0]
     form['status'] = first['action']
