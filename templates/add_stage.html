@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block title %}{{ t['Add stage'] }} - {{ form.common }}{% endblock %}
+{% block content %}
+  <div class="container py-4">
+    <div class="d-flex align-items-center mb-4">
+      <img src="{{ url_for('static', filename='logo.png') }}" alt="Plantlog" style="height:50px;" class="me-3">
+      <h1 class="mb-0 display-6 text-success">{{ t['Add stage for'] }}: {{ form.common }}</h1>
+    </div>
+    {% if errors %}
+      <div class="alert alert-danger">
+        <ul class="mb-0">{% for error in errors %}<li>{{ error }}</li>{% endfor %}</ul>
+      </div>
+    {% endif %}
+    <div class="card shadow-sm">
+      <div class="card-body">
+        <form method="post">
+          <input type="hidden" name="idx" value="{{ plant_idx }}">
+          {% include "stage_sections.html" %}
+          <div class="mt-3">
+            <button class="btn btn-success px-4">
+              <i class="fas fa-plus me-1"></i> {{ t['Add stage'] }}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+  <script>
+    document.addEventListener('change', function() {
+      const sel = document.querySelector('input[name="status"]:checked').value;
+      document.querySelectorAll('.stage-section').forEach(s =>
+        s.style.display = s.id === 'stage-' + sel ? 'block' : 'none'
+      );
+    });
+    document.addEventListener('DOMContentLoaded', () =>
+      document.dispatchEvent(new Event('change'))
+    );
+  </script>
+{% endblock %}

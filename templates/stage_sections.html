@@ -1,0 +1,110 @@
+{# stage_sections.html - shared UI for "stage" selection and sections #}
+{% set stageButtons = {
+    'strat':  ['fa-snowflake','info',    t['Strat']],
+    'soak':   ['fa-tint',     'primary', t['Soak']],
+    'sow':    ['fa-seedling', 'success', t['Sow']],
+    'sprout': ['fa-leaf',     'success', t['Sprout']]
+} %}
+
+<hr class="my-4">
+<h5 class="fw-semibold text-secondary mb-3">{{ t['Current stage'] }}</h5>
+<div class="row row-cols-2 g-2 mb-3">
+  {% for v, specs in stageButtons.items() %}
+    {% set iconClass, color, label = specs %}
+    <div class="col">
+      <input type="radio"
+             class="btn-check"
+             name="status"
+             id="btn-{{ v }}"
+             value="{{ v }}"
+             {% if form.status == v %}checked{% endif %}>
+      <label class="btn btn-outline-{{ color }} w-100"
+             for="btn-{{ v }}">
+        <i class="fas {{ iconClass }} me-1"></i> {{ label }}
+      </label>
+    </div>
+  {% endfor %}
+</div>
+
+<!-- Sow -->
+<div id="stage-sow" class="stage-section">
+    <div class="mb-3">
+      <label class="form-label">{{ t['Sow date'] }}</label>
+      <input type="date" class="form-control" name="date_sow" value="{{ form.date_sow }}">
+    </div>
+    <div class="row g-3">
+      <div class="col-sm-6">
+        <label class="form-label">{{ t['Est. sprout time (min)'] }}</label>
+        <div class="input-group">
+          <input type="number" class="form-control" name="sprout_min" value="{{ form.sprout_min }}">
+          <select class="form-select" name="sprout_min_u">
+            {% for unit in ['days','weeks','months'] %}
+              <option value="{{ unit }}" {% if form.sprout_min_u==unit %}selected{% endif %}>{{ t[unit] }}</option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+      <div class="col-sm-6">
+        <label class="form-label">{{ t['Est. sprout time (max)'] }}</label>
+        <div class="input-group">
+          <input type="number" class="form-control" name="sprout_max" value="{{ form.sprout_max }}">
+          <select class="form-select" name="sprout_max_u">
+            {% for unit in ['days','weeks','months'] %}
+              <option value="{{ unit }}" {% if form.sprout_max_u==unit %}selected{% endif %}>{{ t[unit] }}</option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Soak -->
+  <div id="stage-soak" class="stage-section">
+    <div class="row g-3">
+      <div class="col-sm-6">
+        <label class="form-label">{{ t['Soak start date'] }}</label>
+        <input type="date" class="form-control" name="soak_date" value="{{ form.soak_date }}">
+      </div>
+      <div class="col-sm-6">
+        <label class="form-label">{{ t['Soak duration'] }}</label>
+        <div class="input-group">
+          <input type="number" class="form-control" name="soak_val" value="{{ form.soak_val }}">
+          <select class="form-select" name="soak_unit">
+            {% for unit in ['hours','days'] %}
+              <option value="{{ unit }}" {% if form.soak_unit==unit %}selected{% endif %}>{{ t[unit] }}</option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Strat -->
+  <div id="stage-strat" class="stage-section">
+    <div class="row g-3">
+      <div class="col-sm-6">
+        <label class="form-label">{{ t['Strat start date'] }}</label>
+        <input type="date" class="form-control" name="strat_date" value="{{ form.strat_date }}">
+      </div>
+      <div class="col-sm-6">
+        <label class="form-label">{{ t['Strat duration'] }}</label>
+        <div class="input-group">
+          <input type="number" class="form-control" name="strat_val" value="{{ form.strat_val }}">
+          <select class="form-select" name="strat_unit">
+            {% for unit in ['days','weeks','months'] %}
+              <option value="{{ unit }}" {% if form.strat_unit==unit %}selected{% endif %}>{{ t[unit] }}</option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Sprout -->
+  <div id="stage-sprout" class="stage-section">
+    <div class="mb-3">
+      <label class="form-label">{{ t['Sprouted on'] }}</label>
+      <input type="date" class="form-control" name="sprout_date" value="{{ form.sprout_date }}">
+    </div>
+  </div>
+  

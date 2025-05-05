@@ -1,0 +1,128 @@
+{% extends "base.html" %}
+{% block title %}Plantlog - {{ t['Plant Tracker'] }}{% endblock %}
+
+{% block content %}
+<h1 class="mb-4">{{ t['My plants'] }}</h1>
+
+{% if plants %}
+  <div class="accordion" id="plants-acc">
+    {% for p in plants %}
+      {% set idx = p['id'] %}
+      {% set curr = p.current %}
+      {% set action = curr['action'] %}
+
+      {% set icon_class = 'fa-seedling' %}
+      {% set color_class = 'text-success' %}
+      {% set summary = '' %}
+      {% set now_date = today %}
+      {% set start_date = curr['start'] %}
+
+      {# Determine summary and badge #}
+      {% if action == 'sow' %}
+        {% set summary = t['Sow'] ~ ' ' ~ curr['start'] %}
+        {% if 'range' in curr %}
+          {% set min_val = curr['range'][0] %}
+          {% set min_unit = curr['range'][1] %}
+          {% set max_val = curr['range'][2] %}
+          {% set max_unit = curr['range'][3] %}
+          {% set min_days = duration_to_days(min_val, min_unit) %}
+          {% set max_days = duration_to_days(max_val, max_unit) %}
+          {% set min_date = start_date | dateadd(days=min_days) %}
+          {% set max_date = start_date | dateadd(days=max_days) %}
+          {% if now_date > max_date %}
+            {% set summary = summary ~ ' <span class="badge bg-danger ms-2">' ~ t['Overdue'] ~ '</span>' %}
+          {% elif now_date >= min_date %}
+            {% set summary = summary ~ ' <span class="badge bg-warning text-dark ms-2">' ~ t['Anytime soon'] ~ '</span>' %}
+          {% else %}
+            {% set days_left = (min_date - now_date).days %}
+            {% set summary = summary ~ ' <span class="badge bg-info text-dark ms-2">' ~ days_left|string ~ ' ' ~ t['days'] ~ ' ' ~ t['left'] ~ '</span>' %}
+          {% endif %}
+        {% endif %}
+      {% elif action in ['soak','strat'] %}
+        {% set icon_class = 'fa-tint' if action=='soak' else 'fa-snowflake' %}
+        {% set color_class = 'text-primary' if action=='soak' else 'text-info' %}
+        {% set val = curr['duration'][0] %}
+        {% set unit = curr['duration'][1] %}
+        {% set duration_days = duration_to_days(val, unit) %}
+        {% set end_date = start_date | dateadd(days=duration_days) %}
+        {% set summary = t[action.capitalize()] ~ ' ' ~ curr['start'] %}
+        {% if now_date >= end_date %}
+          {% set summary = summary ~ ' <span class="badge bg-secondary ms-2">' ~ t['Done'] ~ '</span>' %}
+        {% else %}
+          {% set days_left = (end_date - now_date).days %}
+          {% set summary = summary ~ ' <span class="badge bg-info text-dark ms-2">' ~ days_left|string ~ ' ' ~ t['days'] ~ ' ' ~ t['left'] ~ '</span>' %}
+        {% endif %}
+      {% elif action == 'sprout' %}
+        {% set icon_class = 'fa-leaf' %}
+        {% set summary = t['Sprouted on'] ~ ' ' ~ curr['start'] ~ ' <span class="badge bg-success ms-2"><i class="fas fa-check"></i></span>' %}
+      {% endif %}
+
+      <div class="accordion-item">
+        <h2 class="accordion-header" id="heading-{{ idx }}">
+          <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapse-{{ idx }}">
+            <span class="me-3"><i class="fas {{ icon_class }} {{ color_class }}"></i></span>
+            <div class="flex-grow-1">
+              <div class="fw-semibold">{{ p['common'] }} <small class="text-muted fst-italic">({{ p['latin'] }})</small></div>
+              <div class="small text-muted">{{ summary|safe }}</div>
+              {% if p['location'] %}
+                <div class="small text-muted"><i class="fas fa-location-dot me-1"></i>{{ p['location'] }}</div>
+              {% endif %}
+              {% if p['notes'] %}
+                <div class="small text-muted"><i class="fas fa-sticky-note me-1"></i>{{ p['notes'] }}</div>
+              {% endif %}
+            </div>
+          </button>
+        </h2>
+        <div id="collapse-{{ idx }}" class="accordion-collapse collapse" data-bs-parent="#plants-acc">
+          <div class="accordion-body">
+            <ul class="timeline">
+              {% for h in p['history']|reverse %}
+                <li class="timeline-item">
+                  {% if h['action']=='sow' %}
+                    <span class="timeline-icon text-success"><i class="fas fa-seedling"></i></span>
+                    <div>
+                      <strong>{{ t['Sow'] }}</strong> – {{ h['start'] }}
+                      {% if 'range' in h %}
+                        <div class="text-muted small">
+                          {{ t['Expected sprout time'] }}: {{ h['range'][0] }} {{ t[h['range'][1]] }} – {{ h['range'][2] }} {{ t[h['range'][3]] }}
+                        </div>
+                      {% endif %}
+                    </div>
+                  {% elif h['action']=='soak' %}
+                    <span class="timeline-icon text-primary"><i class="fas fa-tint"></i></span>
+                    <div>
+                      <strong>{{ t['Soak'] }}</strong> – {{ h['start'] }}
+                      <div class="text-muted small">{{ h['duration'][0] }} {{ t[h['duration'][1]] }}</div>
+                    </div>
+                  {% elif h['action']=='strat' %}
+                    <span class="timeline-icon text-info"><i class="fas fa-snowflake"></i></span>
+                    <div>
+                      <strong>{{ t['Strat'] }}</strong> – {{ h['start'] }}
+                      <div class="text-muted small">{{ h['duration'][0] }} {{ t[h['duration'][1]] }}</div>
+                    </div>
+                  {% elif h['action']=='sprout' %}
+                    <span class="timeline-icon text-success"><i class="fas fa-leaf"></i></span>
+                    <div>
+                      <strong>{{ t['Sprouted on'] }}</strong> – {{ h['start'] }}
+                    </div>
+                  {% endif %}
+                  <a href="{{ url_for('edit_stage', action_id=h['id'], lang=lang) }}" class="text-secondary ms-2 align-top" title="{{ t['Edit stage'] }}">
+                    <i class="fas fa-edit" style="font-size:0.9rem;"></i>
+                  </a>
+                </li>
+              {% endfor %}
+            </ul>
+
+            <div class="d-flex gap-2 mt-3">
+              <a href="{{ url_for('edit_plant', idx=idx, lang=lang) }}" class="btn btn-outline-secondary btn-sm">{{ t['Edit plant'] }}</a>
+              <a href="{{ url_for('add_stage', idx=idx, lang=lang) }}" class="btn btn-outline-primary btn-sm">{{ t['Add stage'] }}</a>
+            </div>
+          </div>
+        </div>
+      </div>
+    {% endfor %}
+  </div>
+{% else %}
+  <p class="text-muted">{{ t['No plants yet'] }}</p>
+{% endif %}
+{% endblock %}

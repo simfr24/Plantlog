@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% block title %}{{ t['Add plant'] }} - Plantlog{% endblock %}
+{% block content %}
+  <div class="container py-4">
+    <div class="d-flex align-items-center mb-4">
+      <img src="{{ url_for('static', filename='logo.png') }}" alt="Plantlog" style="height:50px;" class="me-3">
+      <h1 class="mb-0 display-6 text-success">{{ t['Add plant'] }}</h1>
+    </div>
+    {% if errors %}<div class="alert alert-danger"><ul class="mb-0">{% for error in errors %}<li>{{ error }}</li>{% endfor %}</ul></div>{% endif %}
+    <div class="card shadow-sm">
+      <div class="card-body">
+        <form method="post">
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label class="form-label fw-semibold">{{ t['Common name'] }}</label>
+              <input class="form-control" name="common" value="{{ form.common }}" placeholder="e.g. Tomato">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-semibold">{{ t['Latin name'] }}</label>
+              <input class="form-control" name="latin" value="{{ form.latin }}" placeholder="e.g. Solanum lycopersicum">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-semibold">{{ t['Location'] }}</label>
+              <input class="form-control" name="location" list="locations" value="{{ form.location }}" placeholder="e.g. Greenhouse">
+              <datalist id="locations">{% for location in locations %}<option value="{{ location }}">{% endfor %}</datalist>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-semibold">{{ t['Notes'] }}</label>
+              <textarea class="form-control" name="notes" style="max-width: 400px; height: 120px;">{{ form.notes }}</textarea>
+            </div>
+          </div>
+          {% include "stage_sections.html" %}
+          <button class="btn btn-success mt-3 px-4"><i class="fas fa-save me-1"></i> {{ t['Save'] }}</button>
+        </form>
+      </div>
+    </div>
+  </div>
+  <script>
+    document.addEventListener('change',function(){
+      const sel=document.querySelector('input[name="status"]:checked').value;
+      document.querySelectorAll('.stage-section').forEach(s => s.style.display=s.id==='stage-'+sel?'block':'none');
+    });
+    document.addEventListener('DOMContentLoaded',()=>document.dispatchEvent(new Event('change')));
+  </script>
+{% endblock %}
