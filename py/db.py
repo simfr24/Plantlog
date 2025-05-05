@@ -8,12 +8,21 @@ DB_PATH = os.path.join(BASE_DIR, '../data/plants.db')
 SCHEMA = """
 PRAGMA foreign_keys = ON;
 
+CREATE TABLE IF NOT EXISTS users (
+    id       INTEGER PRIMARY KEY AUTOINCREMENT,
+    username TEXT UNIQUE NOT NULL,
+    pw_hash  TEXT        NOT NULL,
+    lang     TEXT        NOT NULL DEFAULT 'en'
+);
+
 CREATE TABLE IF NOT EXISTS plants (
     id        INTEGER PRIMARY KEY AUTOINCREMENT,
     common    TEXT   NOT NULL,
     latin     TEXT   NOT NULL,
     location  TEXT,
     notes     TEXT
+    user_id   INTEGER NOT NULL,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
 
 CREATE TABLE IF NOT EXISTS actions (

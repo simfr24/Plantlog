@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block title %}{{ t['register'] }}{% endblock %}
+{% block content %}
+<div class="row justify-content-center mt-5">
+    <div class="col-md-4">
+        <h2 class="mb-3 text-center">{{ t['register'] }}</h2>
+        {% with msgs=get_flashed_messages(with_categories=true) %}
+            {% for cat,msg in msgs %}
+                <div class="alert alert-{{cat}}">{{msg}}</div>
+            {% endfor %}
+        {% endwith %}
+        <form method="post">
+            <div class="mb-3">
+                <label class="form-label">{{ t['username'] }}</label>
+                <input name="username" class="form-control" required>
+            </div>
+            <div class="mb-3">
+                <label class="form-label">{{ t['password'] }}</label>
+                <input name="password" type="password" class="form-control" required>
+            </div>
+            <div class="mb-3">
+                <label class="form-label">{{ t['preferred_language'] }}</label>
+                <select name="lang" class="form-select">
+                    <option value="en">{{ t['english'] }}</option>
+                    <option value="fr">{{ t['french'] }}</option>
+                </select>
+            </div>
+            <button class="btn btn-success w-100">{{ t['create_account'] }}</button>
+            <p class="mt-2 text-center"><a href="{{url_for('login')}}">{{ t['i_have_an_account'] }}</a></p>
+        </form>
+    </div>
+</div>
+{% endblock %}

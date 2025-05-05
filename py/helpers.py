@@ -54,13 +54,14 @@ def load_one(plant_id):
         "current":  history[-1] if history else None
     }
 
-def load_data():
+def load_data(user_id=None):
     """Return a list of plant dicts, each with:
        - history: list of actions oldest→newest
        - current: the last action dict (i.e. history[-1])"""
     with get_conn() as conn:
         plants = conn.execute(
-            "SELECT * FROM plants ORDER BY id"
+            "SELECT * FROM plants WHERE user_id = ?",
+            (user_id,)
         ).fetchall()
 
     out = []
@@ -97,14 +98,15 @@ def load_data():
 
 
 
-def save_new_plant(plant_dict, first_action):
+def save_new_plant(plant_dict, first_action,user_id):
     """Insert a brand‑new plant + its initial action in one transaction."""
     with get_conn() as conn:
         cur = conn.cursor()
         cur.execute(
-            "INSERT INTO plants (common,latin,location,notes) VALUES (?,?,?,?)",
+            "INSERT INTO plants (common,latin,location,notes,user_id) VALUES (?,?,?,?,?)",
             (plant_dict["common"], plant_dict["latin"],
-             plant_dict.get("location"), plant_dict.get("notes"))
+             plant_dict.get("location"), plant_dict.get("notes")
+             , user_id)
         )
         plant_id = cur.lastrowid
         _insert_action(cur, plant_id, first_action)
@@ -413,14 +415,32 @@ def form_keys_for(action_dict):
     else:
         return '', extras
 
-
-def process_delete_plant(plant_id):
+def process_delete_plant(plant_id, user_id):
     with get_conn() as conn:
+        # Ensure the plant belongs to the user
+        plant = conn.execute(
+            "SELECT id FROM plants WHERE id = ? AND user_id = ?", (plant_id, user_id)
+        ).fetchone()
+        if not plant:
+            return  # Do nothing if the plant does not belong to the user
+
         conn.execute("DELETE FROM actions WHERE plant_id = ?", (plant_id,))
         conn.execute("DELETE FROM plants  WHERE id       = ?", (plant_id,))
         conn.commit()
 
-def process_delete_action(action_id):
+def process_delete_action(action_id, user_id):
     with get_conn() as conn:
+        # Ensure the action belongs to a plant owned by the user
+        action = conn.execute(
+            """
+            SELECT a.id FROM actions a
+            JOIN plants p ON a.plant_id = p.id
+            WHERE a.id = ? AND p.user_id = ?
+            """,
+            (action_id, user_id)
+        ).fetchone()
+        if not action:
+            return  # Do nothing if the action does not belong to the user's plant
+
         conn.execute("DELETE FROM actions WHERE id = ?", (action_id,))
         conn.commit()

@@ -13,20 +13,20 @@
           <div class="row g-3">
             <div class="col-md-6">
               <label class="form-label fw-semibold">{{ t['Common name'] }}</label>
-              <input class="form-control" name="common" value="{{ form.common }}" placeholder="e.g. Tomato">
+              <input class="form-control" name="common" value="{{ form.common }}" placeholder="{{ t['e.g. Tomato'] }}">
             </div>
             <div class="col-md-6">
               <label class="form-label fw-semibold">{{ t['Latin name'] }}</label>
-              <input class="form-control" name="latin" value="{{ form.latin }}" placeholder="e.g. Solanum lycopersicum">
+              <input class="form-control" name="latin" value="{{ form.latin }}" placeholder="{{ t['e.g. Latin name'] }}">
             </div>
             <div class="col-md-6">
               <label class="form-label fw-semibold">{{ t['Location'] }}</label>
-              <input class="form-control" name="location" list="locations" value="{{ form.location }}" placeholder="e.g. Greenhouse">
+              <input class="form-control" name="location" list="locations" value="{{ form.location }}" placeholder="{{ t['e.g. Greenhouse'] }}">
               <datalist id="locations">{% for location in locations %}<option value="{{ location }}">{% endfor %}</datalist>
             </div>
             <div class="col-md-6">
               <label class="form-label fw-semibold">{{ t['Notes'] }}</label>
-              <textarea class="form-control" name="notes">{{ form.notes }}</textarea>
+              <textarea class="form-control" name="notes" placeholder="{{ t['e.g. Notes'] }}">{{ form.notes }}</textarea>
             </div>
           </div>
           {% include "stage_sections.html" %}
