@@ -19,8 +19,8 @@
 
 ### 1. Requirements
 
-- PHP 7.4+
-- Web server (e.g., Apache, Nginx, or PHP’s built-in server)
+- Python 3.8+
+- Flask (or any WSGI-compatible web server)
 
 ### 2. Installation
 
@@ -29,57 +29,49 @@ Clone the repo:
 ```bash
 git clone https://github.com/yourusername/plantlog.git
 cd plantlog
-````
+```
 
-Start a PHP server (for local use):
+Install dependencies:
 
 ```bash
-php -S localhost:8000
+pip install flask
+```
+
+Run the Flask app:
+
+```bash
+python app.py
 ```
 
 Then visit:
 
 ```
-http://localhost:8000
-```
-
----
-
-## 🗂️ Project Structure
-
-```
-plantlog/
-├── index.php  # Main app file
-├── plants.json                 # Your saved plants data, will be created on first save
-├── README.md
-├── favicon.ico
+http://localhost:5000
 ```
 
 ---
 
 ## 📝 Data Format
 
-Each plant is saved in `plants.json` with this structure:
+Each plant and its propagation history are stored in a SQLite database with the following structure:
 
-```json
-{
-  "common": "Tomato",
-  "latin": "Solanum lycopersicum",
-  "location": "Greenhouse",
-  "notes": "Started indoors",
-  "history": [
-    {
-      "action": "sow",
-      "start": "2025-03-17",
-      "range": [7, "days", 14, "days"]
-    },
-    {
-      "action": "sprout",
-      "start": "2025-03-28"
-    }
-  ]
-}
-```
+### Plants Table
+- **`id`**: Unique identifier for each plant (primary key).
+- **`common`**: Common name of the plant (e.g., "Tomato").
+- **`latin`**: Latin name of the plant (e.g., "Solanum lycopersicum").
+- **`location`**: Optional field to specify where the plant is located (e.g., "Greenhouse").
+- **`notes`**: Additional notes about the plant.
+
+### Actions Table
+- **`id`**: Unique identifier for each action (primary key).
+- **`plant_id`**: Foreign key linking the action to a specific plant.
+- **`action`**: Type of action (e.g., "sow", "sprout").
+- **`start`**: Date the action starts (formatted as `YYYY-MM-DD`).
+- **`range_min` / `range_max`**: Optional range values for actions like sowing (e.g., germination time).
+- **`range_min_u` / `range_max_u`**: Units for the range values (e.g., "days").
+- **`dur_val` / `dur_unit`**: Optional duration values for actions like soaking (e.g., "24 hours").
+
+This schema ensures data integrity and allows for easy tracking of propagation stages.
 
 ---
 
@@ -92,9 +84,9 @@ Each plant is saved in `plants.json` with this structure:
 
 ## 🔧 Customization Tips
 
-* Want to add more stages? Modify the `$icon` map and form rendering.
-* Adjust timeline style via embedded CSS or your own stylesheet.
-* Add translations in the `$T` array for new languages.
+* Want to add more stages? Modify the `STAGES` dictionary and form rendering logic.
+* Adjust timeline style via custom CSS in the `static/` folder.
+* Add translations in the `translations` dictionary for new languages.
 
 ---
 
@@ -106,5 +98,5 @@ MIT — free to use, modify, and share.
 
 ## 🤝 Acknowledgments
 
-* Built with ❤️ using [Bootstrap 5.3](https://getbootstrap.com/)
+* Built with ❤️ using [Flask](https://flask.palletsprojects.com/) and [Bootstrap 5.3](https://getbootstrap.com/)
 * Icons by [Font Awesome](https://fontawesome.com/)
