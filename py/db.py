@@ -1,7 +1,9 @@
 import sqlite3
 from pathlib import Path
+import os
 
-DB_PATH = Path(__file__).resolve().parent / "../data/plants.db"
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+DB_PATH = os.path.join(BASE_DIR, '../data/plants.db')
 
 SCHEMA = """
 PRAGMA foreign_keys = ON;
