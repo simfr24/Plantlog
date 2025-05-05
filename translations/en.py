@@ -87,4 +87,5 @@ translations = {
     "e.g. Latin name": "e.g. Solanum lycopersicum",
     "e.g. Greenhouse": "e.g. Greenhouse",
     "e.g. Notes": "e.g. Germinates quickly, avoid direct sunlight",
+    "Sprouted in": "Sprouted in"
 }

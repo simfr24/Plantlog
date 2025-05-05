@@ -30,7 +30,7 @@
 <div id="stage-sow" class="stage-section">
     <div class="mb-3">
       <label class="form-label">{{ t['Sow date'] }}</label>
-      <input type="date" class="form-control" name="date_sow" value="{{ form.date_sow }}">
+      <input type="date" class="form-control" name="date_sow" value="{{ form.date_sow or today }}">
     </div>
     <div class="row g-3">
       <div class="col-sm-6">
@@ -63,7 +63,7 @@
     <div class="row g-3">
       <div class="col-sm-6">
         <label class="form-label">{{ t['Soak start date'] }}</label>
-        <input type="date" class="form-control" name="soak_date" value="{{ form.soak_date }}">
+        <input type="date" class="form-control" name="soak_date" value="{{ form.soak_date or today }}">
       </div>
       <div class="col-sm-6">
         <label class="form-label">{{ t['Soak duration'] }}</label>
@@ -84,7 +84,7 @@
     <div class="row g-3">
       <div class="col-sm-6">
         <label class="form-label">{{ t['Strat start date'] }}</label>
-        <input type="date" class="form-control" name="strat_date" value="{{ form.strat_date }}">
+        <input type="date" class="form-control" name="strat_date" value="{{ form.strat_date or today }}">
       </div>
       <div class="col-sm-6">
         <label class="form-label">{{ t['Strat duration'] }}</label>
@@ -104,7 +104,7 @@
   <div id="stage-sprout" class="stage-section">
     <div class="mb-3">
       <label class="form-label">{{ t['Sprouted on'] }}</label>
-      <input type="date" class="form-control" name="sprout_date" value="{{ form.sprout_date }}">
+      <input type="date" class="form-control" name="sprout_date" value="{{ form.sprout_date or today }}">
     </div>
   </div>
   

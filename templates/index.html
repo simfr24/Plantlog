@@ -101,10 +101,19 @@
                       <div class="text-muted small">{{ h['duration'][0] }} {{ t[h['duration'][1]] }}</div>
                     </div>
                   {% elif h['action']=='sprout' %}
-                    <span class="timeline-icon text-success"><i class="fas fa-leaf"></i></span>
-                    <div>
-                      <strong>{{ t['Sprouted on'] }}</strong> – {{ h['start'] }}
-                    </div>
+                  <span class="timeline-icon text-success"><i class="fas fa-leaf"></i></span>
+                  <div>
+                    <strong>{{ t['Sprouted on'] }}</strong> – {{ h['start'] }}
+                    {% set sow = p['history']|selectattr("action", "equalto", "sow")|list|last %}
+                    {% if sow %}
+                      {% set sprouted_date = h['start']|todate %}
+                      {% set sow_date = sow['start']|todate %}
+                      {% set germ_days = (sprouted_date - sow_date).days %}
+                      <div class="text-muted small">
+                        {{ t['Sprouted in'] }} {{ germ_days }} {{ t['days'] }}
+                      </div>
+                    {% endif %}
+                  </div>
                   {% endif %}
                   <a href="{{ url_for('edit_stage', action_id=h['id'], lang=lang) }}" class="text-secondary ms-2 align-top" title="{{ t['Edit stage'] }}">
                     <i class="fas fa-edit" style="font-size:0.9rem;"></i>

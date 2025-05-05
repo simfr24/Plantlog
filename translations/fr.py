@@ -86,4 +86,5 @@ translations = {
     "e.g. Latin name": "ex. : Solanum lycopersicum",
     "e.g. Greenhouse": "ex. : Serre",
     "e.g. Notes": "ex. : Germe vite, aime la chaleur",
+    "Sprouted in": "Germé en"
 }

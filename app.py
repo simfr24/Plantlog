@@ -27,6 +27,9 @@ init_db()
 
 AVAILABLE_LANGS = ['en', 'fr']
 
+@app.template_filter("todate")
+def todate(value):
+    return date.fromisoformat(value) if isinstance(value, str) else value
 
 @app.before_request
 def load_logged_in_user_and_language():
@@ -279,7 +282,6 @@ def login():
         user = get_user_by_username(request.form['username'])
         if user and check_password_hash(user['pw_hash'], request.form['password']):
             login_user(user)
-            flash(t['Logged in'], 'success')
             return redirect(next_page)
         flash(t['Bad credentials'], 'danger')
     return render_template('login.html', lang=g.lang, t=t)
