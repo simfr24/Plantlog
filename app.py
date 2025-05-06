@@ -55,7 +55,8 @@ def login_required(view):
     @wraps(view)
     def wrapped_view(**kwargs):
         if g.user is None:
-            flash("You must be logged in to access this page.", "warning")
+            if request.endpoint != "index":
+                flash("You must be logged in to access this page.", "warning")
             return redirect(url_for("login", next=request.path))
         return view(**kwargs)
     return wrapped_view
