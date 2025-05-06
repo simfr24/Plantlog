@@ -21,9 +21,15 @@
             <div class="mb-3">
                 <label class="form-label">{{ t['preferred_language'] }}</label>
                 <select name="lang" class="form-select">
-                    <option value="en">English</option>
-                    <option value="fr">Français</option>
-                    <option value="ru">Русский</option>
+                    <option value="en" {% if lang == 'en' %}selected{% endif %}>
+                        English
+                    </option>
+                    <option value="fr" {% if lang == 'fr' %}selected{% endif %}>
+                        Français
+                    </option>
+                    <option value="ru" {% if lang == 'ru' %}selected{% endif %}>
+                        Русский
+                    </option>
                 </select>
             </div>
             <button class="btn btn-success w-100">{{ t['create_account'] }}</button>
