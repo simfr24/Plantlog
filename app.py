@@ -33,24 +33,24 @@ def todate(value):
 
 @app.before_request
 def load_logged_in_user_and_language():
-    """Load g.user (if any) **and** work out what lang should be."""
     uid = session.get("uid")
     g.user = get_user_by_id(uid) if uid else None
 
-    # 1️⃣ explicit ?lang overrides & persists when logged‑in
     lang_param = request.args.get("lang")
     if lang_param in AVAILABLE_LANGS:
         if g.user:
             update_user_lang(g.user["id"], lang_param)
-            g.user = get_user_by_id(g.user["id"])    # refresh row
-        session["tmp_lang"] = lang_param             # for anonymous use
-    # 2️⃣ authoritatively decide the language for this request
+            g.user = get_user_by_id(g.user["id"])  # refresh
+        session["tmp_lang"] = lang_param
+
     if g.user:
         g.lang = g.user["lang"]
     elif "tmp_lang" in session:
         g.lang = session["tmp_lang"]
     else:
         g.lang = "en"
+
+    session["lang"] = g.lang
 
 def login_required(view):
     @wraps(view)
@@ -209,7 +209,7 @@ def edit_stage(action_id):
         abort(404)
 
     errors = []
-    lang = request.args.get('lang', session.get('lang', 'en'))
+    lang = g.lang
     translations = get_translations(lang)
 
     if request.method == 'POST':
@@ -237,25 +237,17 @@ def edit_stage(action_id):
         t=translations
     )
 
-    return render_template(
-        'edit_stage.html',
-        form=form,
-        errors=errors,
-        action_id=action_id,
-        lang=lang
-    )
-
 @app.route('/delete_plant/<int:idx>', methods=['GET'])
 @login_required
 def delete_plant(idx):
     process_delete_plant(idx, g.user['id'])
-    return redirect(url_for('index', lang=request.args.get('lang','en')))
+    return redirect(url_for('index', lang=g.lang))
 
 @app.route('/delete_stage/<int:action_id>', methods=['GET'])
 @login_required
 def delete_stage(action_id):
     process_delete_action(action_id, g.user['id'])
-    return redirect(url_for('index', lang=request.args.get('lang','en')))
+    return redirect(url_for('index', lang=g.lang))
 
 @app.route('/register', methods=['GET', 'POST'])
 def register():
