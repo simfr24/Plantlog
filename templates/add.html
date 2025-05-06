@@ -29,6 +29,8 @@
               <textarea class="form-control" name="notes" placeholder="{{ t['e.g. Notes'] }}">{{ form.notes }}</textarea>
             </div>
           </div>
+          <hr class="my-4">
+          <h5 class="fw-semibold text-secondary mb-3">{{ t['Current stage'] }}</h5>
           {% include "stage_sections.html" %}
           <button class="btn btn-success mt-3 px-4"><i class="fas fa-save me-1"></i> {{ t['Save'] }}</button>
         </form>

@@ -6,8 +6,6 @@
     'sprout': ['fa-leaf',     'success', t['Sprout']]
 } %}
 
-<hr class="my-4">
-<h5 class="fw-semibold text-secondary mb-3">{{ t['Current stage'] }}</h5>
 <div class="row row-cols-2 g-2 mb-3">
   {% for v, specs in stageButtons.items() %}
     {% set iconClass, color, label = specs %}
