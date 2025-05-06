@@ -173,10 +173,18 @@ def duration_to_days(val, unit):
 
 def get_translations(lang):
     """Load translations for the specified language"""
-    if lang == 'fr':
-        from translations.fr import translations as tr
-    else:
-        from translations.en import translations as tr
+
+    AVAILABLE_LANGS = ['en', 'fr', 'ru']
+
+    if lang in AVAILABLE_LANGS:
+        try:
+            module = __import__(f"translations.{lang}", fromlist=['translations'])
+            return module.translations
+        except ImportError:
+            pass
+
+    # Fallback to English if the specified language is not available
+    from translations.en import translations as tr
     return tr
 
 

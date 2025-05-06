@@ -25,7 +25,7 @@ app.template_filter("dateadd")(dateadd)
 init_db()
 
 
-AVAILABLE_LANGS = ['en', 'fr']
+AVAILABLE_LANGS = ['en', 'fr', 'ru']
 
 @app.template_filter("todate")
 def todate(value):
@@ -49,7 +49,6 @@ def load_logged_in_user_and_language():
         g.lang = session["tmp_lang"]
     else:
         g.lang = "en"
-
     session["lang"] = g.lang
 
 def login_required(view):
