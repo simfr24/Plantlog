@@ -99,7 +99,7 @@ def add_plant():
 
     if request.method == 'POST':
         form = get_form_data(request)
-        errors, action = validate_form(form, translations)
+        errors, action = validate_form(form, translations, context='add')
 
         if not errors:
             save_new_plant(form, action, g.user['id'])
@@ -139,7 +139,7 @@ def edit_plant(idx):
     # Handle form submission
     if request.method == 'POST':
         form = get_form_data(request)
-        errors, _ = validate_form(form, translations)
+        errors, _ = validate_form(form, translations, context='edit')
         if not errors:
             # Update plant metadata only (no new action)
             update_plant(plant['id'], form, new_action=None)
@@ -171,7 +171,7 @@ def add_stage(idx):
 
     if request.method == 'POST':
         form = get_form_data(request)
-        errors, action = validate_form(form, translations)
+        errors, action = validate_form(form, translations, context='add_stage')
         if not errors:
             # build only the plant metadata dict for update_plant
             plant_data = {
@@ -214,7 +214,7 @@ def edit_stage(action_id):
 
     if request.method == 'POST':
         form = get_form_data(request)
-        errors, action = validate_form(form, translations)
+        errors, action = validate_form(form, translations, context='edit_stage')
         if not errors:
             update_action(action_id, action)
             return redirect(url_for('index', lang=lang))

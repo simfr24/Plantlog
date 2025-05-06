@@ -257,16 +257,16 @@ def get_form_from_plant(plant):
     return form
 
 
-def validate_form(form, translations):
+def validate_form(form, translations, context="add"):
     """Validate plant metadata and (optionally) action. Return errors + structured action"""
     errors = []
     action = None
 
-    # Validate metadata fields
-    if not form.get('common'):
-        errors.append(f"{translations['Common name']} required.")
-    if not form.get('latin'):
-        errors.append(f"{translations['Latin name']} required.")
+    if context in ('add', 'edit'):
+        if not form.get('common'):
+            errors.append(f"{translations['Common name']} required.")
+        if not form.get('latin'):
+            errors.append(f"{translations['Latin name']} required.")
 
     # If status is absent or empty, skip action validation (metadata-only edit)
     status = form.get('status', '')
