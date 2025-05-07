@@ -1,108 +1,112 @@
-{# stage_sections.html - shared UI for "stage" selection and sections #}
-{% set stageButtons = {
-    'strat':  ['fa-snowflake','info',    t['Strat']],
-    'soak':   ['fa-tint',     'primary', t['Soak']],
-    'sow':    ['fa-seedling', 'success', t['Sow']],
-    'sprout': ['fa-leaf',     'success', t['Sprout']]
-} %}
+{# 
+  Renders the stage selection UI with dynamic form inputs.
+  Requires:
+    - event_specs (list of {code, label, icon, bs_color})
+    - form (containing status and relevant values)
+    - today (default date)
+    - t (translations)
+#}
 
 <div class="row row-cols-2 g-2 mb-3">
-  {% for v, specs in stageButtons.items() %}
-    {% set iconClass, color, label = specs %}
+  {% for s in event_specs %}
     <div class="col">
-      <input type="radio"
-             class="btn-check"
+      <input type="radio" class="btn-check"
              name="status"
-             id="btn-{{ v }}"
-             value="{{ v }}"
-             {% if form.status == v %}checked{% endif %}>
-      <label class="btn btn-outline-{{ color }} w-100"
-             for="btn-{{ v }}">
-        <i class="fas {{ iconClass }} me-1"></i> {{ label }}
+             id="btn-{{ s.code }}"
+             value="{{ s.code }}"
+             {% if form.status == s.code %}checked{% endif %}>
+      <label class="btn btn-outline-{{ s.bs_color }} w-100"
+             for="btn-{{ s.code }}">
+        <i class="fas {{ s.icon }} me-1"></i> {{ t[s.label] if s.label in t else s.label }}
       </label>
     </div>
   {% endfor %}
 </div>
 
-<!-- Sow -->
-<div id="stage-sow" class="stage-section">
-    <div class="mb-3">
-      <label class="form-label">{{ t['Sow date'] }}</label>
-      <input type="date" class="form-control" name="date_sow" value="{{ form.date_sow or today }}">
-    </div>
-    <div class="row g-3">
-      <div class="col-sm-6">
-        <label class="form-label">{{ t['Est. sprout time (min)'] }}</label>
-        <div class="input-group">
-          <input type="number" class="form-control" name="sprout_min" value="{{ form.sprout_min }}">
-          <select class="form-select" name="sprout_min_u">
-            {% for unit in ['days','weeks','months'] %}
-              <option value="{{ unit }}" {% if form.sprout_min_u==unit %}selected{% endif %}>{{ t[unit] }}</option>
-            {% endfor %}
-          </select>
-        </div>
-      </div>
-      <div class="col-sm-6">
-        <label class="form-label">{{ t['Est. sprout time (max)'] }}</label>
-        <div class="input-group">
-          <input type="number" class="form-control" name="sprout_max" value="{{ form.sprout_max }}">
-          <select class="form-select" name="sprout_max_u">
-            {% for unit in ['days','weeks','months'] %}
-              <option value="{{ unit }}" {% if form.sprout_max_u==unit %}selected{% endif %}>{{ t[unit] }}</option>
-            {% endfor %}
-          </select>
-        </div>
+<!-- Shared: date input -->
+<div id="shared-event-date" class="mb-3">
+  <label class="form-label">{{ t['Event date'] }}</label>
+  <input type="date" class="form-control" name="event_date" value="{{ form.event_date or today }}">
+</div>
+
+<!-- Sow-specific range -->
+<div id="extra-sow" class="stage-extra" {% if form.status != 'sow' %}style="display:none"{% endif %}>
+  <div class="row g-3">
+    <div class="col-sm-6">
+      <label class="form-label">{{ t['Est. sprout time (min)'] }}</label>
+      <div class="input-group">
+        <input type="number" class="form-control" name="event_range_min" value="{{ form.event_range_min }}">
+        <select class="form-select" name="event_range_min_u">
+          {% for unit in ['days','weeks','months'] %}
+            <option value="{{ unit }}" {% if form.event_range_min_u==unit %}selected{% endif %}>{{ t[unit] }}</option>
+          {% endfor %}
+        </select>
       </div>
     </div>
-  </div>
-  
-  <!-- Soak -->
-  <div id="stage-soak" class="stage-section">
-    <div class="row g-3">
-      <div class="col-sm-6">
-        <label class="form-label">{{ t['Soak start date'] }}</label>
-        <input type="date" class="form-control" name="soak_date" value="{{ form.soak_date or today }}">
-      </div>
-      <div class="col-sm-6">
-        <label class="form-label">{{ t['Soak duration'] }}</label>
-        <div class="input-group">
-          <input type="number" class="form-control" name="soak_val" value="{{ form.soak_val }}">
-          <select class="form-select" name="soak_unit">
-            {% for unit in ['hours','days'] %}
-              <option value="{{ unit }}" {% if form.soak_unit==unit %}selected{% endif %}>{{ t[unit] }}</option>
-            {% endfor %}
-          </select>
-        </div>
+    <div class="col-sm-6">
+      <label class="form-label">{{ t['Est. sprout time (max)'] }}</label>
+      <div class="input-group">
+        <input type="number" class="form-control" name="event_range_max" value="{{ form.event_range_max }}">
+        <select class="form-select" name="event_range_max_u">
+          {% for unit in ['days','weeks','months'] %}
+            <option value="{{ unit }}" {% if form.event_range_max_u==unit %}selected{% endif %}>{{ t[unit] }}</option>
+          {% endfor %}
+        </select>
       </div>
     </div>
   </div>
-  
-  <!-- Strat -->
-  <div id="stage-strat" class="stage-section">
-    <div class="row g-3">
-      <div class="col-sm-6">
-        <label class="form-label">{{ t['Strat start date'] }}</label>
-        <input type="date" class="form-control" name="strat_date" value="{{ form.strat_date or today }}">
-      </div>
-      <div class="col-sm-6">
-        <label class="form-label">{{ t['Strat duration'] }}</label>
-        <div class="input-group">
-          <input type="number" class="form-control" name="strat_val" value="{{ form.strat_val }}">
-          <select class="form-select" name="strat_unit">
-            {% for unit in ['days','weeks','months'] %}
-              <option value="{{ unit }}" {% if form.strat_unit==unit %}selected{% endif %}>{{ t[unit] }}</option>
-            {% endfor %}
-          </select>
-        </div>
+</div>
+
+<!-- Soak/Strat-specific duration -->
+<div id="extra-duration" class="stage-extra" {% if form.status not in ['soak','strat'] %}style="display:none"{% endif %}>
+  <div class="row g-3">
+    <div class="col-sm-6">
+      <label class="form-label">{{ t['Duration'] }}</label>
+      <div class="input-group">
+        <input type="number" class="form-control" name="event_dur_val" value="{{ form.event_dur_val }}">
+        <select class="form-select" name="event_dur_unit">
+          {% for unit in ['hours','days','weeks','months'] %}
+            <option value="{{ unit }}" {% if form.event_dur_unit==unit %}selected{% endif %}>{{ t[unit] }}</option>
+          {% endfor %}
+        </select>
       </div>
     </div>
   </div>
-  
-  <!-- Sprout -->
-  <div id="stage-sprout" class="stage-section">
-    <div class="mb-3">
-      <label class="form-label">{{ t['Sprouted on'] }}</label>
-      <input type="date" class="form-control" name="sprout_date" value="{{ form.sprout_date or today }}">
+</div>
+
+<!-- Measurement-specific size -->
+<div id="extra-measure" class="stage-extra"
+     {% if form.status != 'measure' %}style="display:none"{% endif %}>
+  <div class="row g-3">
+    <div class="col-sm-6">
+      <label class="form-label">{{ t['Size'] }}</label>
+      <div class="input-group">
+        <input type="number" name="event_size_val"
+               class="form-control" value="{{ form.event_size_val }}">
+        <select name="event_size_unit" class="form-select">
+          {% for unit in ['mm','cm','m'] %}
+            <option value="{{ unit }}" {% if form.event_size_unit==unit %}selected{% endif %}>{{ unit }}</option>
+          {% endfor %}
+        </select>
+      </div>
     </div>
   </div>
-  
+</div>
+
+
+<script>
+  document.querySelectorAll('input[name="status"]').forEach(btn => {
+    btn.addEventListener('change', () => {
+      const val = btn.value;
+      document.querySelectorAll('.stage-extra').forEach(el => el.style.display = 'none');
+      if (val === 'sow') {
+        document.getElementById('extra-sow').style.display = '';
+      } else if (val === 'soak' || val === 'strat') {
+        document.getElementById('extra-duration').style.display = '';
+      }else if (val === 'measure') {
+        document.getElementById('extra-measure').style.display = '';
+      }
+
+    });
+  });
+</script>
