@@ -79,6 +79,17 @@ translations = {
     "Death": "Гибель",
     "Measurement": "Измерение",
 
+    # ────────── human-readable summaries ──────────
+    "Sowing started on": "Посев произведён",
+    "Soaking since": "Замачивание с",
+    "Stratification started on": "Стратификация начата",
+    "Germinated on": "Проросло",
+    "Flowering since": "Цветёт с",
+    "Fruiting since": "Плодоносит с",
+    "Died on": "Умерло",
+    "Measurement taken on": "Измерение проведено",
+
+
     # ────────── core state labels ──────────
     "Sown": "Посеяно",
     "Soaking": "Замачивается",

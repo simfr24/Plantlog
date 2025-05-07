@@ -79,6 +79,16 @@ translations = {
     "Death": "Mort",
     "Measurement": "Mesure",
 
+    # ────────── human-readable summaries ──────────
+    "Sowing started on": "Semé le",
+    "Soaking since": "Trempe depuis le",
+    "Stratification started on": "Stratification commencée le",
+    "Germinated on": "Germé le",
+    "Flowering since": "Fleuri le",
+    "Fruiting since": "Fructification depuis le",
+    "Died on": "Mort le",
+    "Measurement taken on": "Mesure prise le",
+
     # ────────── core state labels ──────────
     "Sown": "Semé",
     "Soaking": "Trempage",

@@ -292,7 +292,7 @@ def get_action_by_id(event_id: int) -> Optional[Dict[str, Any]]:  # ✓ kept nam
                    e.range_min, e.range_min_u, e.range_max, e.range_max_u,
                    e.dur_val,  e.dur_unit,
                    e.measure_val, e.measure_unit,
-                   p.common, p.latin,
+                   p.common, p.latin
             FROM events      e
             JOIN event_types et ON et.id = e.event_type_id
             JOIN plants      p  ON p.id  = e.plant_id
