@@ -69,6 +69,9 @@
             <div class="flex-grow-1">
               <div class="fw-semibold">{{ p['common'] }} <small class="text-muted fst-italic">({{ p['latin'] }})</small></div>
               <div class="small text-muted">{{ t[state_label] if state_label in t else state_label }}</div>
+              {% if summary %}
+                <div class="small text-muted">{{ summary|safe }}</div>
+              {% endif %}
               {% if p['location'] %}
                 <div class="small text-muted"><i class="fas fa-location-dot me-1"></i>{{ p['location'] }}</div>
               {% endif %}
