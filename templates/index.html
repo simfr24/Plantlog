@@ -24,36 +24,36 @@
     {% set state = p.state.label if p.state else 'unknown' %}
     {% set lowercase_state = state|lower %}  {# Convert to lowercase for comparison #}
     
-    {% if lowercase_state != 'dead' %}  {# Handle non-dead plants normally #}
-      {% if state not in plants_by_state %}
-        {% set _ = plants_by_state.update({state: []}) %}
-      {% endif %}
-      {% set _ = plants_by_state[state].append(p) %}
-    {% else %}  {# Special handling for dead plants #}
-      {% if 'Dead' not in plants_by_state %}
-        {% set _ = plants_by_state.update({'Dead': []}) %}
-      {% endif %}
-      {% set _ = plants_by_state['Dead'].append(p) %} 
+    {# Standardize state names - handle 'dead' state consistently #}
+    {% set display_state = 'Dead' if lowercase_state == 'dead' else state %}
+    
+    {% if display_state not in plants_by_state %}
+      {% set _ = plants_by_state.update({display_state: []}) %}
     {% endif %}
+    {% set _ = plants_by_state[display_state].append(p) %}
   {% endfor %}
 
   <div class="row g-4">
     {# Render each state group as a separate card #}
     {% for state, state_plants in plants_by_state.items() %}
-      {% if state != 'Dead' %}  {# Only render non-dead states here #}
+      {# Process states in order, with Dead state last #}
+      {% if state != 'Dead' or loop.last %}
+        {% set is_dead_state = (state == 'Dead') %}
+        
         <div class="col-12 col-lg-6">
-          <div class="card">
-            <div class="card-header">
+          <div class="card {{ 'bg-light' if is_dead_state else '' }}">
+            <div class="card-header {{ 'text-muted' if is_dead_state else '' }}">
               {% set example_plant = state_plants[0] %}
               {% set state_obj = example_plant.state %}
               {% set state_icon = state_obj.icon_class if state_obj else 'fa-question' %}
-              {% set state_color = state_obj.color_class if state_obj else 'text-muted' %}
+              {% set state_color = 'text-muted' if is_dead_state else (state_obj.color_class if state_obj else 'text-muted') %}
+              
               <i class="fas {{ state_icon }} {{ state_color }} me-2"></i>
               <span class="{{ state_color }} fw-semibold text-uppercase">{{ t[state] if state in t else state }}</span>
               <span class="badge bg-secondary ms-2">{{ state_plants|length }}</span>
             </div>
             <div class="card-body p-0">
-              <div class="accordion" id="plants-acc-{{ state }}">
+              <div class="accordion" id="plants-acc-{{ state|lower }}">
                 {% for p in state_plants %}
                   {% set idx = p.id %}
                   {% set current_event = p.current %}
@@ -72,92 +72,96 @@
                   {% set summary = (human_names[action] in t and t[human_names[action]] or human_names[action]) ~ ' ' ~ start_date %}
 
                   {# Extra badges / counters depending on the action -------------- #}
-                  {% if action == 'sow' and 'range' in current_event %}
-                    {% set min_val,current_unit,max_val,max_unit = current_event.range %}
-                    {% set min_days = duration_to_days(min_val, current_unit) %}
-                    {% set max_days = duration_to_days(max_val, max_unit) %}
-                    {% set min_date = start_date | dateadd(days=min_days) %}
-                    {% set max_date = start_date | dateadd(days=max_days) %}
-                    {% if now_date > max_date %}
-                      {% set summary = summary ~ ' <span class="badge bg-danger ms-2">' ~ t['Overdue'] ~ '</span>' %}
-                    {% elif now_date >= min_date %}
-                      {# Enhanced "Anytime soon" with gradient and day info #}
-                      {% set days_passed = (now_date - min_date).days %}
-                      {% set total_window = (max_date - min_date).days %}
-                      {% set days_left = (max_date - now_date).days %}
-                      {% set progress = (days_passed / total_window * 100)|round|int %}
-                      {% set gradient_class = "bg-success" if progress < 33 else "bg-warning" if progress < 66 else "bg-danger" %}
-                      
-                      {% set summary = summary ~ ' <span class="badge bg-warning text-dark ms-2 position-relative">' ~ 
-                                        t['Anytime soon'] ~ ' <small>(' ~ days_left ~ ' ' ~ t['days left'] ~ ')</small>' ~
-                                        '<div class="progress position-absolute bottom-0 start-0" style="height: 4px; width: 100%; border-radius: 0 0 0.2rem 0.2rem;">' ~
-                                        '<div class="progress-bar ' ~ gradient_class ~ '" style="width: ' ~ progress ~ '%"></div>' ~
-                                        '</div></span>' %}
-                    {% else %}
-                      {% set days_left = (min_date - now_date).days %}
-                      {% set summary = summary ~ ' <span class="badge bg-info text-dark ms-2">' ~ days_left|string ~ ' ' ~ t['days'] ~ ' ' ~ t['left'] ~ '</span>' %}
-                    {% endif %}
-                  {% elif action in ['soak','strat'] %}
-                    {% set val,unit = current_event.duration %}
-                    {% set duration_days = duration_to_days(val, unit) %}
-                    {% set end_date = start_date | dateadd(days=duration_days) %}
-                    {% if now_date >= end_date %}
-                      {% set summary = summary ~ ' <span class="badge bg-secondary ms-2">' ~ t['Done'] ~ '</span>' %}
-                    {% else %}
-                      {% set days_left = (end_date - now_date).days %}
-                      {% set summary = summary ~ ' <span class="badge bg-info text-dark ms-2">' ~ days_left|string ~ ' ' ~ t['days'] ~ ' ' ~ t['left'] ~ '</span>' %}
-                    {% endif %}
-                  {% elif action == 'sprout' %}
-                    {# Get age since sprouting #}
-                    {% set sprouted_date = start_date|todate %}
-                    {% set age_days = (now_date - sprouted_date).days %}
-                    
-                    {# Check if there are any measurement events after sprouting #}
-                    {% set measurements = p.history|selectattr('action', 'equalto', 'measure')|list %}
-                    {% set last_measurement = measurements|sort(attribute='start')|last if measurements else None %}
-                    
-                    {% if last_measurement %}
-                      {# Show latest measurement info #}
-                      {% set measure_date = last_measurement.start|todate %}
-                      {% set days_since = (now_date - measure_date).days %}
-                      {% set size_value = last_measurement.size[0] %}
-                      {% set size_unit = last_measurement.size[1] %}
-                      
-                      {% set summary = summary ~ ' <span class="badge bg-success ms-2">' ~ 
-                                size_value ~ ' ' ~ size_unit ~ 
-                                ' <small>(' ~ days_since ~ ' ' ~ (t['days ago'] if 'days ago' in t else 'days ago') ~ ')</small></span>' %}
-                    {% else %}
-                      {# Just show age for sprouted plants without measurements #}
-                      {% set summary = summary ~ ' <span class="badge bg-success ms-2">' ~ 
-                                (t['Age'] if 'Age' in t else 'Age') ~ ': ' ~ age_days ~ ' ' ~ t['days'] ~ '</span>' %}
-                    {% endif %}
-                  {% elif action == 'measure' %}
-                    {# For plants whose current action is a measurement #}
-                    {% set measure_date = start_date|todate %}
-                    {% set days_since = (now_date - measure_date).days %}
-                    {% set size_value = current_event.size[0] %}
-                    {% set size_unit = current_event.size[1] %}
-                    
-                    {# Find sprout date if available #}
-                    {% set sprout_event = p.history|selectattr('action', 'equalto', 'sprout')|list|first %}
-                    {% if sprout_event %}
-                      {% set sprouted_date = sprout_event.start|todate %}
+                  {% if not is_dead_state %}
+                    {% if action == 'sow' and 'range' in current_event %}
+                      {% set min_val,current_unit,max_val,max_unit = current_event.range %}
+                      {% set min_days = duration_to_days(min_val, current_unit) %}
+                      {% set max_days = duration_to_days(max_val, max_unit) %}
+                      {% set min_date = start_date | dateadd(days=min_days) %}
+                      {% set max_date = start_date | dateadd(days=max_days) %}
+                      {% if now_date > max_date %}
+                        {% set summary = summary ~ ' <span class="badge bg-danger ms-2">' ~ t['Overdue'] ~ '</span>' %}
+                      {% elif now_date >= min_date %}
+                        {# Enhanced "Anytime soon" with gradient and day info #}
+                        {% set days_passed = (now_date - min_date).days %}
+                        {% set total_window = (max_date - min_date).days %}
+                        {% set days_left = (max_date - now_date).days %}
+                        {% set progress = (days_passed / total_window * 100)|round|int %}
+                        {% set gradient_class = "bg-success" if progress < 33 else "bg-warning" if progress < 66 else "bg-danger" %}
+                        
+                        {% set summary = summary ~ ' <span class="badge bg-warning text-dark ms-2 position-relative">' ~ 
+                                          t['Anytime soon'] ~ ' <small>(' ~ days_left ~ ' ' ~ t['days left'] ~ ')</small>' ~
+                                          '<div class="progress position-absolute bottom-0 start-0" style="height: 4px; width: 100%; border-radius: 0 0 0.2rem 0.2rem;">' ~
+                                          '<div class="progress-bar ' ~ gradient_class ~ '" style="width: ' ~ progress ~ '%"></div>' ~
+                                          '</div></span>' %}
+                      {% else %}
+                        {% set days_left = (min_date - now_date).days %}
+                        {% set summary = summary ~ ' <span class="badge bg-info text-dark ms-2">' ~ days_left|string ~ ' ' ~ t['days'] ~ ' ' ~ t['left'] ~ '</span>' %}
+                      {% endif %}
+                    {% elif action in ['soak','strat'] %}
+                      {% set val,unit = current_event.duration %}
+                      {% set duration_days = duration_to_days(val, unit) %}
+                      {% set end_date = start_date | dateadd(days=duration_days) %}
+                      {% if now_date >= end_date %}
+                        {% set summary = summary ~ ' <span class="badge bg-secondary ms-2">' ~ t['Done'] ~ '</span>' %}
+                      {% else %}
+                        {% set days_left = (end_date - now_date).days %}
+                        {% set summary = summary ~ ' <span class="badge bg-info text-dark ms-2">' ~ days_left|string ~ ' ' ~ t['days'] ~ ' ' ~ t['left'] ~ '</span>' %}
+                      {% endif %}
+                    {% elif action == 'sprout' %}
+                      {# Get age since sprouting #}
+                      {% set sprouted_date = start_date|todate %}
                       {% set age_days = (now_date - sprouted_date).days %}
-                      {% set summary = summary ~ ' <span class="badge bg-success ms-2">' ~ 
-                                size_value ~ ' ' ~ size_unit ~ 
-                                ' <small>(' ~ (t['Age'] if 'Age' in t else 'Age') ~ ': ' ~ age_days ~ ' ' ~ t['days'] ~ ')</small></span>' %}
-                    {% else %}
-                      {% set summary = summary ~ ' <span class="badge bg-success ms-2">' ~ 
-                                size_value ~ ' ' ~ size_unit ~ '</span>' %}
+                      
+                      {# Check if there are any measurement events after sprouting #}
+                      {% set measurements = p.history|selectattr('action', 'equalto', 'measure')|list %}
+                      {% set last_measurement = measurements|sort(attribute='start')|last if measurements else None %}
+                      
+                      {% if last_measurement %}
+                        {# Show latest measurement info #}
+                        {% set measure_date = last_measurement.start|todate %}
+                        {% set days_since = (now_date - measure_date).days %}
+                        {% set size_value = last_measurement.size[0]|float %}
+                        {% set size_display = size_value|int if size_value == size_value|int else size_value %}
+                        {% set size_unit = last_measurement.size[1] %}
+                        
+                        {% set summary = summary ~ ' <span class="badge bg-success ms-2">' ~ 
+                                  size_display ~ size_unit ~ 
+                                  ' <small>(' ~ days_since ~ ' ' ~ (t['days ago'] if 'days ago' in t else 'days ago') ~ ')</small></span>' %}
+                      {% else %}
+                        {# Just show age for sprouted plants without measurements #}
+                        {% set summary = summary ~ ' <span class="badge bg-success ms-2">' ~ 
+                                  (t['Age'] if 'Age' in t else 'Age') ~ ': ' ~ age_days ~ ' ' ~ t['days'] ~ '</span>' %}
+                      {% endif %}
+                    {% elif action == 'measure' %}
+                      {# For plants whose current action is a measurement #}
+                      {% set measure_date = start_date|todate %}
+                      {% set days_since = (now_date - measure_date).days %}
+                      {% set size_value = current_event.size[0]|float %}
+                      {% set size_display = size_value|int if size_value == size_value|int else size_value %}
+                      {% set size_unit = current_event.size[1] %}
+                      
+                      {# Find sprout date if available #}
+                      {% set sprout_event = p.history|selectattr('action', 'equalto', 'sprout')|list|first %}
+                      {% if sprout_event %}
+                        {% set sprouted_date = sprout_event.start|todate %}
+                        {% set age_days = (now_date - sprouted_date).days %}
+                        {% set summary = summary ~ ' <span class="badge bg-success ms-2">' ~ 
+                                  size_display ~ size_unit ~ 
+                                  ' <small>(' ~ (t['Age'] if 'Age' in t else 'Age') ~ ': ' ~ age_days ~ ' ' ~ t['days'] ~ ')</small></span>' %}
+                      {% else %}
+                        {% set summary = summary ~ ' <span class="badge bg-success ms-2">' ~ 
+                                  size_display ~ size_unit ~ '</span>' %}
+                      {% endif %}
                     {% endif %}
                   {% endif %}
 
-                  <div class="accordion-item">
-                    <h2 class="accordion-header" id="heading-{{ state }}-{{ idx }}">
-                      <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapse-{{ state }}-{{ idx }}">
+                  <div class="accordion-item {{ 'bg-light' if is_dead_state else '' }}">
+                    <h2 class="accordion-header" id="heading-{{ state|lower }}-{{ idx }}">
+                      <button class="accordion-button collapsed {{ 'bg-light text-muted' if is_dead_state else '' }}" type="button" data-bs-toggle="collapse" data-bs-target="#collapse-{{ state|lower }}-{{ idx }}">
                         {# Main plant info ---------------------------------------- #}
                         <div class="flex-grow-1">
-                          <div class="fw-semibold">
+                          <div class="fw-semibold {{ 'text-muted' if is_dead_state else '' }}">
                             {{ p.common }} <small class="text-muted fst-italic">({{ p.latin }})</small>
                           </div>
                           <div class="small text-muted">{{ summary|safe }}</div>
@@ -171,7 +175,7 @@
                       </button>
                     </h2>
 
-                    <div id="collapse-{{ state }}-{{ idx }}" class="accordion-collapse collapse" data-bs-parent="#plants-acc-{{ state }}">
+                    <div id="collapse-{{ state|lower }}-{{ idx }}" class="accordion-collapse collapse" data-bs-parent="#plants-acc-{{ state|lower }}">
                       <div class="accordion-body">
                         <ul class="timeline">
                           {% for h in p.history|reverse %}
@@ -185,8 +189,39 @@
                                     {{ t['Expected sprout time'] }}: {{ h.range[0] }} {{ t[h.range[1]] }} – {{ h.range[2] }} {{ t[h.range[3]] }}
                                   </div>
                                 {% elif h.action == 'measure' %}
+                                  {% set size_value = h.size[0]|float %}
+                                  {% set size_display = size_value|int if size_value == size_value|int else size_value %}
                                   <div class="text-muted small">
-                                    {{ h.size[0] }} {{ h.size[1] }}
+                                    {{ size_display }}{{ h.size[1] }}
+                                    
+                                    {# Calculate growth rate if there's a previous measurement #}
+                                    {% set prev_measures = p.history|selectattr('action', 'equalto', 'measure')|list %}
+                                    {% set prev_measures = prev_measures|sort(attribute='start') %}
+                                    {% set measure_idx = prev_measures.index(h) %}
+                                    
+                                    {% if measure_idx > 0 and prev_measures[measure_idx-1].size[1] == h.size[1] %}
+                                      {% set prev = prev_measures[measure_idx-1] %}
+                                      {% set current_val = h.size[0]|float %}
+                                      {% set prev_val = prev.size[0]|float %}
+                                      {% set current_date = h.start|todate %}
+                                      {% set prev_date = prev.start|todate %}
+                                      {% set days_between = (current_date - prev_date).days %}
+                                      
+                                      {% if days_between > 0 %}
+                                        {% set growth = current_val - prev_val %}
+                                        {% set growth_rate = (growth / days_between)|round(2) %}
+                                        {% set growth_display = growth_rate|int if growth_rate == growth_rate|int else growth_rate %}
+                                        {% if growth_rate > 0 %}
+                                          <span class="ms-2 text-success">
+                                            <i class="fas fa-arrow-up fa-xs"></i> {{ growth_display }} {{ h.size[1] }}/{{ t['day'] if 'day' in t else 'day' }}
+                                          </span>
+                                        {% elif growth_rate < 0 %}
+                                          <span class="ms-2 text-danger">
+                                            <i class="fas fa-arrow-down fa-xs"></i> {{ growth_display|abs }} {{ h.size[1] }}/{{ t['day'] if 'day' in t else 'day' }}
+                                          </span>
+                                        {% endif %}
+                                      {% endif %}
+                                    {% endif %}
                                   </div>
                                 {% elif h.action in ['soak','strat'] %}
                                   <div class="text-muted small">{{ h.duration[0] }} {{ t[h.duration[1]] }}</div>
@@ -223,128 +258,6 @@
         </div>
       {% endif %}
     {% endfor %}
-    
-    {# Render dead plants last with muted styling #}
-    {% if 'Dead' in plants_by_state %} 
-      <div class="col-12 col-lg-6">
-        <div class="card bg-light">
-          <div class="card-header text-muted">
-            {% set example_plant = plants_by_state['Dead'][0] %}
-            {% set state_obj = example_plant.state %}
-            {% set state_icon = state_obj.icon_class if state_obj else 'fa-question' %}
-            <i class="fas {{ state_icon }} text-muted me-2"></i>
-            <span class="text-muted fw-semibold text-uppercase">{{ t['Dead'] if 'Dead' in t else 'Dead' }}</span>
-            <span class="badge bg-secondary ms-2">{{ plants_by_state['Dead']|length }}</span>
-          </div>
-          <div class="card-body p-0">
-            <div class="accordion" id="plants-acc-dead">
-              {% for p in plants_by_state['Dead'] %}
-                {% set idx = p.id %}
-                {% set current_event = p.current %}
-                {% set action = current_event.action %}
-                
-                {# ---- Summary line for dead plants ----------------------------- #}
-                {% set start_date = current_event.start %}
-                {% set summary = (human_names[action] in t and t[human_names[action]] or human_names[action]) ~ ' ' ~ start_date %}
-
-                <div class="accordion-item bg-light">
-                  <h2 class="accordion-header" id="heading-dead-{{ idx }}">
-                    <button class="accordion-button collapsed bg-light text-muted" type="button" data-bs-toggle="collapse" data-bs-target="#collapse-dead-{{ idx }}">
-                      {# Main plant info for dead plants ------------------------- #}
-                      <div class="flex-grow-1">
-                        <div class="fw-semibold text-muted">
-                          {{ p.common }} <small class="text-muted fst-italic">({{ p.latin }})</small>
-                        </div>
-                        <div class="small text-muted">{{ summary|safe }}</div>
-                        {% if p.location %}
-                          <div class="small text-muted"><i class="fas fa-location-dot me-1"></i>{{ p.location }}</div>
-                        {% endif %}
-                        {% if p.notes %}
-                          <div class="small text-muted"><i class="fas fa-sticky-note me-1"></i>{{ p.notes }}</div>
-                        {% endif %}
-                      </div>
-                    </button>
-                  </h2>
-
-                  <div id="collapse-dead-{{ idx }}" class="accordion-collapse collapse" data-bs-parent="#plants-acc-dead">
-                    <div class="accordion-body">
-                      <ul class="timeline">
-                        {% for h in p.history|reverse %}
-                          {% set evspec = event_map[h.action] %}
-                          <li class="timeline-item">
-                            <span class="timeline-icon {{ evspec.color_class }}"><i class="fas {{ evspec.icon }}"></i></span>
-                            <div>
-                              <strong>{{ t[human_names[h.action]] if human_names[h.action] in t else human_names[h.action] }}</strong> – {{ h.start }}
-                              {% if h.action == 'sow' and 'range' in h %}
-                                <div class="text-muted small">
-                                  {{ t['Expected sprout time'] }}: {{ h.range[0] }} {{ t[h.range[1]] }} – {{ h.range[2] }} {{ t[h.range[3]] }}
-                                </div>
-                              {% elif h.action == 'measure' %}
-                                <div class="text-muted small">
-                                  {{ h.size[0] }} {{ h.size[1] }}
-                                  
-                                  {# Calculate growth rate if there's a previous measurement #}
-                                  {% set prev_measures = p.history|selectattr('action', 'equalto', 'measure')|list %}
-                                  {% set prev_measures = prev_measures|sort(attribute='start') %}
-                                  {% set measure_idx = prev_measures.index(h) %}
-                                  
-                                  {% if measure_idx > 0 and prev_measures[measure_idx-1].size[1] == h.size[1] %}
-                                    {% set prev = prev_measures[measure_idx-1] %}
-                                    {% set current_val = h.size[0]|float %}
-                                    {% set prev_val = prev.size[0]|float %}
-                                    {% set current_date = h.start|todate %}
-                                    {% set prev_date = prev.start|todate %}
-                                    {% set days_between = (current_date - prev_date).days %}
-                                    
-                                    {% if days_between > 0 %}
-                                      {% set growth = current_val - prev_val %}
-                                      {% set growth_rate = (growth / days_between)|round(2) %}
-                                      {% if growth_rate > 0 %}
-                                        <span class="ms-2 text-success">
-                                          <i class="fas fa-arrow-up fa-xs"></i> {{ growth_rate }} {{ h.size[1] }}/{{ t['day'] if 'day' in t else 'day' }}
-                                        </span>
-                                      {% elif growth_rate < 0 %}
-                                        <span class="ms-2 text-danger">
-                                          <i class="fas fa-arrow-down fa-xs"></i> {{ growth_rate|abs }} {{ h.size[1] }}/{{ t['day'] if 'day' in t else 'day' }}
-                                        </span>
-                                      {% endif %}
-                                    {% endif %}
-                                  {% endif %}
-                                </div>
-                              {% elif h.action in ['soak','strat'] %}
-                                <div class="text-muted small">{{ h.duration[0] }} {{ t[h.duration[1]] }}</div>
-                              {% elif h.action == 'sprout' %}
-                                {% set sow = p.history|selectattr('action','equalto','sow')|list|last %}
-                                {% if sow %}
-                                  {% set sprouted_date = h.start|todate %}
-                                  {% set sow_date = sow.start|todate %}
-                                  {% set germ_days = (sprouted_date - sow_date).days %}
-                                  <div class="text-muted small">
-                                    {{ t['Sprouted in'] }} {{ germ_days }} {{ t['days'] }}
-                                  </div>
-                                {% endif %}
-                              {% endif %}
-                            </div>
-                            <a href="{{ url_for('edit_stage', action_id=h.id, lang=lang) }}" class="text-secondary ms-2 align-top" title="{{ t['Edit stage'] }}">
-                              <i class="fas fa-edit" style="font-size:0.9rem;"></i>
-                            </a>
-                          </li>
-                        {% endfor %}
-                      </ul>
-
-                      <div class="d-flex gap-2 mt-3">
-                        <a href="{{ url_for('edit_plant', idx=idx, lang=lang) }}" class="btn btn-outline-secondary btn-sm">{{ t['Edit plant'] }}</a>
-                        <a href="{{ url_for('add_stage', idx=idx, lang=lang) }}" class="btn btn-outline-primary btn-sm">{{ t['Add stage'] }}</a>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              {% endfor %}
-            </div>
-          </div>
-        </div>
-      </div>
-    {% endif %}
   </div>
 {% else %}
   <p class="text-muted">{{ t['No plants yet'] }}</p>
