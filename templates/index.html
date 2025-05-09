@@ -35,14 +35,14 @@
     {% set _ = plants_by_state[display_state].append(p) %}
   {% endfor %}
 
-  <div class="row g-4">
+  <div class="plant-columns">
     {# Render each state group as a separate card #}
     {% for state, state_plants in plants_by_state.items() %}
       {# Process states in order, with Dead state last #}
       {% if state != 'Dead' or loop.last %}
         {% set is_dead_state = (state == 'Dead') %}
         
-        <div class="col-12 col-lg-6">
+        <div class="plant-card">
           <div class="card {{ 'bg-light' if is_dead_state else '' }}">
             <div class="card-header {{ 'text-muted' if is_dead_state else '' }}">
               {% set example_plant = state_plants[0] %}
@@ -279,6 +279,23 @@
 
 {# Add some additional CSS for the enhanced badge and card styling #}
 <style>
+
+  .plant-columns{
+    column-count: 1;          /* single column on small screens */
+    column-gap:   1.5rem;     /* space between the two masonry columns */
+  }
+
+  @media (min-width: 992px){   /* lg-breakpoint = two columns */
+    .plant-columns{ column-count: 2; }
+  }
+
+  /* tell the browser that a card is an indivisible block */
+  .plant-card{
+    width: 100%;
+    display: inline-block;     /* needed for multi-column flow */
+    margin: 0 0 1.5rem;        /* matches the original g-4 gutter */
+    break-inside: avoid;       /* keeps a card from being split */
+  }
   .progress {
     background-color: rgba(0,0,0,0.1);
   }
