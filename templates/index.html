@@ -101,7 +101,7 @@
                         {% set progress = (days_passed / total_window * 100)|round|int %}
                         {% set gradient_class = "bg-success" if progress < 33 else "bg-warning" if progress < 66 else "bg-danger" %}
                         {% set summary = summary ~ ' <span class="badge bg-warning text-dark ms-2 position-relative">' ~ 
-                                          t['Anytime soon'] ~ ' <small>(' ~ days_left ~ ' ' ~ t['days left'] ~ ')</small>' ~
+                                          t['Anytime soon'] ~ ' <small>(' ~ days_left ~ ' ' ~ t['days'] ~ ')</small>' ~
                                           '<div class="progress position-absolute bottom-0 start-0" style="height: 4px; width: 100%; border-radius: 0 0 0.2rem 0.2rem;">' ~
                                           '<div class="progress-bar ' ~ gradient_class ~ '" style="width: ' ~ progress ~ '%"></div>' ~
                                           '</div></span>' %}
