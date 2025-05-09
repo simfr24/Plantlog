@@ -105,7 +105,7 @@ def init_and_fill_db():
               ('flower',    'Flower',       'text-warning',   'fa-fan',        'flowering',  30),
               ('fruit',     'Fruit',        'text-danger',    'fa-apple-whole','fruiting',   40),
               ('measure',   'Measurement',  'text-secondary', 'fa-ruler',       None,        50),
-              ('custom',    'Custom Event', 'text-secondary',  'fa-star',        None,        60),
+              ('custom',    'Custom Event', 'text-secondary', 'fa-star',       None,        60),
               ('dead',      'Death',        'text-dark',      'fa-skull',      'dead',       90),
             ])
 

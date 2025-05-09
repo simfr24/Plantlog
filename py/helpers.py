@@ -198,7 +198,7 @@ def _insert_event(cur, plant_id: int, ev: Dict[str, Any]) -> None:
     elif ev["action"] == "custom":
         cur.execute(
             f"INSERT INTO events ({','.join(base_cols)}, custom_label, custom_note)"
-            " VALUES (?,?,?,?,?,?)",
+            " VALUES (?,?,?,?,?)",
             base_vals + (ev["custom_label"], ev["custom_note"]),
         )
     else:  # sprout
