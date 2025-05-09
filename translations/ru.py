@@ -90,6 +90,7 @@ translations = {
     "Died on": "Умерло",
     "Measurement taken on": "Измерение проведено",
     "Planted on": "Посажено",
+    "Age": "Возраст",
 
     # ────────── core state labels ──────────
     "Sown": "Посеяно",

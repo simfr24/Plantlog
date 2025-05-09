@@ -90,6 +90,7 @@ translations = {
     "Died on": "Died on",
     "Measurement taken on": "Measurement taken on",
     "Planted on": "Planted on",
+    "Age": "Age",
 
     # ────────── core state labels ──────────
     "Sown": "Sown",
