@@ -23,8 +23,7 @@ from flask import (
     session,
     abort,
     g,
-    flash,
-    Markup
+    flash
 )
 from werkzeug.security import check_password_hash
 
