@@ -180,7 +180,7 @@
                         <ul class="timeline">
                           {% for h in p.history|reverse %}
                             {% set evspec = event_map[h.action] %}
-                            <li class="timeline-item">
+                            <li class="timeline-item {{ 'dead' if is_dead_state else '' }}">
                               <span class="timeline-icon {{ evspec.color_class }}"><i class="fas {{ evspec.icon }}"></i></span>
                               <div>
                                 <strong>{{ t[human_names[h.action]] if human_names[h.action] in t else human_names[h.action] }}</strong> – {{ h.start }}
@@ -277,5 +277,84 @@
   .accordion-button:not(.collapsed) {
     background-color: rgba(0,0,0,0.02);
   }
+  .timeline {
+    position: relative;
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+
+  .timeline:before {
+    content: '';
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 14px;
+    width: 2px;
+    background: #e9ecef;
+    z-index: 0;
+  }
+
+  .timeline-item {
+    position: relative;
+    display: flex;
+    align-items: flex-start;
+    padding-left: 40px;
+    margin-bottom: 1rem;
+  }
+
+  /* Fix for the last timeline item so line doesn't extend beyond */
+  .timeline-item:last-child:before {
+    content: '';
+    position: absolute;
+    left: 14px;
+    top: 30px;
+    bottom: 0;
+    width: 2px;
+    background: #fff; /* Match your background color */
+    z-index: 1;
+  }
+
+  /* Ensure "dead" class has bg-light for consistency */
+  .timeline-item.dead:last-child:before {
+    background: #f8f9fa; /* Bootstrap's bg-light color */
+  }
+
+  .timeline-icon {
+    position: absolute;
+    left: 0;
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    background: #fff;
+    border: 2px solid currentColor;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 2;
+    font-size: 0.8rem;
+  }
+
+  /* Ensure proper spacing on mobile */
+  @media (max-width: 576px) {
+    .timeline-item {
+      padding-left: 35px;
+    }
+    
+    .timeline:before {
+      left: 13px;
+    }
+    
+    .timeline-item:last-child:before {
+      left: 13px;
+    }
+  }
+
+  /* Improved styling for different plant stages */
+  .timeline-icon.text-success { border-color: #28a745; }
+  .timeline-icon.text-info { border-color: #17a2b8; }
+  .timeline-icon.text-warning { border-color: #ffc107; }
+  .timeline-icon.text-danger { border-color: #dc3545; }
+  .timeline-icon.text-secondary { border-color: #6c757d; }
 </style>
 {% endblock %}
