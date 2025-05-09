@@ -94,9 +94,9 @@ translations = {
 
     # ────────── Custom events ──────────
     "{event} on": "{event} le",
-    "Title": "Titre",
-    "Details": "Détails",
-    "Custom": "Personnalisé",
+    "Event title": "Titre de l'événement",
+    "Note content": "Détails",
+    "Custom Event": "Entrée perso",
 
     # ────────── core state labels ──────────
     "Sown": "Semé",

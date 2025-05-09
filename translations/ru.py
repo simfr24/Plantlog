@@ -96,7 +96,7 @@ translations = {
     "{event} on": "{event} —",
     "Event title": "Название события",
     "Note content": "Описание",
-    "Custom Event": "Произвольное событие",
+    "Custom Event": "Своя запись",
 
     # ────────── core state labels ──────────
     "Sown": "Посеяно",
