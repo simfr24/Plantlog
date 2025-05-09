@@ -60,6 +60,7 @@
                   {% set idx = p.id %}
                   {% set current_event = p.current %}
                   {% set action = current_event.action %}
+                  {% set last_non_custom = (p.history | rejectattr('action', 'equalto', 'custom') | list)[-1] if p.history | rejectattr('action', 'equalto', 'custom') | list else None %}
                   {% set event_spec = event_map[action] %}
 
                   {# ---- Plant state --------------------------------------------- #}
@@ -80,23 +81,25 @@
                   {% endif %}
 
                   {# Extra badges / counters depending on the action -------------- #}
-                  {% if not is_dead_state %}
-                    {% if action == 'sow' and 'range' in current_event %}
-                      {% set min_val,current_unit,max_val,max_unit = current_event.range %}
+                  {% if not is_dead_state and last_non_custom %}
+                    {% set badge_action = last_non_custom.action %}
+                    {% set badge_start = last_non_custom.start %}
+                    
+                    {% if badge_action == 'sow' and 'range' in last_non_custom %}
+                      {% set min_val, current_unit, max_val, max_unit = last_non_custom.range %}
                       {% set min_days = duration_to_days(min_val, current_unit) %}
                       {% set max_days = duration_to_days(max_val, max_unit) %}
-                      {% set min_date = start_date | dateadd(days=min_days) %}
-                      {% set max_date = start_date | dateadd(days=max_days) %}
+                      {% set min_date = badge_start | dateadd(days=min_days) %}
+                      {% set max_date = badge_start | dateadd(days=max_days) %}
+                      
                       {% if now_date > max_date %}
                         {% set summary = summary ~ ' <span class="badge bg-danger ms-2">' ~ t['Overdue'] ~ '</span>' %}
                       {% elif now_date >= min_date %}
-                        {# Enhanced "Anytime soon" with gradient and day info #}
                         {% set days_passed = (now_date - min_date).days %}
                         {% set total_window = (max_date - min_date).days %}
                         {% set days_left = (max_date - now_date).days %}
                         {% set progress = (days_passed / total_window * 100)|round|int %}
                         {% set gradient_class = "bg-success" if progress < 33 else "bg-warning" if progress < 66 else "bg-danger" %}
-                        
                         {% set summary = summary ~ ' <span class="badge bg-warning text-dark ms-2 position-relative">' ~ 
                                           t['Anytime soon'] ~ ' <small>(' ~ days_left ~ ' ' ~ t['days left'] ~ ')</small>' ~
                                           '<div class="progress position-absolute bottom-0 start-0" style="height: 4px; width: 100%; border-radius: 0 0 0.2rem 0.2rem;">' ~
@@ -106,63 +109,57 @@
                         {% set days_left = (min_date - now_date).days %}
                         {% set summary = summary ~ ' <span class="badge bg-info text-dark ms-2">' ~ days_left|string ~ ' ' ~ t['days'] ~ ' ' ~ t['left'] ~ '</span>' %}
                       {% endif %}
-                    {% elif action in ['soak','strat'] %}
-                      {% set val,unit = current_event.duration %}
+                  
+                    {% elif badge_action in ['soak', 'strat'] %}
+                      {% set val, unit = last_non_custom.duration %}
                       {% set duration_days = duration_to_days(val, unit) %}
-                      {% set end_date = start_date | dateadd(days=duration_days) %}
+                      {% set end_date = badge_start | dateadd(days=duration_days) %}
                       {% if now_date >= end_date %}
                         {% set summary = summary ~ ' <span class="badge bg-secondary ms-2">' ~ t['Done'] ~ '</span>' %}
                       {% else %}
                         {% set days_left = (end_date - now_date).days %}
                         {% set summary = summary ~ ' <span class="badge bg-info text-dark ms-2">' ~ days_left|string ~ ' ' ~ t['days'] ~ ' ' ~ t['left'] ~ '</span>' %}
                       {% endif %}
-                    {% elif action == 'sprout' %}
-                      {# Get age since sprouting #}
-                      {% set sprouted_date = start_date|todate %}
+                  
+                    {% elif badge_action == 'sprout' %}
+                      {% set sprouted_date = badge_start|todate %}
                       {% set age_days = (now_date - sprouted_date).days %}
-                      
-                      {# Check if there are any measurement events after sprouting #}
                       {% set measurements = p.history|selectattr('action', 'equalto', 'measure')|list %}
                       {% set last_measurement = measurements|sort(attribute='start')|last if measurements else None %}
-                      
+                  
                       {% if last_measurement %}
-                        {# Show latest measurement info #}
                         {% set measure_date = last_measurement.start|todate %}
                         {% set days_since = (now_date - measure_date).days %}
                         {% set size_value = last_measurement.size[0]|float %}
                         {% set size_display = size_value|int if size_value == size_value|int else size_value %}
                         {% set size_unit = last_measurement.size[1] %}
-                        
                         {% set summary = summary ~ ' <span class="badge bg-success ms-2">' ~ 
-                                  size_display ~ size_unit ~ 
-                                  ' <small>(' ~ days_since ~ ' ' ~ (t['days ago'] if 'days ago' in t else 'days ago') ~ ')</small></span>' %}
+                                      size_display ~ size_unit ~ 
+                                      ' <small>(' ~ days_since ~ ' ' ~ (t['days ago'] if 'days ago' in t else 'days ago') ~ ')</small></span>' %}
                       {% else %}
-                        {# Just show age for sprouted plants without measurements #}
                         {% set summary = summary ~ ' <span class="badge bg-success ms-2">' ~ 
-                                  (t['Age'] if 'Age' in t else 'Age') ~ ': ' ~ age_days ~ ' ' ~ t['days'] ~ '</span>' %}
+                                      (t['Age'] if 'Age' in t else 'Age') ~ ': ' ~ age_days ~ ' ' ~ t['days'] ~ '</span>' %}
                       {% endif %}
-                    {% elif action == 'measure' %}
-                      {# For plants whose current action is a measurement #}
-                      {% set measure_date = start_date|todate %}
+                  
+                    {% elif badge_action == 'measure' %}
+                      {% set measure_date = badge_start|todate %}
                       {% set days_since = (now_date - measure_date).days %}
-                      {% set size_value = current_event.size[0]|float %}
+                      {% set size_value = last_non_custom.size[0]|float %}
                       {% set size_display = size_value|int if size_value == size_value|int else size_value %}
-                      {% set size_unit = current_event.size[1] %}
-                      
-                      {# Find sprout date if available #}
+                      {% set size_unit = last_non_custom.size[1] %}
                       {% set sprout_event = p.history|selectattr('action', 'equalto', 'sprout')|list|first %}
                       {% if sprout_event %}
                         {% set sprouted_date = sprout_event.start|todate %}
                         {% set age_days = (now_date - sprouted_date).days %}
                         {% set summary = summary ~ ' <span class="badge bg-success ms-2">' ~ 
-                                  size_display ~ size_unit ~ 
-                                  ' <small>(' ~ (t['Age'] if 'Age' in t else 'Age') ~ ': ' ~ age_days ~ ' ' ~ t['days'] ~ ')</small></span>' %}
+                                      size_display ~ size_unit ~ 
+                                      ' <small>(' ~ (t['Age'] if 'Age' in t else 'Age') ~ ': ' ~ age_days ~ ' ' ~ t['days'] ~ ')</small></span>' %}
                       {% else %}
                         {% set summary = summary ~ ' <span class="badge bg-success ms-2">' ~ 
-                                  size_display ~ size_unit ~ '</span>' %}
+                                      size_display ~ size_unit ~ '</span>' %}
                       {% endif %}
                     {% endif %}
-                  {% endif %}
+                  {% endif %}                
 
                   <div class="accordion-item {{ 'bg-light' if is_dead_state else '' }}">
                     <h2 class="accordion-header" id="heading-{{ state|lower }}-{{ idx }}">
