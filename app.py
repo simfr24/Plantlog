@@ -277,7 +277,6 @@ def edit_stage(action_id):
         form[date_field] = ev["start"]
         form.update(extras)
         errors = []
-
     return render_template(
         "edit_stage.html",
         form=form,

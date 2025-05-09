@@ -88,9 +88,15 @@ translations = {
     "Flowering since": "Цветёт с",
     "Fruiting since": "Плодоносит с",
     "Died on": "Умерло",
-    "Measurement taken on": "Измерение проведено",
+    "Measurement taken on": "проведено",
     "Planted on": "Посажено",
     "Age": "Возраст",
+
+    # ────────── Custom events ──────────
+    "{event} on": "{event} —",
+    "Event title": "Название события",
+    "Note content": "Описание",
+    "Custom Event": "Произвольное событие",
 
     # ────────── core state labels ──────────
     "Sown": "Посеяно",

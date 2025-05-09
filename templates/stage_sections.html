@@ -7,7 +7,7 @@
     - t (translations)
 #}
 
-<div class="row row-cols-2 g-2 mb-3">
+<div class="row row-cols-2 row-cols-md-3 row-cols-xl-5 g-2 mb-3">
   {% for s in event_specs %}
     <div class="col">
       <input type="radio" class="btn-check"
@@ -93,20 +93,39 @@
   </div>
 </div>
 
+<!-- Custom action-specific label -->
+<div id="extra-custom-action" class="stage-extra" {% if form.status != 'custom_action' %}style="display:none"{% endif %}>
+  <div class="mb-3">
+    <label class="form-label">{{ t['Event title'] }}</label>
+    <input type="text" name="event_custom_label" class="form-control" value="{{ form.event_custom_label }}">
+  </div>
+  <div class="mb-3">
+    <label class="form-label">{{ t['Note content'] }}</label>
+    <textarea name="event_custom_note" class="form-control" rows="3">{{ form.event_custom_note }}</textarea>
+  </div>
+</div>
+
 
 <script>
-  document.querySelectorAll('input[name="status"]').forEach(btn => {
+   document.querySelectorAll('input[name="status"]').forEach(btn => {
     btn.addEventListener('change', () => {
       const val = btn.value;
       document.querySelectorAll('.stage-extra').forEach(el => el.style.display = 'none');
+
       if (val === 'sow') {
         document.getElementById('extra-sow').style.display = '';
       } else if (val === 'soak' || val === 'strat') {
         document.getElementById('extra-duration').style.display = '';
-      }else if (val === 'measure') {
+      } else if (val === 'measure') {
         document.getElementById('extra-measure').style.display = '';
+      } else if (val === 'custom') {
+        document.getElementById('extra-custom-action').style.display = '';
       }
-
     });
   });
+
+  const checked = document.querySelector('input[name="status"]:checked');
+  if (checked) {
+    checked.dispatchEvent(new Event('change'));
+  }
 </script>

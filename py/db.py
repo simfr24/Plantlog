@@ -61,8 +61,10 @@ CREATE TABLE IF NOT EXISTS events (
   range_max_u     TEXT,
   dur_val         INTEGER,
   dur_unit        TEXT,
-  measure_val REAL,
-  measure_unit TEXT,
+  measure_val     REAL,
+  measure_unit    TEXT,
+  custom_label    TEXT,
+  custom_note     TEXT,
   FOREIGN KEY(plant_id)      REFERENCES plants(id) ON DELETE CASCADE,
   FOREIGN KEY(event_type_id) REFERENCES event_types(id)
 );
@@ -95,15 +97,16 @@ def init_and_fill_db():
             VALUES (?,      ?,       ?,           ?,
                     (SELECT id FROM state_types WHERE code=?), ?)
             """, [
-            ('soak',    'Soak',  'text-primary','fa-tint',       'soaked',     5),
-            ('strat',   'Strat', 'text-info',   'fa-snowflake',  'strat',      5),
-            ('sow',     'Sow',   'text-success','fa-seedling',   'seed',       10),
-            ('plant',     'Plant',   'text-success','fa-tree',   'growing',       15),
-            ('sprout',  'Sprout','text-success','fa-leaf',       'growing',    20),
-            ('measure', 'Measurement', 'text-secondary', 'fa-ruler', None, 25),
-            ('flower',  'Flower','text-warning','fa-fan',        'flowering',  30),
-            ('fruit',   'Fruit', 'text-danger', 'fa-apple-whole','fruiting',   40),
-            ('dead',    'Death', 'text-dark',   'fa-skull',      'dead',       90),
+              ('soak',      'Soak',         'text-primary',   'fa-tint',       'soaked',     4),
+              ('strat',     'Strat',        'text-info',      'fa-snowflake',  'strat',      5),
+              ('sow',       'Sow',          'text-success',   'fa-seedling',   'seed',       10),
+              ('plant',     'Plant',        'text-success',   'fa-tree',       'growing',    15),
+              ('sprout',    'Sprout',       'text-success',   'fa-leaf',       'growing',    20),
+              ('flower',    'Flower',       'text-warning',   'fa-fan',        'flowering',  30),
+              ('fruit',     'Fruit',        'text-danger',    'fa-apple-whole','fruiting',   40),
+              ('measure',   'Measurement',  'text-secondary', 'fa-ruler',       None,        50),
+              ('custom',    'Custom Event', 'text-secondary',  'fa-star',        None,        60),
+              ('dead',      'Death',        'text-dark',      'fa-skull',      'dead',       90),
             ])
 
         conn.commit()

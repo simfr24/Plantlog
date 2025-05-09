@@ -92,6 +92,12 @@ translations = {
     "Planted on": "Planté le",
     "Age": "Age",
 
+    # ────────── Custom events ──────────
+    "{event} on": "{event} le",
+    "Title": "Titre",
+    "Details": "Détails",
+    "Custom": "Personnalisé",
+
     # ────────── core state labels ──────────
     "Sown": "Semé",
     "Soaking": "Trempage",

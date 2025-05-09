@@ -64,7 +64,8 @@ def _events_for_plant(conn, plant_id: int) -> List[Dict[str, Any]]:
         SELECT e.id, et.code AS action, e.happened_on AS start,
                e.range_min, e.range_min_u, e.range_max, e.range_max_u,
                e.dur_val,  e.dur_unit,
-               e.measure_val, e.measure_unit
+               e.measure_val, e.measure_unit,
+               e.custom_label, e.custom_note
         FROM events      e
         JOIN event_types et ON et.id = e.event_type_id
         WHERE e.plant_id = ?
@@ -86,6 +87,9 @@ def _events_for_plant(conn, plant_id: int) -> List[Dict[str, Any]]:
             ev["duration"] = [a["dur_val"], a["dur_unit"]]
         elif a["action"] == "measure":
             ev["size"] = [a["measure_val"], a["measure_unit"]]
+        elif a["action"] == "custom":
+            ev["custom_label"] = a["custom_label"]
+            ev["custom_note"] = a["custom_note"]
         hist.append(ev)
     return hist
 
@@ -191,6 +195,12 @@ def _insert_event(cur, plant_id: int, ev: Dict[str, Any]) -> None:
             " VALUES (?,?,?,?,?)",
             base_vals + (ev["size"][0], ev["size"][1]),
         )
+    elif ev["action"] == "custom":
+        cur.execute(
+            f"INSERT INTO events ({','.join(base_cols)}, custom_label, custom_note)"
+            " VALUES (?,?,?,?,?,?)",
+            base_vals + (ev["custom_label"], ev["custom_note"]),
+        )
     else:  # sprout
         cur.execute(f"INSERT INTO events ({','.join(base_cols)}) VALUES (?,?,?)", base_vals)
 
@@ -271,7 +281,14 @@ def update_action(event_id: int, ev: Dict[str, Any]) -> None:  # ✓ kept name
                 WHERE id = ?""",
                 base + tuple(ev["size"]) + (event_id,),
             )
-        
+        elif ev["action"] == "custom":
+            cur.execute(
+                """UPDATE events SET event_type_id = ?, happened_on = ?,
+                        custom_label = ?, custom_note = ?
+                WHERE id = ?""",
+                base + (ev["custom_label"], ev["custom_note"], event_id),
+            )
+
         else:
             cur.execute(
                 "UPDATE events SET event_type_id = ?, happened_on = ? WHERE id = ?",
@@ -292,7 +309,8 @@ def get_action_by_id(event_id: int) -> Optional[Dict[str, Any]]:  # ✓ kept nam
                    e.range_min, e.range_min_u, e.range_max, e.range_max_u,
                    e.dur_val,  e.dur_unit,
                    e.measure_val, e.measure_unit,
-                   p.common, p.latin
+                   p.common, p.latin,
+                   e.custom_label, e.custom_note
             FROM events      e
             JOIN event_types et ON et.id = e.event_type_id
             JOIN plants      p  ON p.id  = e.plant_id
@@ -317,6 +335,9 @@ def get_action_by_id(event_id: int) -> Optional[Dict[str, Any]]:  # ✓ kept nam
             act["duration"] = [a["dur_val"], a["dur_unit"]]
         elif a["action"] == "measure":
            act["size"] = [a["measure_val"], a["measure_unit"]]
+        elif a["action"] == "custom":
+            act["custom_label"] = a["custom_label"]
+            act["custom_note"] = a["custom_note"]
         return act
 
 
@@ -433,6 +454,8 @@ def get_form_data(request):
         "notes": request.form.get("notes", "").strip(),
         "event_size_val": to_int(request.form.get("event_size_val")),
         "event_size_unit": request.form.get("event_size_unit", "cm"),
+        "event_custom_label": request.form.get("event_custom_label", "").strip(),
+        "event_custom_note": request.form.get("event_custom_note", "").strip(),
     }
 
 
@@ -463,6 +486,11 @@ def get_form_from_plant(plant):
     elif first["action"] == "measure" and "size" in first:
         form["event_size_val"] = first["size"][0]
         form["event_size_unit"] = first["size"][1]
+    
+    elif first["action"] == "custom":
+        form["event_custom_label"] = first.get("custom_label", "")
+        form["event_custom_note"] = first.get("custom_note", "")
+
 
 
     return form
@@ -524,6 +552,17 @@ def validate_form(form, translations, context="add"):
             "start": date,
             "size": [val, form.get("event_size_unit", "cm")],
         }
+    elif status == "custom":
+        label = form.get("event_custom_label", "").strip()
+        if not label:
+            errors.append("Custom event label is required.")
+        event = {
+            "action": "custom",
+            "start": date,
+            "custom_label": label,
+            "custom_note": form.get("event_custom_note", "").strip(),
+        }
+
 
 
     else:
@@ -561,6 +600,11 @@ def form_keys_for(action_dict):
         extras.update({
             "event_size_val": action_dict["size"][0],
             "event_size_unit": action_dict["size"][1],
+        })
+    elif action == "custom":
+        extras.update({
+            "event_custom_label": action_dict.get("custom_label", ""),
+            "event_custom_note": action_dict.get("custom_note", ""),
         })
 
     return "event_date", extras

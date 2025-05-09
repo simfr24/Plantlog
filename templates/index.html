@@ -15,6 +15,8 @@
   'dead':      'Died on',
   'measure':   'Measurement taken on',
   'plant':     'Planted on',
+  'custom':    '{event} on',
+
 } %}
 
 {% if plants %}
@@ -69,7 +71,13 @@
                   {# ---- Summary line ------------------------------------------- #}
                   {% set now_date = today %}
                   {% set start_date = current_event.start %}
-                  {% set summary = (human_names[action] in t and t[human_names[action]] or human_names[action]) ~ ' ' ~ start_date %}
+                  {% if action == 'custom' %}
+                    {% set label = current_event.custom_label or '?' %}
+                    {% set label_text = t['{event} on'].replace('{event}', label) if '{event} on' in t else label ~ ' on' %}
+                    {% set summary = label_text ~ ' ' ~ start_date %}
+                  {% else %}
+                    {% set summary = (human_names[action] in t and t[human_names[action]] or human_names[action]) ~ ' ' ~ start_date %}
+                  {% endif %}
 
                   {# Extra badges / counters depending on the action -------------- #}
                   {% if not is_dead_state %}
@@ -183,7 +191,16 @@
                             <li class="timeline-item {{ 'dead' if is_dead_state else '' }}">
                               <span class="timeline-icon {{ evspec.color_class }}"><i class="fas {{ evspec.icon }}"></i></span>
                               <div>
-                                <strong>{{ t[human_names[h.action]] if human_names[h.action] in t else human_names[h.action] }}</strong> – {{ h.start }}
+                                {% if h.action == 'custom' %}
+                                  {% set label = current_event.custom_label or '?' %}
+                                    {% set label_text = t['{event} on'].replace('{event}', label) if '{event} on' in t else label ~ ' on' %}
+                                    <strong>{{ label_text }}</strong> – {{ h.start }}
+                                    {% if h.custom_note %}
+                                      <div class="text-muted small">{{ h.custom_note }}</div>
+                                    {% endif %}
+                                  {% else %}
+                                    <strong>{{ t[human_names[h.action]] if human_names[h.action] in t else human_names[h.action] }}</strong> – {{ h.start }}
+                                  {% endif %}
                                 {% if h.action == 'sow' and 'range' in h %}
                                   <div class="text-muted small">
                                     {{ t['Expected sprout time'] }}: {{ h.range[0] }} {{ t[h.range[1]] }} – {{ h.range[2] }} {{ t[h.range[3]] }}
