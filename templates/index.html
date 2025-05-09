@@ -143,13 +143,14 @@
                       {% set size_display = size_value|int if size_value == size_value|int else size_value %}
                       {% set size_unit = last_non_custom.size[1] %}
                       {% set sprout_event = p.history|selectattr('action', 'equalto', 'sprout')|list|first %}
-                      {% if sprout_event %}
-                        {% set sprouted_date = sprout_event.start|todate %}
-                        {% set age_days = (now_date - sprouted_date).days %}
+                      {% set planted_event = p.history|selectattr('action', 'equalto', 'plant')|list|first %}
+                      {% set base_event = sprout_event if sprout_event else planted_event %}
+                      {% if base_event %}
+                        {% set base_date = base_event.start|todate %}
+                        {% set age_days = (now_date - base_date).days %}
                         {% set summary = summary ~ size_badge(size_display, size_unit, t['Age'] if 'Age' in t else 'Age', age_days, t) %}
                       {% else %}
-                        {% set summary = summary ~ ' <span class="badge bg-success ms-2">' ~ 
-                                      size_display ~ size_unit ~ '</span>' %}
+                        {% set summary = summary ~ ' <span class="badge bg-success ms-2">' ~ size_display ~ size_unit ~ '</span>' %}
                       {% endif %}
                     {% endif %}
                   {% endif %}                
