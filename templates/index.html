@@ -21,23 +21,25 @@
   {% set plants_by_state = {} %}
   {% for p in plants %}
     {% set state = p.state.label if p.state else 'unknown' %}
-    {% if state != 'dead' %}  {# Handle non-dead plants normally #}
+    {% set lowercase_state = state|lower %}  {# Convert to lowercase for comparison #}
+    
+    {% if lowercase_state != 'dead' %}  {# Handle non-dead plants normally #}
       {% if state not in plants_by_state %}
         {% set _ = plants_by_state.update({state: []}) %}
       {% endif %}
       {% set _ = plants_by_state[state].append(p) %}
     {% else %}  {# Special handling for dead plants #}
-      {% if 'dead' not in plants_by_state %}
-        {% set _ = plants_by_state.update({'dead': []}) %}
+      {% if 'Dead' not in plants_by_state %}
+        {% set _ = plants_by_state.update({'Dead': []}) %}
       {% endif %}
-      {% set _ = plants_by_state['dead'].append(p) %}
+      {% set _ = plants_by_state['Dead'].append(p) %} 
     {% endif %}
   {% endfor %}
 
   <div class="row g-4">
     {# Render each state group as a separate card #}
     {% for state, state_plants in plants_by_state.items() %}
-      {% if state != 'dead' %}  {# Render all non-dead states first #}
+      {% if state != 'Dead' %}  {# Only render non-dead states here #}
         <div class="col-12 col-lg-6">
           <div class="card">
             <div class="card-header">
@@ -222,20 +224,20 @@
     {% endfor %}
     
     {# Render dead plants last with muted styling #}
-    {% if 'dead' in plants_by_state %}
+    {% if 'Dead' in plants_by_state %} 
       <div class="col-12 col-lg-6">
         <div class="card bg-light">
           <div class="card-header text-muted">
-            {% set example_plant = plants_by_state['dead'][0] %}
+            {% set example_plant = plants_by_state['Dead'][0] %}
             {% set state_obj = example_plant.state %}
             {% set state_icon = state_obj.icon_class if state_obj else 'fa-question' %}
             <i class="fas {{ state_icon }} text-muted me-2"></i>
-            <span class="text-muted fw-semibold text-uppercase">{{ t['dead'] if 'dead' in t else 'Dead' }}</span>
-            <span class="badge bg-secondary ms-2">{{ plants_by_state['dead']|length }}</span>
+            <span class="text-muted fw-semibold text-uppercase">{{ t['Dead'] if 'Dead' in t else 'Dead' }}</span>
+            <span class="badge bg-secondary ms-2">{{ plants_by_state['Dead']|length }}</span>
           </div>
           <div class="card-body p-0">
             <div class="accordion" id="plants-acc-dead">
-              {% for p in plants_by_state['dead'] %}
+              {% for p in plants_by_state['Dead'] %}
                 {% set idx = p.id %}
                 {% set current_event = p.current %}
                 {% set action = current_event.action %}
