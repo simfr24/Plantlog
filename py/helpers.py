@@ -18,7 +18,7 @@ import os
 from datetime import datetime, timedelta
 from functools import lru_cache
 from typing import Any, Dict, List, Optional, Tuple
-from flask import Markup
+from markupsafe import Markup
 import math
 
 from py.db import get_conn
