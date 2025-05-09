@@ -78,6 +78,7 @@ translations = {
     "Fruit": "Fructification",
     "Death": "Mort",
     "Measurement": "Mesure",
+    "Plant": "Plantation",
 
     # ────────── human-readable summaries ──────────
     "Sowing started on": "Semé le",
@@ -88,6 +89,7 @@ translations = {
     "Fruiting since": "Fructification depuis le",
     "Died on": "Mort le",
     "Measurement taken on": "Mesure prise le",
+    "Planted on": "Planté le",
 
     # ────────── core state labels ──────────
     "Sown": "Semé",
@@ -97,6 +99,7 @@ translations = {
     "Flowering": "Floraison",
     "Fruiting": "Fructification",
     "Dead": "Mort",
+    "Planted": "Planté",
 
     # ────────── backend flash messages (login / register) ──────────
     "Username & password required": "Nom d'utilisateur et mot de passe requis",

@@ -27,13 +27,13 @@ translations = {
     "e.g. Latin name": "например, Solanum lycopersicum",
     "e.g. Greenhouse": "например, Теплица",
     "e.g. Notes": "например, Быстро прорастает, любит тепло",
-    "Size": "Размер",
 
     # stage-specific inputs
     "Event date": "Дата события",
     "Est. sprout time (min)": "Мин. время прорастания",
     "Est. sprout time (max)": "Макс. время прорастания",
     "Duration": "Длительность",
+    "Size": "Размер",
 
     # ────────── units ──────────
     "hours": "часов",
@@ -78,6 +78,7 @@ translations = {
     "Fruit": "Плодоношение",
     "Death": "Гибель",
     "Measurement": "Измерение",
+    "Plant": "Посадка",
 
     # ────────── human-readable summaries ──────────
     "Sowing started on": "Посев произведён",
@@ -88,7 +89,7 @@ translations = {
     "Fruiting since": "Плодоносит с",
     "Died on": "Умерло",
     "Measurement taken on": "Измерение проведено",
-
+    "Planted on": "Посажено",
 
     # ────────── core state labels ──────────
     "Sown": "Посеяно",
@@ -98,6 +99,7 @@ translations = {
     "Flowering": "Цветёт",
     "Fruiting": "Плодоносит",
     "Dead": "Мёртвое",
+    "Planted": "Посажено",
 
     # ────────── backend flash messages (login / register) ──────────
     "Username & password required": "Требуется имя пользователя и пароль",

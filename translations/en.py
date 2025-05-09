@@ -78,6 +78,7 @@ translations = {
     "Fruit": "Fruit",
     "Death": "Death",
     "Measurement": "Measurement",
+    "Plant": "Plant",
 
     # ────────── human-readable summaries ──────────
     "Sowing started on": "Sowing started on",
@@ -88,6 +89,7 @@ translations = {
     "Fruiting since": "Fruiting since",
     "Died on": "Died on",
     "Measurement taken on": "Measurement taken on",
+    "Planted on": "Planted on",
 
     # ────────── core state labels ──────────
     "Sown": "Sown",
@@ -97,6 +99,7 @@ translations = {
     "Flowering": "Flowering",
     "Fruiting": "Fruiting",
     "Dead": "Dead",
+    "Planted": "Planté",
 
     # ────────── backend flash messages (login / register) ──────────
     "Username & password required": "Username & password required",

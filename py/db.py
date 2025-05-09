@@ -1,10 +1,8 @@
 import sqlite3
 import os
-from py.migration import migrate
 
 BASE_DIR   = os.path.dirname(os.path.abspath(__file__))
 DB_PATH    = os.path.join(BASE_DIR, '../data/plants.db')
-OLD_DB     = os.path.join(BASE_DIR, '../data/old_plants.db')
 
 def get_conn():
     conn = sqlite3.connect(DB_PATH)
@@ -100,6 +98,7 @@ def init_and_fill_db():
             ('soak',    'Soak',  'text-primary','fa-tint',       'soaked',     5),
             ('strat',   'Strat', 'text-info',   'fa-snowflake',  'strat',      5),
             ('sow',     'Sow',   'text-success','fa-seedling',   'seed',       10),
+            ('plant',     'Plant',   'text-success','fa-tree',   'growing',       15),
             ('sprout',  'Sprout','text-success','fa-leaf',       'growing',    20),
             ('measure', 'Measurement', 'text-secondary', 'fa-ruler', None, 25),
             ('flower',  'Flower','text-warning','fa-fan',        'flowering',  30),
@@ -112,7 +111,5 @@ def init_and_fill_db():
 
 
 def init_db():
-    # during development, always reset & migrate
     init_and_fill_db()
-    migrate(OLD_DB,DB_PATH)
 
