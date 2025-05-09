@@ -38,8 +38,13 @@ translations = {
     # ────────── units ──────────
     "hours": "часов",
     "days": "дней",
+    "day": "день",
+    "week": "неделя",
     "weeks": "недель",
+    "month": "месяц",
     "months": "месяцев",
+    "years": "лет",
+    "year": "год",
 
     # ────────── timeline / badges ──────────
     "Overdue": "Просрочено",

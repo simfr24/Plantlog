@@ -38,8 +38,13 @@ translations = {
     # ────────── units ──────────
     "hours": "hours",
     "days": "days",
+    "day": "day",
+    "week": "week",
     "weeks": "weeks",
+    "month": "month",
     "months": "months",
+    "years": "years",
+    "year": "year",
 
     # ────────── timeline / badges ──────────
     "Overdue": "Overdue",

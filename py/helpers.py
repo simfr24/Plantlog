@@ -18,6 +18,8 @@ import os
 from datetime import datetime, timedelta
 from functools import lru_cache
 from typing import Any, Dict, List, Optional, Tuple
+from flask import Markup
+import math
 
 from py.db import get_conn
 
@@ -30,6 +32,72 @@ def to_int(value: Any, default: int = 0) -> int:
         return int(value)
     except (TypeError, ValueError):
         return default
+
+def format_age(days, t):
+    if days < 60:
+        unit = t['day'] if days == 1 else t['days']
+        return f"{days} {unit}"
+    elif days < 365:
+        months = days // 30
+        remaining_days = days % 30
+        output = f"{months} {t['month'] if months == 1 else t['months']}"
+        if remaining_days > 0:
+            output += f" {remaining_days} {t['day'] if remaining_days == 1 else t['days']}"
+        return output
+    else:
+        years = days // 365
+        remaining_days = days % 365
+        months = remaining_days // 30
+        remaining_days = remaining_days % 30
+        output = f"{years} {t['year'] if years == 1 else t['years']}"
+        if months > 0:
+            output += f" {months} {t['month'] if months == 1 else t['months']}"
+        if remaining_days > 0 and months == 0:
+            output += f" {remaining_days} {t['day'] if remaining_days == 1 else t['days']}"
+        return output
+
+def age_badge(label, days, t):
+    return Markup(
+        f'<span class="badge bg-success ms-2">{label}: {format_age(days, t)}</span>'
+    )
+
+def size_badge(value, unit, age_label, age_days, t):
+    size = int(value) if value == int(value) else value
+    return Markup(
+        f'<span class="badge bg-success ms-2">{size}{unit} '
+        f'<small>({age_label}: {format_age(age_days, t)})</small></span>'
+    )
+
+def overdue_badge(t):
+    return Markup(
+        f'<span class="badge bg-danger ms-2">{t["Overdue"]}</span>'
+    )
+
+def anytime_soon_badge(days_left, progress, t):
+    progress = max(0, min(progress, 100))
+    gradient = (
+        "bg-success" if progress < 33 else
+        "bg-warning" if progress < 66 else
+        "bg-danger"
+    )
+    return Markup(
+        f'<span class="badge bg-warning text-dark ms-2 position-relative">'
+        f'{t["Anytime soon"]} <small>({format_age(days_left, t)})</small>'
+        f'<div class="progress position-absolute bottom-0 start-0" '
+        f'style="height: 4px; width: 100%; border-radius: 0 0 0.2rem 0.2rem;">'
+        f'<div class="progress-bar {gradient}" style="width: {progress}%"></div>'
+        f'</div></span>'
+    )
+
+def countdown_badge(days_left, t):
+    return Markup(
+        f'<span class="badge bg-info text-dark ms-2">{format_age(days_left, t)} {t["left"]}</span>'
+    )
+
+def done_badge(t):
+    return Markup(
+        f'<span class="badge bg-secondary ms-2">{t["Done"]}</span>'
+    )
 
 
 ###############################################################################

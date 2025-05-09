@@ -93,21 +93,17 @@
                       {% set max_date = badge_start | dateadd(days=max_days) %}
                       
                       {% if now_date > max_date %}
-                        {% set summary = summary ~ ' <span class="badge bg-danger ms-2">' ~ t['Overdue'] ~ '</span>' %}
+                        {% set summary = summary ~ overdue_badge(t) %}
                       {% elif now_date >= min_date %}
                         {% set days_passed = (now_date - min_date).days %}
                         {% set total_window = (max_date - min_date).days %}
                         {% set days_left = (max_date - now_date).days %}
                         {% set progress = (days_passed / total_window * 100)|round|int %}
                         {% set gradient_class = "bg-success" if progress < 33 else "bg-warning" if progress < 66 else "bg-danger" %}
-                        {% set summary = summary ~ ' <span class="badge bg-warning text-dark ms-2 position-relative">' ~ 
-                                          t['Anytime soon'] ~ ' <small>(' ~ days_left ~ ' ' ~ t['days'] ~ ')</small>' ~
-                                          '<div class="progress position-absolute bottom-0 start-0" style="height: 4px; width: 100%; border-radius: 0 0 0.2rem 0.2rem;">' ~
-                                          '<div class="progress-bar ' ~ gradient_class ~ '" style="width: ' ~ progress ~ '%"></div>' ~
-                                          '</div></span>' %}
+                        {% set summary = summary ~ anytime_soon_badge(days_left, progress, t) %}
                       {% else %}
                         {% set days_left = (min_date - now_date).days %}
-                        {% set summary = summary ~ ' <span class="badge bg-info text-dark ms-2">' ~ days_left|string ~ ' ' ~ t['days'] ~ ' ' ~ t['left'] ~ '</span>' %}
+                        {% set summary = summary ~ countdown_badge(days_left, t) %}
                       {% endif %}
                   
                     {% elif badge_action in ['soak', 'strat'] %}
@@ -115,10 +111,10 @@
                       {% set duration_days = duration_to_days(val, unit) %}
                       {% set end_date = badge_start | dateadd(days=duration_days) %}
                       {% if now_date >= end_date %}
-                        {% set summary = summary ~ ' <span class="badge bg-secondary ms-2">' ~ t['Done'] ~ '</span>' %}
+                        {% set summary = summary ~ done_badge(t) %}
                       {% else %}
                         {% set days_left = (end_date - now_date).days %}
-                        {% set summary = summary ~ ' <span class="badge bg-info text-dark ms-2">' ~ days_left|string ~ ' ' ~ t['days'] ~ ' ' ~ t['left'] ~ '</span>' %}
+                        {% set summary = summary ~ countdown_badge(days_left, t) %}
                       {% endif %}
                   
                     {% elif badge_action == 'sprout' %}
@@ -137,8 +133,7 @@
                                       size_display ~ size_unit ~ 
                                       ' <small>(' ~ days_since ~ ' ' ~ (t['days ago'] if 'days ago' in t else 'days ago') ~ ')</small></span>' %}
                       {% else %}
-                        {% set summary = summary ~ ' <span class="badge bg-success ms-2">' ~ 
-                                      (t['Age'] if 'Age' in t else 'Age') ~ ': ' ~ age_days ~ ' ' ~ t['days'] ~ '</span>' %}
+                        {% set summary = summary ~ age_badge(t['Age'] if 'Age' in t else 'Age', age_days, t) %}
                       {% endif %}
                   
                     {% elif badge_action == 'measure' %}
@@ -151,9 +146,7 @@
                       {% if sprout_event %}
                         {% set sprouted_date = sprout_event.start|todate %}
                         {% set age_days = (now_date - sprouted_date).days %}
-                        {% set summary = summary ~ ' <span class="badge bg-success ms-2">' ~ 
-                                      size_display ~ size_unit ~ 
-                                      ' <small>(' ~ (t['Age'] if 'Age' in t else 'Age') ~ ': ' ~ age_days ~ ' ' ~ t['days'] ~ ')</small></span>' %}
+                        {% set summary = summary ~ size_badge(size_display, size_unit, t['Age'] if 'Age' in t else 'Age', age_days, t) %}
                       {% else %}
                         {% set summary = summary ~ ' <span class="badge bg-success ms-2">' ~ 
                                       size_display ~ size_unit ~ '</span>' %}

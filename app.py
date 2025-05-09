@@ -24,6 +24,7 @@ from flask import (
     abort,
     g,
     flash,
+    Markup
 )
 from werkzeug.security import check_password_hash
 
@@ -56,7 +57,15 @@ from py.helpers import (
     get_translations,
     duration_to_days,
     dateadd,
-    get_event_specs
+    get_event_specs,
+    format_age,
+    age_badge,
+    size_badge,
+    overdue_badge,
+    anytime_soon_badge,
+    countdown_badge,
+    done_badge
+
 )
 from py.processing import sort_key, get_unique_locations
 
@@ -83,6 +92,16 @@ AVAILABLE_LANGS = ["en", "fr", "ru"]
 def todate(value):
     return date.fromisoformat(value) if isinstance(value, str) else value
 
+app.jinja_env.globals.update(
+    format_age=format_age,
+    age_badge=age_badge,
+    size_badge=size_badge,
+    overdue_badge=overdue_badge,
+    anytime_soon_badge=anytime_soon_badge,
+    countdown_badge=countdown_badge,
+    done_badge=done_badge,
+)
+# 
 
 ###############################################################################
 # Request/Session helpers
