@@ -189,7 +189,7 @@
                               <span class="timeline-icon {{ evspec.color_class }}"><i class="fas {{ evspec.icon }}"></i></span>
                               <div>
                                 {% if h.action == 'custom' %}
-                                  {% set label = current_event.custom_label or '?' %}
+                                  {% set label = h.custom_label or '?' %}
                                     {% set label_text = t['{event} on'].replace('{event}', label) if '{event} on' in t else label ~ ' on' %}
                                     <strong>{{ label_text }}</strong> – {{ h.start }}
                                     {% if h.custom_note %}
