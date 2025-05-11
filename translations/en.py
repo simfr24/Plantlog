@@ -6,6 +6,7 @@ translations = {
     # ────────── navigation / layout ──────────
     "Plant Tracker": "Plant Tracker",
     "My plants": "My plants",
+    "{name}'s plants": "{name}'s plants",
     "Add plant": "Add plant",
     "Add stage": "Add stage",
     "Add stage for": "Add stage for",

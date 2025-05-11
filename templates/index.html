@@ -1,8 +1,24 @@
 {% extends "base.html" %}
-{% block title %}Plantlog - {{ t['Plant Tracker'] }}{% endblock %}
+{% block title %}
+  {% if public_view %}
+    Plantlog – {{ owner.username }}
+  {% else %}
+    Plantlog – {{ t['Plant Tracker'] }}
+  {% endif %}
+{% endblock %}
 
 {% block content %}
-<h1 class="mb-4">{{ t['My plants'] }}</h1>
+
+<h1 class="mb-4">
+  {% if public_view %}
+    <i class="fas fa-user me-2 text-secondary"></i>
+    {{ t["{name}'s plants"].format(name=owner.username) }}
+  {% else %}
+    {{ t['My plants'] }}
+  {% endif %}
+</h1>
+
+
 
 {# Friendly, human-readable labels for each action -------------------- #}
 {% set human_names = {
@@ -245,17 +261,20 @@
                                   {% endif %}
                                 {% endif %}
                               </div>
+                              {% if not public_view %}
                               <a href="{{ url_for('edit_stage', action_id=h.id, lang=lang) }}" class="text-secondary ms-2 align-top" title="{{ t['Edit stage'] }}">
                                 <i class="fas fa-edit" style="font-size:0.9rem;"></i>
                               </a>
+                              {% endif %}
                             </li>
                           {% endfor %}
                         </ul>
-
+                        {% if not public_view %}
                         <div class="d-flex gap-2 mt-3">
                           <a href="{{ url_for('edit_plant', idx=idx, lang=lang) }}" class="btn btn-outline-secondary btn-sm">{{ t['Edit plant'] }}</a>
                           <a href="{{ url_for('add_stage', idx=idx, lang=lang) }}" class="btn btn-outline-primary btn-sm">{{ t['Add stage'] }}</a>
                         </div>
+                        {% endif %}
                       </div>
                     </div>
                   </div>

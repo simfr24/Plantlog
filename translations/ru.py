@@ -6,6 +6,7 @@ translations = {
     # ────────── navigation / layout ──────────
     "Plant Tracker": "Журнал растений",
     "My plants": "Мои растения",
+    "{name}'s plants": "Растения {name}",
     "Add plant": "Добавить растение",
     "Add stage": "Добавить этап",
     "Add stage for": "Добавить этап для",
