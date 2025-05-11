@@ -140,5 +140,54 @@ translations = {
     "Are you sure you want to delete this stage?": "Êtes-vous sûr de vouloir supprimer cette étape ?",
     "Delete": "Supprimer",
     "Cancel": "Annuler",
-    "Close": "Fermer"
+    "Close": "Fermer",
+
+    # ─────────────── help page ───────────────
+    "Help": "Aide",
+    "Overview": "Aperçu",
+    
+    # Aide – contenu enrichi
+    "Help overview detailed": "Bienvenue dans Plantlog ! Cette application vous permet de suivre l'évolution de vos plantes, étape par étape. Vous pouvez enregistrer des événements clés, visualiser les changements d'état, et garder un historique détaillé de chaque plante.",
+
+    # États des plantes
+    "Help state Sown detailed": "L'état 'Semé' indique que la graine a été placée dans un substrat, comme du terreau ou du coton humide, dans l'espoir de la voir germer.",
+    "Help state Soaking detailed": "Le trempage est souvent utilisé pour ramollir l'enveloppe des graines dures avant le semis. Cela peut durer de quelques heures à plusieurs jours.",
+    "Help state Stratifying detailed": "La stratification froide imite l’hiver naturel : certaines graines ont besoin d’une période de froid et d’humidité pour lever leur dormance. Cette étape est souvent effectuée au réfrigérateur.",
+    "Help state Growing detailed": "Lorsque la graine a germé et qu’un plant se développe, la plante est en phase de croissance. Elle produit ses premières vraies feuilles.",
+    "Help state Flowering detailed": "La plante a commencé à fleurir. C’est une étape cruciale pour les espèces cultivées pour leurs fleurs ou leurs fruits.",
+    "Help state Fruiting detailed": "La plante porte des fruits, signe qu'elle a été fécondée avec succès après la floraison.",
+    "Help state Dead detailed": "L’état 'Mort' signifie que la plante est morte ou qu’aucune croissance n’a été observée après un long moment.",
+
+    # Événements des plantes
+    "Help event Sow detailed": "Enregistrez le moment où vous semez une graine. Vous pouvez aussi estimer combien de temps elle mettra à germer (durée min et max).",
+    "Help event Soak detailed": "Notez le début du trempage. Cela aide pour les espèces qui germent mieux après un contact prolongé avec l’eau.",
+    "Help event Strat detailed": "Indiquez quand commence la stratification. Vous pouvez spécifier la durée prévue (ex. 6 semaines à 4°C).",
+    "Help event Plant detailed": "Utilisez cet événement pour signaler qu’un semis ou une bouture a été planté(e) dans un pot ou en pleine terre.",
+    "Help event Sprout detailed": "Notez quand vous avez observé la germination, c’est-à-dire la sortie de la racine ou de la tige.",
+    "Help event Flower detailed": "Enregistrez l’apparition des premières fleurs visibles.",
+    "Help event Fruit detailed": "Ajoutez un événement lorsque des fruits se forment sur la plante.",
+    "Help event Measurement detailed": "Permet de noter la taille actuelle de la plante (en cm, mm ou m).",
+    "Help event Custom Event detailed": "Un événement libre que vous pouvez nommer et commenter, comme 'Rempotage', 'Maladie', etc.",
+    "Help event Death detailed": "Signale que la plante est morte (flétrie, moisie, desséchée…).",
+
+    # Transitions d'état
+    "Help transitions description detailed": "Chaque événement peut entraîner un changement d’état de la plante. Voici comment cela fonctionne :",
+    "Help transition Sow detailed": "Après un semis, la plante passe à l’état 'Semé'.",
+    "Help transition Soak detailed": "Un trempage place la graine dans l’état 'Trempage'.",
+    "Help transition Strat detailed": "Une stratification place la graine dans l’état 'Stratification'.",
+    "Help transition Plant detailed": "L’événement 'Plantation' passe la plante à l’état 'En croissance'.",
+    "Help transition Sprout detailed": "La germination fait entrer la plante dans l’état 'En croissance'.",
+    "Help transition Flower detailed": "Le début de floraison est enregistré, la plante reste à l’état 'En croissance'.",
+    "Help transition Fruit detailed": "L’apparition de fruits est notée, la plante reste à l’état 'En croissance'.",
+    "Help transition Measurement detailed": "Une mesure n’affecte pas l’état de la plante.",
+    "Help transition Custom Event detailed": "Les événements personnalisés ne changent pas l’état.",
+    "Help transition Death detailed": "La plante passe à l’état 'Mort'.",
+
+    "Plant States": "États de la plante",
+    "Plant Events": "Événements de la plante",
+    "How States Change": "Comment les états évoluent",
+
+    # Footer
+    "Back to dashboard": "Retour au tableau de bord",
+
 }

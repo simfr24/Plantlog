@@ -140,5 +140,54 @@ translations = {
     "Are you sure you want to delete this stage?": "Are you sure you want to delete this stage?",
     "Delete": "Delete",
     "Cancel": "Cancel",
-    "Close": "Close"
+    "Close": "Close",
+
+    # ─────────────── help page ───────────────
+    "Help": "Help",
+    "Overview": "Overview",
+    
+    # Help – enriched content
+    "Help overview detailed": "Welcome to Plantlog! This app helps you track your plants’ development step by step. You can log key events, view state changes, and maintain a detailed history for each plant.",
+
+    # Plant states
+    "Help state Sown detailed": "The 'Sown' state means the seed has been placed in a substrate like soil or moist cotton in hopes it will germinate.",
+    "Help state Soaking detailed": "Soaking is often used to soften hard seed coats before sowing. It can last from a few hours to several days.",
+    "Help state Stratifying detailed": "Cold stratification mimics winter: some seeds need a period of cold and moisture to break dormancy. This is often done in a refrigerator.",
+    "Help state Growing detailed": "Once the seed has germinated and a seedling begins to grow, the plant enters the growth stage, producing its first true leaves.",
+    "Help state Flowering detailed": "The plant has started flowering. This is a key stage for species grown for their flowers or fruit.",
+    "Help state Fruiting detailed": "The plant is bearing fruit, indicating successful pollination after flowering.",
+    "Help state Dead detailed": "The 'Dead' state means the plant has died or no growth has been observed for a long time.",
+
+    # Plant events
+    "Help event Sow detailed": "Log the moment you sow a seed. You can also estimate how long it will take to germinate (minimum and maximum duration).",
+    "Help event Soak detailed": "Record the start of soaking. This is useful for species that germinate better after prolonged contact with water.",
+    "Help event Strat detailed": "Indicate when stratification begins. You can specify the expected duration (e.g. 6 weeks at 4°C).",
+    "Help event Plant detailed": "Use this event to note when a seedling or cutting is planted into a pot or the ground.",
+    "Help event Sprout detailed": "Note when germination is observed—when the root or shoot emerges.",
+    "Help event Flower detailed": "Log when the first visible flowers appear.",
+    "Help event Fruit detailed": "Add an event when fruits start forming on the plant.",
+    "Help event Measurement detailed": "Used to log the current size of the plant (in cm, mm, or m).",
+    "Help event Custom Event detailed": "A free-form event you can name and describe, such as 'Repotting', 'Disease', etc.",
+    "Help event Death detailed": "Marks that the plant has died (wilted, rotted, dried out…).",
+
+    # State transitions
+    "Help transitions description detailed": "Each event can cause a change in the plant's state. Here's how it works:",
+    "Help transition Sow detailed": "After sowing, the plant enters the 'Sown' state.",
+    "Help transition Soak detailed": "Soaking puts the seed into the 'Soaking' state.",
+    "Help transition Strat detailed": "Stratification sets the seed to the 'Stratifying' state.",
+    "Help transition Plant detailed": "The 'Plant' event sets the plant to 'Growing'.",
+    "Help transition Sprout detailed": "Germination moves the plant into the 'Growing' state.",
+    "Help transition Flower detailed": "The start of flowering is recorded, the plant remains in the 'Growing' state.",
+    "Help transition Fruit detailed": "The appearance of fruits is noted, the plant stays in the 'Growing' state.",
+    "Help transition Measurement detailed": "A measurement doesn’t change the plant’s state.",
+    "Help transition Custom Event detailed": "Custom events do not change the state.",
+    "Help transition Death detailed": "The plant transitions to the 'Dead' state.",
+
+    "Plant States": "Plant States",
+    "Plant Events": "Plant Events",
+    "How States Change": "How States Change",
+
+    # Footer
+    "Back to dashboard": "Back to Dashboard",
+    
 }

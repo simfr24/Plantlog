@@ -1,0 +1,341 @@
+{% extends "base.html" %}
+{% block title %}{{ t['Help'] }} - Plantlog{% endblock %}
+{% block content %}
+<div class="container py-5">
+    <h1 class="mb-4 text-center">{{ t['Help'] }} <i class="fas fa-question-circle"></i></h1>
+    
+    <!-- Overview Section -->
+    <div class="card mb-5 shadow-sm">
+        <div class="card-body">
+            <h2 class="card-title">{{ t['Overview'] }}</h2>
+            <p class="card-text">{{ t['Help overview detailed'] }}</p>
+        </div>
+    </div>
+    
+    <!-- Plant States Section -->
+    <h2 class="mb-4">{{ t['Plant States'] }}</h2>
+    <div class="row mb-5">
+        <!-- Sown State -->
+        <div class="col-md-6 col-lg-4 mb-4">
+            <div class="card h-100 shadow-sm border-success">
+                <div class="card-header bg-success text-white">
+                    <i class="fas fa-seedling me-2"></i>{{ t['Sown'] }}
+                </div>
+                <div class="card-body">
+                    <p class="card-text">{{ t['Help state Sown detailed'] }}</p>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Soaking State -->
+        <div class="col-md-6 col-lg-4 mb-4">
+            <div class="card h-100 shadow-sm border-primary">
+                <div class="card-header bg-primary text-white">
+                    <i class="fas fa-tint me-2"></i>{{ t['Soaking'] }}
+                </div>
+                <div class="card-body">
+                    <p class="card-text">{{ t['Help state Soaking detailed'] }}</p>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Stratifying State -->
+        <div class="col-md-6 col-lg-4 mb-4">
+            <div class="card h-100 shadow-sm border-info">
+                <div class="card-header bg-info text-white">
+                    <i class="fas fa-snowflake me-2"></i>{{ t['Stratifying'] }}
+                </div>
+                <div class="card-body">
+                    <p class="card-text">{{ t['Help state Stratifying detailed'] }}</p>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Growing State -->
+        <div class="col-md-6 col-lg-4 mb-4">
+            <div class="card h-100 shadow-sm border-success">
+                <div class="card-header bg-success text-white">
+                    <i class="fas fa-leaf me-2"></i>{{ t['Growing'] }}
+                </div>
+                <div class="card-body">
+                    <p class="card-text">{{ t['Help state Growing detailed'] }}</p>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Dead State -->
+        <div class="col-md-6 col-lg-4 mb-4">
+            <div class="card h-100 shadow-sm border-dark">
+                <div class="card-header bg-dark text-white">
+                    <i class="fas fa-skull me-2"></i>{{ t['Dead'] }}
+                </div>
+                <div class="card-body">
+                    <p class="card-text">{{ t['Help state Dead detailed'] }}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Plant Events Section -->
+    <h2 class="mb-4">{{ t['Plant Events'] }}</h2>
+    <div class="row mb-5">
+        <!-- Sow Event -->
+        <div class="col-md-6 col-lg-4 mb-4">
+            <div class="card h-100 shadow-sm">
+                <div class="card-header text-white" style="background-color: #28a745;">
+                    <i class="fas fa-seedling me-2"></i>{{ t['Sow'] }}
+                </div>
+                <div class="card-body">
+                    <p class="card-text">{{ t['Help event Sow detailed'] }}</p>
+                </div>
+                <div class="card-footer bg-light text-dark border-top small">
+                    {{ t['Help transition Sow detailed'] }}
+                </div>
+            </div>
+        </div>
+        
+        <!-- Soak Event -->
+        <div class="col-md-6 col-lg-4 mb-4">
+            <div class="card h-100 shadow-sm">
+                <div class="card-header text-white" style="background-color: #007bff;">
+                    <i class="fas fa-tint me-2"></i>{{ t['Soak'] }}
+                </div>
+                <div class="card-body">
+                    <p class="card-text">{{ t['Help event Soak detailed'] }}</p>
+                </div>
+                <div class="card-footer bg-light text-dark border-top small">
+                    {{ t['Help transition Soak detailed'] }}
+                </div>
+            </div>
+        </div>
+        
+        <!-- Strat Event -->
+        <div class="col-md-6 col-lg-4 mb-4">
+            <div class="card h-100 shadow-sm">
+                <div class="card-header text-white" style="background-color: #17a2b8;">
+                    <i class="fas fa-snowflake me-2"></i>{{ t['Strat'] }}
+                </div>
+                <div class="card-body">
+                    <p class="card-text">{{ t['Help event Strat detailed'] }}</p>
+                </div>
+                <div class="card-footer bg-light text-dark border-top small">
+                    {{ t['Help transition Strat detailed'] }}
+                </div>
+            </div>
+        </div>
+        
+        <!-- Plant Event -->
+        <div class="col-md-6 col-lg-4 mb-4">
+            <div class="card h-100 shadow-sm">
+                <div class="card-header text-white" style="background-color: #28a745;">
+                    <i class="fas fa-tree me-2"></i>{{ t['Plant'] }}
+                </div>
+                <div class="card-body">
+                    <p class="card-text">{{ t['Help event Plant detailed'] }}</p>
+                </div>
+                <div class="card-footer bg-light text-dark border-top small">
+                    {{ t['Help transition Plant detailed'] }}
+                </div>
+            </div>
+        </div>
+        
+        <!-- Sprout Event -->
+        <div class="col-md-6 col-lg-4 mb-4">
+            <div class="card h-100 shadow-sm">
+                <div class="card-header text-white" style="background-color: #28a745;">
+                    <i class="fas fa-leaf me-2"></i>{{ t['Sprout'] }}
+                </div>
+                <div class="card-body">
+                    <p class="card-text">{{ t['Help event Sprout detailed'] }}</p>
+                </div>
+                <div class="card-footer bg-light text-dark border-top small">
+                    {{ t['Help transition Sprout detailed'] }}
+                </div>
+            </div>
+        </div>
+        
+        <!-- Flower Event -->
+        <div class="col-md-6 col-lg-4 mb-4">
+            <div class="card h-100 shadow-sm">
+                <div class="card-header" style="background-color: #ffc107;">
+                    <i class="fas fa-fan me-2"></i>{{ t['Flower'] }}
+                </div>
+                <div class="card-body">
+                    <p class="card-text">{{ t['Help event Flower detailed'] }}</p>
+                </div>
+                <div class="card-footer bg-light text-dark border-top small">
+                    {{ t['Help transition Flower detailed'] }}
+                </div>
+            </div>
+        </div>
+        
+        <!-- Fruit Event -->
+        <div class="col-md-6 col-lg-4 mb-4">
+            <div class="card h-100 shadow-sm">
+                <div class="card-header text-white" style="background-color: #dc3545;">
+                    <i class="fas fa-apple-whole me-2"></i>{{ t['Fruit'] }}
+                </div>
+                <div class="card-body">
+                    <p class="card-text">{{ t['Help event Fruit detailed'] }}</p>
+                </div>
+                <div class="card-footer bg-light text-dark border-top small">
+                    {{ t['Help transition Fruit detailed'] }}
+                </div>
+            </div>
+        </div>
+        
+        <!-- Measurement Event -->
+        <div class="col-md-6 col-lg-4 mb-4">
+            <div class="card h-100 shadow-sm">
+                <div class="card-header text-white" style="background-color: #6c757d;">
+                    <i class="fas fa-ruler me-2"></i>{{ t['Measurement'] }}
+                </div>
+                <div class="card-body">
+                    <p class="card-text">{{ t['Help event Measurement detailed'] }}</p>
+                </div>
+                <div class="card-footer bg-light text-dark border-top small">
+                    {{ t['Help transition Measurement detailed'] }}
+                </div>
+            </div>
+        </div>
+        
+        <!-- Custom Event -->
+        <div class="col-md-6 col-lg-4 mb-4">
+            <div class="card h-100 shadow-sm">
+                <div class="card-header text-white" style="background-color: #6c757d;">
+                    <i class="fas fa-star me-2"></i>{{ t['Custom Event'] }}
+                </div>
+                <div class="card-body">
+                    <p class="card-text">{{ t['Help event Custom Event detailed'] }}</p>
+                </div>
+                <div class="card-footer bg-light text-dark border-top small">
+                    {{ t['Help transition Custom Event detailed'] }}
+                </div>
+            </div>
+        </div>
+        
+        <!-- Death Event -->
+        <div class="col-md-6 col-lg-4 mb-4">
+            <div class="card h-100 shadow-sm">
+                <div class="card-header text-white" style="background-color: #343a40;">
+                    <i class="fas fa-skull me-2"></i>{{ t['Death'] }}
+                </div>
+                <div class="card-body">
+                    <p class="card-text">{{ t['Help event Death detailed'] }}</p>
+                </div>
+                <div class="card-footer bg-light text-dark border-top small">
+                    {{ t['Help transition Death detailed'] }}
+                </div>
+            </div>
+        </div>
+    </div>
+    
+     <div class="card mb-5 shadow-sm">
+        <div class="card-header bg-light">
+            <h2 class="mb-0">{{ t['How States Change'] }}</h2>
+        </div>
+        <div class="card-body">
+            <p>{{ t['Help transitions description detailed'] }}</p>
+
+            <div class="state-flow-diagram mt-4">
+                <!-- Increase overall canvas to give arrows breathing room -->
+                <svg viewBox="0 0 1400 600" class="w-100" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif">
+                    <!-- ===== Definitions ===== -->
+                    <defs>
+                        <marker id="arrowhead" markerWidth="12" markerHeight="8" refX="10" refY="4" orient="auto">
+                            <polygon points="0 0, 12 4, 0 8" fill="currentColor" />
+                        </marker>
+                        <style><![CDATA[
+                            .fa-icon { font-family: "Font Awesome 6 Free"; font-weight: 900; }
+                        ]]></style>
+                    </defs>
+    
+                    <!-- ===== States ===== -->
+                    <!-- Soaking -->
+                    <circle cx="280" cy="150" r="60" fill="#007bff" opacity="0.9" />
+                    <text x="280" y="150" dy="9" text-anchor="middle" class="fa-icon" fill="white" font-size="30">&#xf043;</text>
+                    <text x="280" y="185" text-anchor="middle" fill="white" font-weight="bold" font-size="13">{{ t['Soaking'] }}</text>
+    
+                    <!-- Stratifying -->
+                    <circle cx="280" cy="380" r="60" fill="#17a2b8" opacity="0.9" />
+                    <text x="280" y="380" dy="9" text-anchor="middle" class="fa-icon" fill="white" font-size="30">&#xf2dc;</text>
+                    <text x="280" y="415" text-anchor="middle" fill="white" font-weight="bold" font-size="13">{{ t['Stratifying'] }}</text>
+    
+                    <!-- Sown -->
+                    <circle cx="625" cy="265" r="60" fill="#28a745" opacity="0.9" />
+                    <text x="625" y="265" dy="9" text-anchor="middle" class="fa-icon" fill="white" font-size="30">&#xf4d8;</text>
+                    <text x="625" y="300" text-anchor="middle" fill="white" font-weight="bold" font-size="13">{{ t['Sown'] }}</text>
+    
+                    <!-- Growing -->
+                    <circle cx="935" cy="265" r="60" fill="#28a745" opacity="0.9" />
+                    <text x="935" y="265" dy="9" text-anchor="middle" class="fa-icon" fill="white" font-size="30">&#xf06c;</text>
+                    <text x="935" y="300" text-anchor="middle" fill="white" font-weight="bold" font-size="13">{{ t['Growing'] }}</text>
+    
+                    <!-- Dead -->
+                    <circle cx="1205" cy="430" r="60" fill="#343a40" opacity="0.95" />
+                    <text x="1205" y="430" dy="9" text-anchor="middle" class="fa-icon" fill="white" font-size="30">&#xf54c;</text>
+                    <text x="1205" y="465" text-anchor="middle" fill="white" font-weight="bold" font-size="13">{{ t['Dead'] }}</text>
+    
+                    <!-- ===== Transitions / Events ===== -->
+                    <!-- 1. Soak (external) -->
+                    <path d="M90 150 L215 150" stroke="#007bff" stroke-width="3" fill="none" marker-end="url(#arrowhead)" />
+                    <text x="165" y="138" text-anchor="end" fill="#007bff" font-size="13"><tspan class="fa-icon" font-size="13">&#xf043;</tspan> {{ t['Soak'] }}</text>
+    
+                    <!-- 2. Strat (external) -->
+                    <path d="M90 380 L215 380" stroke="#17a2b8" stroke-width="3" fill="none" marker-end="url(#arrowhead)" />
+                    <text x="165" y="368" text-anchor="end" fill="#17a2b8" font-size="13"><tspan class="fa-icon" font-size="13">&#xf2dc;</tspan> {{ t['Strat'] }}</text>
+    
+                    <!-- 3. Sow (Soaking -> Sown)  (gentle sweeping arc) -->
+                    <path d="M345 150 C430 190 530 235 558 255" stroke="#28a745" stroke-width="3" fill="none" marker-end="url(#arrowhead)" />
+                    <text x="465" y="185" text-anchor="middle" fill="#28a745" font-size="13"><tspan class="fa-icon" font-size="13">&#xf4d8;</tspan> {{ t['Sow'] }}</text>
+    
+                    <!-- 4. Sow (Stratifying -> Sown)  (symmetrical sweeping arc) -->
+                    <path d="M345 380 C430 340 530 295 558 275" stroke="#28a745" stroke-width="3" fill="none" marker-end="url(#arrowhead)" />
+                    <text x="465" y="355" text-anchor="middle" fill="#28a745" font-size="13"><tspan class="fa-icon" font-size="13">&#xf4d8;</tspan> {{ t['Sow'] }}</text>
+    
+                    <!-- 5. Sprout (Sown -> Growing) (short, straight) -->
+                    <path d="M685 265 L870 265" stroke="#28a745" stroke-width="3" fill="none" marker-end="url(#arrowhead)" />
+                    <text x="775" y="250" text-anchor="middle" fill="#28a745" font-size="13"><tspan class="fa-icon" font-size="13">&#xf06c;</tspan> {{ t['Sprout'] }}</text>
+    
+                    <!-- 6. Plant (external – graceful drop) -->
+                    <path d="M930 60 L930 200" stroke="#28a745" stroke-width="3" fill="none" marker-end="url(#arrowhead)" />
+                    <text x="940" y="75" text-anchor="start" fill="#28a745" font-size="13"><tspan class="fa-icon" font-size="13">&#xf1bb;</tspan> {{ t['Plant'] }}</text>
+    
+                    <!-- 7. Death (Sown -> Dead)  (long sweeping lower arc) -->
+                    <path d="M620 325 C620 450 940 500 1145 450" stroke="#343a40" stroke-width="3" fill="none" marker-end="url(#arrowhead)" />
+                    <text x="880" y="490" text-anchor="middle" fill="#343a40" font-size="13"><tspan class="fa-icon" font-size="13">&#xf54c;</tspan> {{ t['Death'] }}</text>
+    
+                    <!-- 8. Death (Growing -> Dead)  (short downward curve) -->
+                    <path d="M980 315 C1045 360 1130 350 1160 390" stroke="#343a40" stroke-width="3" fill="none" marker-end="url(#arrowhead)" />
+                    <text x="1060" y="330" text-anchor="middle" fill="#343a40" font-size="13"><tspan class="fa-icon" font-size="13">&#xf54c;</tspan> {{ t['Death'] }}</text>
+                </svg>
+            </div>
+        </div>
+    </div>    
+    
+    <!-- Back to Dashboard Button -->
+    <div class="text-center">
+        <a href="{{ url_for('index') }}" class="btn btn-primary btn-lg">
+            <i class="fas fa-home me-2"></i>{{ t['Back to dashboard'] }}
+        </a>
+    </div>
+</div>
+{% endblock %}
+
+<style>
+    .card-header {
+        font-weight: bold;
+    }
+    .card {
+        transition: transform 0.3s ease;
+    }
+    .card:hover {
+        transform: translateY(-5px);
+    }
+    .state-flow-diagram {
+        overflow-x: auto;
+    }
+    .card-footer {
+        font-size: 0.8rem !important;
+    }
+</style>

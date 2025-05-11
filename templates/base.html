@@ -81,6 +81,12 @@
               <li><a class="dropdown-item" href="{{ request.path }}?lang=ru">Русский</a></li>
             </ul>
           </li>
+          <li class="nav-item">
+            <a class="nav-link btn btn-outline-secondary {% if request.endpoint=='help_page' %}active{% endif %}"
+               href="{{ url_for('help_page') }}">
+              <i class="fas fa-question-circle"></i> {{ t['Help'] }}
+            </a>
+          </li>
 
           {% if g.user %}
             <li class="nav-item dropdown">

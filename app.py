@@ -403,6 +403,11 @@ def logout():
     flash(t["Logged out"], "info")
     return redirect(url_for("login"))
 
+@app.route('/help')
+@login_required
+def help_page():
+    return render_template('help.html', lang=g.lang, t=get_translations(g.lang))
+
 
 ###############################################################################
 # Static helpers
