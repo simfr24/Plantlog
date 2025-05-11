@@ -129,5 +129,16 @@ translations = {
     "ID": "ID",
     "Username": "Имя пользователя",
     "Plants": "Растения",
-    "Public page": "Публичная страница"
+    "Public page": "Публичная страница",
+    "Created": "Создан",
+    "Last login": "Последний вход",
+
+    # ─────────────── confirm modals ───────────────
+    "Confirm delete plant": "Подтвердите удаление растения",
+    "Are you sure you want to delete this plant?": "Вы уверены, что хотите удалить это растение?",
+    "Confirm delete stage": "Подтвердите удаление стадии",
+    "Are you sure you want to delete this stage?": "Вы уверены, что хотите удалить эту стадию?",
+    "Delete": "Удалить",
+    "Cancel": "Отмена",
+    "Close": "Закрыть"
 }

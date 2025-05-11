@@ -131,5 +131,14 @@ translations = {
     "Plants": "Plantes",
     "Public page": "Page publique",
     "Created": "Créé le",
-    "Last login": "Dernière connexion"
+    "Last login": "Dernière connexion",
+
+    # ─────────────── confirm modals ───────────────
+    "Confirm delete plant": "Confirmer la suppression de la plante",
+    "Are you sure you want to delete this plant?": "Êtes-vous sûr de vouloir supprimer cette plante ?",
+    "Confirm delete stage": "Confirmer la suppression de l’étape",
+    "Are you sure you want to delete this stage?": "Êtes-vous sûr de vouloir supprimer cette étape ?",
+    "Delete": "Supprimer",
+    "Cancel": "Annuler",
+    "Close": "Fermer"
 }

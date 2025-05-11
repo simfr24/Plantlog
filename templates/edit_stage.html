@@ -1,6 +1,28 @@
 {% extends "base.html" %}
 {% block title %}{{ t['Edit stage'] }} - {{ form.common }}{% endblock %}
 {% block content %}
+
+<!-- Modal -->
+<div class="modal fade" id="confirmDeleteStageModal" tabindex="-1" aria-labelledby="confirmDeleteStageModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="confirmDeleteStageModalLabel">{{ t['Confirm delete stage'] }}</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{{ t['Close'] }}"></button>
+      </div>
+      <div class="modal-body">
+        {{ t['Are you sure you want to delete this stage?'] }}
+      </div>
+      <div class="modal-footer">
+        <form method="post" action="{{ url_for('delete_stage', action_id=action_id, lang=lang) }}">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{ t['Cancel'] }}</button>
+          <button type="submit" class="btn btn-danger">{{ t['Delete'] }}</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
   <div class="container py-4">
     <div class="d-flex align-items-center mb-4">
       <img src="{{ url_for('static', filename='logo.png') }}" alt="Plantlog" style="height:50px;" class="me-3">
@@ -22,11 +44,9 @@
             </button>
           </div>
         </form>
-        <form method="post" action="{{ url_for('delete_stage', action_id=action_id, lang=lang) }}" class="mt-3" onsubmit="return confirm('{{ t['Confirm delete stage'] }}');">
-          <button type="submit" class="btn btn-danger px-4">
-            <i class="fas fa-trash me-1"></i> {{ t['Delete stage'] }}
-          </button>
-        </form>
+        <button type="button" class="btn btn-danger px-4 mt-3" data-bs-toggle="modal" data-bs-target="#confirmDeleteStageModal">
+          <i class="fas fa-trash me-1"></i> {{ t['Delete stage'] }}
+        </button>
       </div>
     </div>
   </div>

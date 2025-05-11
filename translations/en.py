@@ -132,6 +132,13 @@ translations = {
     "Public page": "Public page",
     "Created": "Created",
     "Last login": "Last login",
-    "Created": "Создан",
-    "Last login": "Последний вход"
+
+    # ─────────────── confirm modals ───────────────
+    "Confirm delete plant": "Confirm delete plant",
+    "Are you sure you want to delete this plant?": "Are you sure you want to delete this plant?",
+    "Confirm delete stage": "Confirm delete stage",
+    "Are you sure you want to delete this stage?": "Are you sure you want to delete this stage?",
+    "Delete": "Delete",
+    "Cancel": "Cancel",
+    "Close": "Close"
 }
