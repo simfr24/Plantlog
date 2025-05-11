@@ -1,92 +1,47 @@
-# 🌱 Plantlog – Responsive Seed / Plant Tracker
+# 🌱 Plantlog – Track Your Plants
 
-**Plantlog** is a lightweight and mobile-first web app for tracking plant propagation stages — from soaking and stratification to sowing and sprouting. It features a clear timeline view, language switching (English / French), and a Bootstrap 5.3 interface with modern UX elements like off-canvas forms and icon-based stage selection.
-
----
-
-## ✨ Features
-
-- 📱 **Mobile‑first design** using Bootstrap 5.3
-- 🌐 **Multilingual UI** – English and French (toggle via dropdown)
-- 🪴 Track propagation stages: **Soak**, **Stratify**, **Sow**, **Sprout**
-- 🧾 **Collapsible plant timeline** with icons and status badges
-- 🖊️ **Off‑canvas form** for adding or editing plant entries
-- 📂 **Data stored in JSON** – easy to back up, export, or modify
+**Plantlog** is a multilingual web app that helps you keep track of your plants from seed to fruit — and everything in between. It's simple, mobile-friendly, and ideal for hobbyists and growers alike.
 
 ---
 
-## 🚀 Getting Started
+## ✨ What It Does
 
-### 1. Requirements
+- Record key stages in a plant’s life: **Soaking**, **Stratifying**, **Sowing**, **Sprouting**, **Flowering**, **Fruiting**, and more
+- View a clean timeline of each plant’s history
+- Add observations like measurements or custom notes
+- Share your plant list with a read-only link using `/u/<username>`
 
-- Python 3.8+
-- Flask (or any WSGI-compatible web server)
+---
 
-### 2. Installation
+## 🧑‍🌾 How to Use
 
-Clone the repo:
+1. **Create an account** – choose your language
+2. **Add a plant** – give it a name, species, and notes
+3. **Log events** – e.g. when you soaked seeds, saw sprouts, or measured growth
+4. **Check your dashboard** – get a timeline and the plant’s current state
+5. **Use the Help page** – if you’re unsure about a stage or terminology
 
-```bash
-git clone https://github.com/yourusername/plantlog.git
-cd plantlog
-```
+You can also visit other users’ public pages and view their plant timelines.
 
-Install dependencies:
+---
+
+## 🌐 Use It Online
+
+You can use Plantlog at:
+
+👉 [https://plantlog.fr](https://plantlog.fr)
+
+You're welcome to create an account and track your plants — just note that this public instance is offered as-is, with **no guarantee of data security or long-term availability**.
+---
+
+## 🚀 Running It
+
+Requires Python 3.8+ and Flask.
 
 ```bash
 pip install flask
-```
-
-Run the Flask app:
-
-```bash
 python app.py
-```
-
-Then visit:
-
-```
-http://localhost:5000
-```
-
----
-
-## 📝 Data Format
-
-Each plant and its propagation history are stored in a SQLite database with the following structure:
-
-### Plants Table
-- **`id`**: Unique identifier for each plant (primary key).
-- **`common`**: Common name of the plant (e.g., "Tomato").
-- **`latin`**: Latin name of the plant (e.g., "Solanum lycopersicum").
-- **`location`**: Optional field to specify where the plant is located (e.g., "Greenhouse").
-- **`notes`**: Additional notes about the plant.
-
-### Actions Table
-- **`id`**: Unique identifier for each action (primary key).
-- **`plant_id`**: Foreign key linking the action to a specific plant.
-- **`action`**: Type of action (e.g., "sow", "sprout").
-- **`start`**: Date the action starts (formatted as `YYYY-MM-DD`).
-- **`range_min` / `range_max`**: Optional range values for actions like sowing (e.g., germination time).
-- **`range_min_u` / `range_max_u`**: Units for the range values (e.g., "days").
-- **`dur_val` / `dur_unit`**: Optional duration values for actions like soaking (e.g., "24 hours").
-
-This schema ensures data integrity and allows for easy tracking of propagation stages.
-
----
-
-## 🌍 Language Switching
-
-* Use the dropdown in the navbar
-* Or add `?lang=fr` or `?lang=en` to the URL to switch manually
-
----
-
-## 🔧 Customization Tips
-
-* Want to add more stages? Modify the `STAGES` dictionary and form rendering logic.
-* Adjust timeline style via custom CSS in the `static/` folder.
-* Add translations in the `translations` dictionary for new languages.
+````
 
 ---
 
