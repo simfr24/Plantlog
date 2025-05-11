@@ -35,6 +35,8 @@ from py.users import (
     get_user_by_username,
     get_user_by_id,
     update_user_lang,
+    get_all_users,
+    record_user_login
 )
 from py.helpers import (
     # data helpers
@@ -63,7 +65,8 @@ from py.helpers import (
     overdue_badge,
     anytime_soon_badge,
     countdown_badge,
-    done_badge
+    done_badge,
+    get_daily_unique_logins
 
 )
 from py.processing import sort_key, get_unique_locations
@@ -110,6 +113,10 @@ app.jinja_env.globals.update(
 def load_logged_in_user_and_language():
     uid = session.get("uid")
     g.user = get_user_by_id(uid) if uid else None
+
+    if g.user:
+        # This handles both true logins and session resumes
+        record_user_login(g.user["id"])
 
     lang_param = request.args.get("lang")
     if lang_param in AVAILABLE_LANGS:
@@ -169,6 +176,43 @@ def public_view(username):
     ctx  = build_dashboard_context(user, lang)
     return render_template("index.html", public_view=True, **ctx)
 
+
+###############################################################################
+# Routes – Admin
+###############################################################################
+
+
+@app.route("/admin/users")
+@login_required
+def admin_users():
+    if g.user["id"] != 1:
+        abort(403)
+
+    # ── per-user rows ────────────────────────────────────────────────
+    all_users = get_all_users()
+    user_data = []
+    for user in all_users:
+        plants = load_data(user["id"])
+        user_data.append({
+            "id":          user["id"],
+            "username":    user["username"],
+            "plant_count": len(plants),
+            "created_at":  user["created_at"],
+            "last_login":  user["last_login"],
+        })
+
+    # ── today’s unique-login count ───────────────────────────────────
+    today = date.today().isoformat()                    # 'YYYY-MM-DD'
+    row   = get_daily_unique_logins(today, today)       # [(day, cnt)] or []
+    today_logins = row[0][1] if row else 0
+
+    return render_template(
+        "admin_users.html",
+        users=user_data,
+        today_logins=today_logins,       # ↰ pass to template
+        lang=g.lang,
+        t=get_translations(g.lang),
+    )
 
 ###############################################################################
 # Routes – plant CRUD

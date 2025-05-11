@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% block title %}Admin – Users{% endblock %}
+
+{% block content %}
+<h1 class="mb-4">🌱 Users</h1>
+
+<p class="mb-4">
+    <span class="badge bg-info">
+      {{ t.get('Logins today', 'Logins today') }}: {{ today_logins }}
+    </span>
+</p>
+
+<table class="table table-striped">
+  <thead>
+    <tr>
+      <th>ID</th>
+      <th>{{ t['Username'] }}</th>
+      <th>{{ t['Plants'] }}</th>
+      <th>{{ t.get('Created', 'Created') }}</th>
+      <th>{{ t.get('Last login', 'Last login') }}</th>
+      <th>🔗</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for user in users %}
+    <tr>
+      <td>{{ user.id }}</td>
+      <td>{{ user.username }}</td>
+      <td>{{ user.plant_count }}</td>
+      <td>{{ user.created_at[:10] }}</td>
+      <td>{{ user.last_login[:-9] if user.last_login else '—' }}</td>
+      <td>
+        <a href="{{ url_for('public_view', username=user.username) }}"
+           target="_blank"
+           class="btn btn-outline-primary btn-sm">
+          {{ t['Public page'] }}
+        </a>
+      </td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endblock %}

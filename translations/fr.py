@@ -123,4 +123,13 @@ translations = {
     "Bad credentials": "Identifiants incorrects",
     "You must be logged in to access this page.": "Vous devez être connecté pour accéder à cette page.",
     "Size must be > 0.": "La taille doit être > 0.",
+
+    # ─────────────── admin ───────────────
+    "Logins today": "Connexions aujourd’hui",
+    "ID": "ID",
+    "Username": "Nom d’utilisateur",
+    "Plants": "Plantes",
+    "Public page": "Page publique",
+    "Created": "Créé le",
+    "Last login": "Dernière connexion"
 }

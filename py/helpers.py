@@ -99,6 +99,23 @@ def done_badge(t):
         f'<span class="badge bg-secondary ms-2">{t["Done"]}</span>'
     )
 
+def get_daily_unique_logins(start: str | None = None,
+                            end:   str | None = None):
+    """
+    Returns a list of (day, unique_user_count) tuples ordered by day ASC.
+    Dates must be 'YYYY-MM-DD'.  Pass none/none for the full history.
+    """
+    sql   = """
+        SELECT day, COUNT(*) AS users
+        FROM   user_daily_logins
+        WHERE  (?1 IS NULL OR day >= ?1)
+           AND (?2 IS NULL OR day <= ?2)
+        GROUP  BY day
+        ORDER  BY day ASC
+    """
+    with get_conn() as conn:
+        return conn.execute(sql, (start, end)).fetchall()
+
 
 ###############################################################################
 # Event‑type lookup helpers – cached for speed

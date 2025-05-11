@@ -123,4 +123,11 @@ translations = {
     "Bad credentials": "Неверные учетные данные",
     "You must be logged in to access this page.": "Вы должны войти, чтобы получить доступ к этой странице.",
     "Size must be > 0.": "Размер должен быть больше 0.",
+
+    # ─────────────── admin ───────────────
+    "Logins today": "Входов сегодня",
+    "ID": "ID",
+    "Username": "Имя пользователя",
+    "Plants": "Растения",
+    "Public page": "Публичная страница"
 }

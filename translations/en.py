@@ -123,4 +123,15 @@ translations = {
     "Bad credentials": "Bad credentials",
     "You must be logged in to access this page.": "You must be logged in to access this page.",
     "Size must be > 0.": "Size must be > 0.",
+
+    # ─────────────── admin ───────────────
+    "Logins today": "Logins today",
+    "ID": "ID",
+    "Username": "Username",
+    "Plants": "Plants",
+    "Public page": "Public page",
+    "Created": "Created",
+    "Last login": "Last login",
+    "Created": "Создан",
+    "Last login": "Последний вход"
 }

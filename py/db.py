@@ -13,10 +13,21 @@ SCHEMA = """
 PRAGMA foreign_keys = ON;
 
 CREATE TABLE IF NOT EXISTS users (
-    id       INTEGER PRIMARY KEY AUTOINCREMENT,
-    username TEXT UNIQUE NOT NULL,
-    pw_hash  TEXT        NOT NULL,
-    lang     TEXT        NOT NULL DEFAULT 'en'
+    id          INTEGER PRIMARY KEY AUTOINCREMENT,
+    username    TEXT UNIQUE NOT NULL,
+    pw_hash     TEXT        NOT NULL,
+    lang        TEXT        NOT NULL DEFAULT 'en',
+    created_at  TEXT NOT NULL DEFAULT (datetime('now')),
+    last_login  TEXT
+);
+
+CREATE TABLE IF NOT EXISTS user_daily_logins (
+    id          INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id     INTEGER NOT NULL,
+    day         TEXT    NOT NULL,            -- YYYY-MM-DD
+    first_login TEXT    NOT NULL DEFAULT (datetime('now')),
+    UNIQUE (user_id, day),                   -- one row per user+day
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
 
 CREATE TABLE IF NOT EXISTS state_types (
