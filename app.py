@@ -109,6 +109,9 @@ app.jinja_env.globals.update(
 # Request/Session helpers
 ###############################################################################
 
+from flask import request
+from werkzeug.datastructures import LanguageAccept
+
 @app.before_request
 def load_logged_in_user_and_language():
     uid = session.get("uid")
@@ -119,12 +122,26 @@ def load_logged_in_user_and_language():
         record_user_login(g.user["id"])
 
     lang_param = request.args.get("lang")
-    if lang_param in AVAILABLE_LANGS:
-        if g.user:
-            update_user_lang(g.user["id"], lang_param)
-            g.user = get_user_by_id(g.user["id"])  # refresh
-        session["tmp_lang"] = lang_param
+    should_detect_lang = (not g.user) or lang_param
 
+    # Determine preferred language
+    if should_detect_lang:
+        preferred_lang = None
+
+        if lang_param in AVAILABLE_LANGS:
+            preferred_lang = lang_param
+        else:
+            # Try to parse the best match from Accept-Language header
+            browser_langs: LanguageAccept = request.accept_languages
+            preferred_lang = browser_langs.best_match(AVAILABLE_LANGS)
+
+        if preferred_lang:
+            if g.user:
+                update_user_lang(g.user["id"], preferred_lang)
+                g.user = get_user_by_id(g.user["id"])
+            session["tmp_lang"] = preferred_lang
+
+    # Set g.lang and session["lang"]
     if g.user:
         g.lang = g.user["lang"]
     elif "tmp_lang" in session:
@@ -160,7 +177,7 @@ def build_dashboard_context(user_obj, lang):
         plants    = plants,
         today     = date.today(),
         duration_to_days = duration_to_days,
-        owner     = user_obj,          # ⬅️  new — used to print the name
+        owner     = user_obj,
     )
 
 @app.route("/")

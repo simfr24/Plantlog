@@ -94,10 +94,23 @@
                 <i class="fa-solid fa-user"></i> {{ g.user['username'] }}
               </a>
               <ul class="dropdown-menu dropdown-menu-end">
-                <li><a class="dropdown-item text-danger" href="{{ url_for('logout') }}">
-                  <i class="fa-solid fa-sign-out-alt"></i> {{ t['Log out'] }}
-                </a></li>
+                <li>
+                  <a class="dropdown-item text-danger" href="{{ url_for('logout') }}">
+                    <i class="fa-solid fa-sign-out-alt"></i> {{ t['Log out'] }}
+                  </a>
+                </li>
               </ul>
+            </li>
+          {% else %}
+            <li class="nav-item">
+              <a class="nav-link btn btn-outline-primary" href="{{ url_for('login') }}">
+                <i class="fa-solid fa-right-to-bracket"></i> {{ t['login_button'] }}
+              </a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link btn btn-outline-secondary" href="{{ url_for('register') }}">
+                <i class="fa-solid fa-user-plus"></i> {{ t['register'] }}
+              </a>
             </li>
           {% endif %}
         </ul>
