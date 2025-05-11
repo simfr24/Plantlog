@@ -168,6 +168,16 @@
                       {% else %}
                         {% set summary = summary ~ ' <span class="badge bg-success ms-2">' ~ size_display ~ size_unit ~ '</span>' %}
                       {% endif %}
+                    {% else %}
+                      {# Fallback: display age if sprout or plant event is available #}
+                      {% set sprout_event = p.history | selectattr('action', 'equalto', 'sprout') | list | first %}
+                      {% set plant_event = p.history | selectattr('action', 'equalto', 'plant') | list | first %}
+                      {% set age_base = sprout_event if sprout_event else plant_event %}
+                      {% if age_base %}
+                        {% set base_date = age_base.start | todate %}
+                        {% set age_days = (now_date - base_date).days %}
+                        {% set summary = summary ~ age_badge(t['Age'] if 'Age' in t else 'Age', age_days, t) %}
+                      {% endif %}
                     {% endif %}
                   {% endif %}                
 
