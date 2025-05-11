@@ -31,7 +31,7 @@ You can use Plantlog at:
 
 👉 [https://plantlog.fr](https://plantlog.fr)
 
-You're welcome to create an account and track your plants — just note that this public instance is offered as-is, not professionnaly managed and coems with **no guarantee of data security or long-term availability**.
+You're welcome to create an account and track your plants — just note that this public instance is offered as-is, not professionnaly managed and comes with **no guarantee of data security or long-term availability**.
 
 ---
 
