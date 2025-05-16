@@ -1,0 +1,56 @@
+{% set sprout_event = plant.history|selectattr('action','equalto','sprout')|list|first %}
+{% set measurements = plant.history|selectattr('action', 'equalto', 'measure')|list %}
+{% set last_measurement = measurements|sort(attribute='start')|last if measurements else None %}
+{% set water_events = plant.history|selectattr('action','equalto','water')|list %}
+{% set last_water = water_events|sort(attribute='start')|last if water_events else None %}
+{% set fertilize_events = plant.history|selectattr('action','equalto','fertilize')|list %}
+{% set last_fertilize = fertilize_events|sort(attribute='start')|last if fertilize_events else None %}
+
+{% if sprout_event or last_measurement or last_water or last_fertilize %}
+<div class="card shadow-sm mb-4">
+  <div class="card-header">
+    <i class="fas fa-chart-simple me-2 text-muted"></i>
+    <span class="fw-semibold">{{ t['Quick Stats'] }}</span>
+  </div>
+  <div class="card-body">
+    <ul class="list-group list-group-flush">
+      {% if sprout_event %}
+        {% set sprouted_date = sprout_event.start|todate %}
+        {% set now_date = today %}
+        {% set age_days = (now_date - sprouted_date).days %}
+        <li class="list-group-item d-flex justify-content-between align-items-center">
+          <span><i class="fas fa-calendar-day me-2 text-success"></i> {{ t['Age'] }}</span>
+          <span class="badge bg-success rounded-pill">{{ age_days }} {{ t['days'] }}</span>
+        </li>
+      {% endif %}
+      {% if last_measurement %}
+        {% set size_value = last_measurement.size[0]|float %}
+        {% set size_display = size_value|int if size_value == size_value|int else size_value %}
+        {% set size_unit = last_measurement.size[1] %}
+        <li class="list-group-item d-flex justify-content-between align-items-center">
+          <span><i class="fas fa-ruler me-2 text-secondary"></i> {{ t['Latest size'] }}</span>
+          <span class="badge bg-secondary rounded-pill">{{ size_display }}{{ size_unit }}</span>
+        </li>
+      {% endif %}
+      {% if last_water %}
+        {% set water_date = last_water.start|todate %}
+        {% set now_date = today %}
+        {% set days_since = (now_date - water_date).days %}
+        <li class="list-group-item d-flex justify-content-between align-items-center">
+          <span><i class="fas fa-droplet me-2 text-primary"></i> {{ t['Last watered'] }}</span>
+          <span class="badge bg-primary rounded-pill">{{ days_since }} {{ t['days ago'] }}</span>
+        </li>
+      {% endif %}
+      {% if last_fertilize %}
+        {% set fertilize_date = last_fertilize.start|todate %}
+        {% set now_date = today %}
+        {% set days_since = (now_date - fertilize_date).days %}
+        <li class="list-group-item d-flex justify-content-between align-items-center">
+          <span><i class="fas fa-bottle-water me-2 text-warning text-opacity-85"></i> {{ t['Last fertilized'] }}</span>
+          <span class="badge bg-warning text-dark rounded-pill">{{ days_since }} {{ t['days ago'] }}</span>
+        </li>
+      {% endif %}
+    </ul>
+  </div>
+</div>
+{% endif %}

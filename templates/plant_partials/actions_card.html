@@ -1,0 +1,19 @@
+<div class="card shadow-sm mb-4">
+  <div class="card-header">
+    <i class="fas fa-bolt me-2 text-muted"></i>
+    <span class="fw-semibold">{{ t['Actions'] }}</span>
+  </div>
+  <div class="card-body">
+    <div class="d-grid gap-2">
+      <a href="{{ url_for('add_stage', idx=plant.id, lang=lang) }}" class="btn btn-primary">
+        <i class="fas fa-plus me-1"></i> {{ t['Add stage'] }}
+      </a>
+      <a href="{{ url_for('edit_plant', idx=plant.id, lang=lang) }}" class="btn btn-outline-secondary">
+        <i class="fas fa-edit me-1"></i> {{ t['Edit plant'] }}
+      </a>
+      <a href="{{ url_for('index', lang=lang) }}" class="btn btn-outline-dark">
+        <i class="fas fa-arrow-left me-1"></i> {{ t['Back to dashboard'] }}
+      </a>
+    </div>
+  </div>
+</div>

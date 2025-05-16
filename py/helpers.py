@@ -142,6 +142,53 @@ def _etl(code: str) -> Dict[str, Any]:
 # Data loading helpers
 ###############################################################################
 
+def group_plants_by_state(plants):
+    """Groups plants by their state label, returns an OrderedDict (preserves sort order)."""
+    from collections import OrderedDict
+    state_groups = OrderedDict()
+    for plant in plants:
+        state = plant.get("state", {}).get("label", "unknown")
+        if state.lower() == "dead":
+            state = "Dead"
+        if state not in state_groups:
+            state_groups[state] = []
+        state_groups[state].append(plant)
+    return state_groups
+
+def build_state_cards(state_groups):
+    """
+    Given OrderedDict of {state: [plants]}, returns two lists of cards for left/right columns.
+    Each card is a tuple (state, state_plants, is_dead_state)
+    """
+    state_cards = []
+    total_plants = sum(len(plants) for plants in state_groups.values())
+    for i, (state, plants) in enumerate(state_groups.items()):
+        is_dead_state = (state.lower() == "dead")
+        # Like your old logic: only show dead at the end
+        if not is_dead_state or i == len(state_groups) - 1:
+            state_cards.append((state, plants, is_dead_state))
+    # Split for columns:
+    left, right = [], []
+    left_count, right_count = 0, 0
+    # Check if any group is "huge"
+    for state, plants, is_dead_state in state_cards:
+        if len(plants) > (total_plants - len(plants)):
+            # Put this giant group alone in left, all others in right
+            right = [(state, plants, is_dead_state)]
+            left = [c for c in state_cards if c[0] != state]
+            return left, right
+    # Otherwise, greedily balance by plant count
+    for card in state_cards:
+        plants = card[1]
+        if left_count <= right_count:
+            left.append(card)
+            left_count += len(plants)
+        else:
+            right.append(card)
+            right_count += len(plants)
+    return left, right
+
+
 def _events_for_plant(conn, plant_id: int) -> List[Dict[str, Any]]:
     """Return a list of event dicts (oldest→newest) for a given plant."""
     rows = conn.execute(

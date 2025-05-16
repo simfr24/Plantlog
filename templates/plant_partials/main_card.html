@@ -1,0 +1,36 @@
+<div class="card shadow-sm mb-4">
+  <div class="card-header d-flex align-items-center">
+    {% set state_obj = plant.state %}
+    {% set state_label = state_obj.label if state_obj else '?' %}
+    {% set state_icon = state_obj.icon_class if state_obj else 'fa-question' %}
+    {% set state_color = state_obj.color_class if state_obj else 'text-muted' %}
+    <i class="fas {{ state_icon }} {{ state_color }} me-2"></i>
+    <span class="{{ state_color }} fw-semibold text-uppercase">{{ t[state_label] if state_label in t else state_label }}</span>
+  </div>
+  <div class="card-body">
+    <div class="row gy-3">
+      {% if plant.location %}
+      <div class="col-md-6">
+        <div class="d-flex align-items-start">
+          <i class="fas fa-location-dot me-2 text-muted mt-1"></i>
+          <div>
+            <strong>{{ t['Location'] }}:</strong>
+            <div class="text-muted">{{ plant.location }}</div>
+          </div>
+        </div>
+      </div>
+      {% endif %}
+      {% if plant.notes %}
+      <div class="col-md-12">
+        <div class="d-flex">
+          <i class="fas fa-sticky-note me-2 text-muted mt-1"></i>
+          <div>
+            <strong>{{ t['Notes'] }}:</strong>
+            <div class="mt-1 text-muted">{{ plant.notes }}</div>
+          </div>
+        </div>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+</div>

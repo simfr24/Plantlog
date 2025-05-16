@@ -66,7 +66,9 @@ from py.helpers import (
     anytime_soon_badge,
     countdown_badge,
     done_badge,
-    get_daily_unique_logins
+    get_daily_unique_logins,
+    group_plants_by_state,
+    build_state_cards,
 
 )
 from py.processing import sort_key, get_unique_locations
@@ -171,6 +173,8 @@ def build_dashboard_context(user_obj, lang):
     """Return the kwargs needed by either dashboard template."""
     translations = get_translations(lang)
     plants       = sorted(load_data(user_obj["id"]), key=sort_key)
+    state_groups = group_plants_by_state(plants)
+    left_col, right_col = build_state_cards(state_groups)
     return dict(
         lang      = lang,
         t         = translations,
@@ -178,6 +182,9 @@ def build_dashboard_context(user_obj, lang):
         today     = date.today(),
         duration_to_days = duration_to_days,
         owner     = user_obj,
+        state_groups = state_groups,
+        left_col  = left_col,
+        right_col = right_col,
     )
 
 @app.route("/")

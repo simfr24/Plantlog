@@ -1,0 +1,81 @@
+<div class="card shadow-sm mb-4">
+  <div class="card-header">
+    <i class="fas fa-history me-2 text-muted"></i>
+    <span class="fw-semibold">{{ t['Timeline'] }}</span>
+  </div>
+  <div class="card-body pb-2">
+    <ul class="timeline">
+      {% for h in plant.history|reverse %}
+        {% set evspec = event_map[h.action] %}
+        <li class="timeline-item">
+          <span class="timeline-icon {{ evspec.color_class }}"><i class="fas {{ evspec.icon }}"></i></span>
+          <div class="timeline-content">
+            <div class="d-flex justify-content-between flex-wrap">
+              <strong class="{{ evspec.color_class }}">
+                {% if h.action == 'custom' and h.custom_label %}
+                  {{ h.custom_label }}
+                {% else %}
+                  {{ t[evspec.label] if evspec.label in t else evspec.label }}
+                {% endif %}
+              </strong>
+              <span class="text-muted ms-2">{{ h.start }}</span>
+            </div>
+            {% if h.action == 'sow' %}
+              <div class="text-muted small mt-1">
+                {{ t['Expected sprout time'] }}: {{ h.range[0] }} {{ t[h.range[1]] }} – {{ h.range[2] }} {{ t[h.range[3]] }}
+              </div>
+            {% elif h.action == 'measure' %}
+              {% set size_value = h.size[0]|float %}
+              {% set size_display = size_value|int if size_value == size_value|int else size_value %}
+              <div class="text-muted small mt-1">
+                {{ size_display }}{{ h.size[1] }}
+                {% set prev_measures = plant.history|selectattr('action', 'equalto', 'measure')|list %}
+                {% set prev_measures = prev_measures|sort(attribute='start') %}
+                {% set measure_idx = prev_measures.index(h) %}
+                {% if measure_idx > 0 and prev_measures[measure_idx-1].size[1] == h.size[1] %}
+                  {% set prev = prev_measures[measure_idx-1] %}
+                  {% set current_val = h.size[0]|float %}
+                  {% set prev_val = prev.size[0]|float %}
+                  {% set current_date = h.start|todate %}
+                  {% set prev_date = prev.start|todate %}
+                  {% set days_between = (current_date - prev_date).days %}
+                  {% if days_between > 0 %}
+                    {% set growth = current_val - prev_val %}
+                    {% set growth_rate = (growth / days_between)|round(2) %}
+                    {% set growth_display = growth_rate|int if growth_rate == growth_rate|int else growth_rate %}
+                    {% if growth_rate > 0 %}
+                      <span class="ms-2 text-success">
+                        <i class="fas fa-arrow-up fa-xs"></i> {{ growth_display }} {{ h.size[1] }}/{{ t['day'] if 'day' in t else 'day' }}
+                      </span>
+                    {% elif growth_rate < 0 %}
+                      <span class="ms-2 text-danger">
+                        <i class="fas fa-arrow-down fa-xs"></i> {{ growth_display|abs }} {{ h.size[1] }}/{{ t['day'] if 'day' in t else 'day' }}
+                      </span>
+                    {% endif %}
+                  {% endif %}
+                {% endif %}
+              </div>
+            {% elif h.action in ['soak', 'strat'] %}
+              <div class="text-muted small mt-1">{{ h.duration[0] }} {{ t[h.duration[1]] }}</div>
+            {% elif h.action == 'sprout' %}
+              {% set sow = plant.history|selectattr('action','equalto','sow')|list|last %}
+              {% if sow %}
+                {% set sprouted_date = h.start|todate %}
+                {% set sow_date = sow.start|todate %}
+                {% set germ_days = (sprouted_date - sow_date).days %}
+                <div class="text-muted small mt-1">
+                  {{ t['Sprouted in'] }} {{ germ_days }} {{ t['days'] }}
+                </div>
+              {% endif %}
+            {% elif h.action == 'custom' %}
+              <div class="text-muted small mt-1">{{ h.custom_note }}</div>
+            {% endif %}
+          </div>
+          <a href="{{ url_for('edit_stage', action_id=h.id, lang=lang) }}" class="text-secondary ms-2 timeline-edit" title="{{ t['Edit stage'] }}">
+            <i class="fas fa-edit"></i>
+          </a>
+        </li>
+      {% endfor %}
+    </ul>
+  </div>
+</div>

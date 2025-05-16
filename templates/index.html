@@ -37,273 +37,31 @@
 } %}
 
 {% if plants %}
-  {# Group plants by their states #}
-  {% set plants_by_state = {} %}
-  {% for p in plants %}
-    {% set state = p.state.label if p.state else 'unknown' %}
-    {% set lowercase_state = state|lower %}  {# Convert to lowercase for comparison #}
-    
-    {# Standardize state names - handle 'dead' state consistently #}
-    {% set display_state = 'Dead' if lowercase_state == 'dead' else state %}
-    
-    {% if display_state not in plants_by_state %}
-      {% set _ = plants_by_state.update({display_state: []}) %}
-    {% endif %}
-    {% set _ = plants_by_state[display_state].append(p) %}
+  
+{# Mobile: one column, original order #}
+<div class="d-lg-none plant-columns">
+  {% set all_cards = left_col + right_col %}
+  {% set alive_cards = all_cards | rejectattr('2') | list %} {# 2 is is_dead_state #}
+  {% set dead_cards = all_cards | selectattr('2') | list %}
+  {% for state, state_plants, is_dead_state in alive_cards + dead_cards %}
+    {% include 'index_partials/state_card.html' %}
   {% endfor %}
+</div>
 
-  <div class="plant-columns">
-    {# Render each state group as a separate card #}
-    {% for state, state_plants in plants_by_state.items() %}
-      {# Process states in order, with Dead state last #}
-      {% if state != 'Dead' or loop.last %}
-        {% set is_dead_state = (state == 'Dead') %}
-        
-        <div class="plant-card">
-          <div class="card {{ 'bg-light' if is_dead_state else '' }}">
-            <div class="card-header {{ 'text-muted' if is_dead_state else '' }}">
-              {% set example_plant = state_plants[0] %}
-              {% set state_obj = example_plant.state %}
-              {% set state_icon = state_obj.icon_class if state_obj else 'fa-question' %}
-              {% set state_color = 'text-muted' if is_dead_state else (state_obj.color_class if state_obj else 'text-muted') %}
-              
-              <i class="fas {{ state_icon }} {{ state_color }} me-2"></i>
-              <span class="{{ state_color }} fw-semibold text-uppercase">{{ t[state] if state in t else state }}</span>
-              <span class="badge bg-secondary ms-2">{{ state_plants|length }}</span>
-            </div>
-            <div class="card-body p-0">
-              <div class="accordion" id="plants-acc-{{ state|lower }}">
-                {% for p in state_plants %}
-                  {% set idx = p.id %}
-                  {% set current_event = p.current %}
-                  {% set action = current_event.action %}
-                  {% set last_non_custom = (p.history | rejectattr('action', 'equalto', 'custom') | list)[-1] if p.history | rejectattr('action', 'equalto', 'custom') | list else None %}
-                  {% set event_spec = event_map[action] %}
-
-                  {# ---- Plant state --------------------------------------------- #}
-                  {% set state_obj = p.state %}
-                  {% set state_label = state_obj.label if state_obj else '?' %}
-                  {% set state_icon = state_obj.icon_class if state_obj else 'fa-question' %}
-                  {% set state_color = state_obj.color_class if state_obj else 'text-muted' %}
-
-                  {# ---- Summary line ------------------------------------------- #}
-                  {% set now_date = today %}
-                  {% set start_date = current_event.start %}
-                  {% if action == 'custom' %}
-                    {% set label = current_event.custom_label or '?' %}
-                    {% set label_text = t['{event} on'].replace('{event}', label) if '{event} on' in t else label ~ ' on' %}
-                    {% set summary = label_text ~ ' ' ~ start_date %}
-                  {% else %}
-                    {% set summary = (human_names[action] in t and t[human_names[action]] or human_names[action]) ~ ' ' ~ start_date %}
-                  {% endif %}
-
-                  {# Extra badges / counters depending on the action -------------- #}
-                  {% if not is_dead_state and last_non_custom %}
-                    {% set badge_action = last_non_custom.action %}
-                    {% set badge_start = last_non_custom.start %}
-                    
-                    {% if badge_action == 'sow' and 'range' in last_non_custom %}
-                      {% set min_val, current_unit, max_val, max_unit = last_non_custom.range %}
-                      {% set min_days = duration_to_days(min_val, current_unit) %}
-                      {% set max_days = duration_to_days(max_val, max_unit) %}
-                      {% set min_date = badge_start | dateadd(days=min_days) %}
-                      {% set max_date = badge_start | dateadd(days=max_days) %}
-                      
-                      {% if now_date > max_date %}
-                        {% set summary = summary ~ overdue_badge(t) %}
-                      {% elif now_date >= min_date %}
-                        {% set days_passed = (now_date - min_date).days %}
-                        {% set total_window = (max_date - min_date).days %}
-                        {% set days_left = (max_date - now_date).days %}
-                        {% set progress = (days_passed / total_window * 100)|round|int %}
-                        {% set gradient_class = "bg-success" if progress < 33 else "bg-warning" if progress < 66 else "bg-danger" %}
-                        {% set summary = summary ~ anytime_soon_badge(days_left, progress, t) %}
-                      {% else %}
-                        {% set days_left = (min_date - now_date).days %}
-                        {% set summary = summary ~ countdown_badge(days_left, t) %}
-                      {% endif %}
-                  
-                    {% elif badge_action in ['soak', 'strat'] %}
-                      {% set val, unit = last_non_custom.duration %}
-                      {% set duration_days = duration_to_days(val, unit) %}
-                      {% set end_date = badge_start | dateadd(days=duration_days) %}
-                      {% if now_date >= end_date %}
-                        {% set summary = summary ~ done_badge(t) %}
-                      {% else %}
-                        {% set days_left = (end_date - now_date).days %}
-                        {% set summary = summary ~ countdown_badge(days_left, t) %}
-                      {% endif %}
-                  
-                    {% elif badge_action == 'sprout' %}
-                      {% set sprouted_date = badge_start|todate %}
-                      {% set age_days = (now_date - sprouted_date).days %}
-                      {% set measurements = p.history|selectattr('action', 'equalto', 'measure')|list %}
-                      {% set last_measurement = measurements|sort(attribute='start')|last if measurements else None %}
-                  
-                      {% if last_measurement %}
-                        {% set measure_date = last_measurement.start|todate %}
-                        {% set days_since = (now_date - measure_date).days %}
-                        {% set size_value = last_measurement.size[0]|float %}
-                        {% set size_display = size_value|int if size_value == size_value|int else size_value %}
-                        {% set size_unit = last_measurement.size[1] %}
-                        {% set summary = summary ~ ' <span class="badge bg-success ms-2">' ~ 
-                                      size_display ~ size_unit ~ 
-                                      ' <small>(' ~ days_since ~ ' ' ~ (t['days ago'] if 'days ago' in t else 'days ago') ~ ')</small></span>' %}
-                      {% else %}
-                        {% set summary = summary ~ age_badge(t['Age'] if 'Age' in t else 'Age', age_days, t) %}
-                      {% endif %}
-                  
-                    {% elif badge_action == 'measure' %}
-                      {% set measure_date = badge_start|todate %}
-                      {% set days_since = (now_date - measure_date).days %}
-                      {% set size_value = last_non_custom.size[0]|float %}
-                      {% set size_display = size_value|int if size_value == size_value|int else size_value %}
-                      {% set size_unit = last_non_custom.size[1] %}
-                      {% set sprout_event = p.history|selectattr('action', 'equalto', 'sprout')|list|first %}
-                      {% set planted_event = p.history|selectattr('action', 'equalto', 'plant')|list|first %}
-                      {% set base_event = sprout_event if sprout_event else planted_event %}
-                      {% if base_event %}
-                        {% set base_date = base_event.start|todate %}
-                        {% set age_days = (now_date - base_date).days %}
-                        {% set summary = summary ~ size_badge(size_display, size_unit, t['Age'] if 'Age' in t else 'Age', age_days, t) %}
-                      {% else %}
-                        {% set summary = summary ~ ' <span class="badge bg-success ms-2">' ~ size_display ~ size_unit ~ '</span>' %}
-                      {% endif %}
-                    {% else %}
-                      {# Fallback: display age if sprout or plant event is available #}
-                      {% set sprout_event = p.history | selectattr('action', 'equalto', 'sprout') | list | first %}
-                      {% set plant_event = p.history | selectattr('action', 'equalto', 'plant') | list | first %}
-                      {% set age_base = sprout_event if sprout_event else plant_event %}
-                      {% if age_base %}
-                        {% set base_date = age_base.start | todate %}
-                        {% set age_days = (now_date - base_date).days %}
-                        {% set summary = summary ~ age_badge(t['Age'] if 'Age' in t else 'Age', age_days, t) %}
-                      {% endif %}
-                    {% endif %}
-                  {% endif %}                
-
-                  <div class="accordion-item {{ 'bg-light' if is_dead_state else '' }}">
-                    <h2 class="accordion-header" id="heading-{{ state|lower }}-{{ idx }}">
-                      <button class="accordion-button collapsed {{ 'bg-light text-muted' if is_dead_state else '' }}" type="button" data-bs-toggle="collapse" data-bs-target="#collapse-{{ state|lower }}-{{ idx }}">
-                        {# Main plant info ---------------------------------------- #}
-                        <div class="flex-grow-1">
-                          <div class="fw-semibold {{ 'text-muted' if is_dead_state else '' }}">
-                            {{ p.common }} <small class="text-muted fst-italic">({{ p.latin }})</small>
-                          </div>
-                          <div class="small text-muted">{{ summary|safe }}</div>
-                          {% if p.location %}
-                            <div class="small text-muted"><i class="fas fa-location-dot me-1"></i>{{ p.location }}</div>
-                          {% endif %}
-                          {% if p.notes %}
-                            <div class="small text-muted"><i class="fas fa-sticky-note me-1"></i>{{ p.notes }}</div>
-                          {% endif %}
-                        </div>
-                      </button>
-                    </h2>
-
-                    <div id="collapse-{{ state|lower }}-{{ idx }}" class="accordion-collapse collapse" data-bs-parent="#plants-acc-{{ state|lower }}">
-                      <div class="accordion-body">
-                        <ul class="timeline">
-                          {% for h in p.history|reverse %}
-                            {% set evspec = event_map[h.action] %}
-                            <li class="timeline-item {{ 'dead' if is_dead_state else '' }}">
-                              <span class="timeline-icon {{ evspec.color_class }}"><i class="fas {{ evspec.icon }}"></i></span>
-                              <div>
-                                {% if h.action == 'custom' %}
-                                  {% set label = h.custom_label or '?' %}
-                                    {% set label_text = t['{event} on'].replace('{event}', label) if '{event} on' in t else label ~ ' on' %}
-                                    <strong>{{ label_text }}</strong> – {{ h.start }}
-                                    {% if h.custom_note %}
-                                      <div class="text-muted small">{{ h.custom_note }}</div>
-                                    {% endif %}
-                                  {% else %}
-                                    <strong>{{ t[human_names[h.action]] if human_names[h.action] in t else human_names[h.action] }}</strong> – {{ h.start }}
-                                  {% endif %}
-                                {% if h.action == 'sow' and 'range' in h %}
-                                  <div class="text-muted small">
-                                    {{ t['Expected sprout time'] }}: {{ h.range[0] }} {{ t[h.range[1]] }} – {{ h.range[2] }} {{ t[h.range[3]] }}
-                                  </div>
-                                {% elif h.action == 'measure' %}
-                                  {% set size_value = h.size[0]|float %}
-                                  {% set size_display = size_value|int if size_value == size_value|int else size_value %}
-                                  <div class="text-muted small">
-                                    {{ size_display }}{{ h.size[1] }}
-                                    
-                                    {# Calculate growth rate if there's a previous measurement #}
-                                    {% set prev_measures = p.history|selectattr('action', 'equalto', 'measure')|list %}
-                                    {% set prev_measures = prev_measures|sort(attribute='start') %}
-                                    {% set measure_idx = prev_measures.index(h) %}
-                                    
-                                    {% if measure_idx > 0 and prev_measures[measure_idx-1].size[1] == h.size[1] %}
-                                      {% set prev = prev_measures[measure_idx-1] %}
-                                      {% set current_val = h.size[0]|float %}
-                                      {% set prev_val = prev.size[0]|float %}
-                                      {% set current_date = h.start|todate %}
-                                      {% set prev_date = prev.start|todate %}
-                                      {% set days_between = (current_date - prev_date).days %}
-                                      
-                                      {% if days_between > 0 %}
-                                        {% set growth = current_val - prev_val %}
-                                        {% set growth_rate = (growth / days_between)|round(2) %}
-                                        {% set growth_display = growth_rate|int if growth_rate == growth_rate|int else growth_rate %}
-                                        {% if growth_rate > 0 %}
-                                          <span class="ms-2 text-success">
-                                            <i class="fas fa-arrow-up fa-xs"></i> {{ growth_display }} {{ h.size[1] }}/{{ t['day'] if 'day' in t else 'day' }}
-                                          </span>
-                                        {% elif growth_rate < 0 %}
-                                          <span class="ms-2 text-danger">
-                                            <i class="fas fa-arrow-down fa-xs"></i> {{ growth_display|abs }} {{ h.size[1] }}/{{ t['day'] if 'day' in t else 'day' }}
-                                          </span>
-                                        {% endif %}
-                                      {% endif %}
-                                    {% endif %}
-                                  </div>
-                                {% elif h.action in ['soak','strat'] %}
-                                  <div class="text-muted small">{{ h.duration[0] }} {{ t[h.duration[1]] }}</div>
-                                {% elif h.action == 'sprout' %}
-                                  {% set sow = p.history|selectattr('action','equalto','sow')|list|last %}
-                                  {% if sow %}
-                                    {% set sprouted_date = h.start|todate %}
-                                    {% set sow_date = sow.start|todate %}
-                                    {% set germ_days = (sprouted_date - sow_date).days %}
-                                    <div class="text-muted small">
-                                      {{ t['Sprouted in'] }} {{ germ_days }} {{ t['days'] }}
-                                    </div>
-                                  {% endif %}
-                                {% endif %}
-                              </div>
-                              {% if not public_view %}
-                              <a href="{{ url_for('edit_stage', action_id=h.id, lang=lang) }}" class="text-secondary ms-2 align-top" title="{{ t['Edit stage'] }}">
-                                <i class="fas fa-edit" style="font-size:0.9rem;"></i>
-                              </a>
-                              {% endif %}
-                            </li>
-                          {% endfor %}
-                        </ul>
-                        <div class="d-flex gap-2 mt-3">
-                          <a href="{{ url_for('view_plant', idx=idx, lang=lang) }}" class="btn btn-outline-success btn-sm">
-                          <i class="fas fa-leaf me-1"></i> {{ t['Plant details'] }}
-                          </a>
-                          {% if not public_view %}
-                          <a href="{{ url_for('edit_plant', idx=idx, lang=lang) }}" class="btn btn-outline-secondary btn-sm">
-                            <i class="fas fa-edit me-1"></i> {{ t['Edit plant'] }}
-                          </a>
-                          <a href="{{ url_for('add_stage', idx=idx, lang=lang) }}" class="btn btn-outline-primary btn-sm">
-                            <i class="fas fa-plus-circle me-1"></i> {{ t['Add stage'] }}
-                          </a>
-                          {% endif %}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                {% endfor %}
-              </div>
-            </div>
-          </div>
-        </div>
-      {% endif %}
+{# Desktop: two columns, balanced by plant count #}
+<div class="row d-none d-lg-flex">
+  <div class="col-lg-6">
+    {% for state, state_plants, is_dead_state in left_col %}
+      {% include 'index_partials/state_card.html' %}
     {% endfor %}
   </div>
+  <div class="col-lg-6">
+    {% for state, state_plants, is_dead_state in right_col %}
+      {% include 'index_partials/state_card.html' %}
+    {% endfor %}
+  </div>
+</div>
+
 {% else %}
   <p class="text-muted">{{ t['No plants yet'] }}</p>
 {% endif %}

@@ -18,7 +18,6 @@
 
 {% block content %}
 <div class="container py-4">
-
   <!-- Hero Header -->
   <div class="d-flex align-items-center mb-4">
     <div class="plant-icon-circle bg-light me-3">
@@ -30,379 +29,107 @@
     </div>
   </div>
 
-  <div class="row">
-    <!-- Main Info & Timeline -->
-    <div class="col-lg-8 mb-4">
-      <div class="card shadow-sm mb-4">
-        <div class="card-header d-flex align-items-center">
-          {% set state_obj = plant.state %}
-          {% set state_label = state_obj.label if state_obj else '?' %}
-          {% set state_icon = state_obj.icon_class if state_obj else 'fa-question' %}
-          {% set state_color = state_obj.color_class if state_obj else 'text-muted' %}
-          <i class="fas {{ state_icon }} {{ state_color }} me-2"></i>
-          <span class="{{ state_color }} fw-semibold text-uppercase">{{ t[state_label] if state_label in t else state_label }}</span>
-        </div>
-        <div class="card-body">
-          <div class="row gy-3">
-            {% if plant.location %}
-            <div class="col-md-6">
-              <div class="d-flex align-items-start">
-                <i class="fas fa-location-dot me-2 text-muted mt-1"></i>
-                <div>
-                  <strong>{{ t['Location'] }}:</strong>
-                  <div class="text-muted">{{ plant.location }}</div>
-                </div>
-              </div>
-            </div>
-            {% endif %}
-            {% if plant.notes %}
-            <div class="col-md-12">
-              <div class="d-flex">
-                <i class="fas fa-sticky-note me-2 text-muted mt-1"></i>
-                <div>
-                  <strong>{{ t['Notes'] }}:</strong>
-                  <div class="mt-1 text-muted">{{ plant.notes }}</div>
-                </div>
-              </div>
-            </div>
-            {% endif %}
-          </div>
-        </div>
-      </div>
+  <!-- MOBILE: one column, best order for reading -->
+<div class="d-lg-none">
+  {% include 'plant_partials/main_card.html' %}
+  {% include 'plant_partials/quick_stats_card.html' %}
+  {% include 'plant_partials/current_stage_card.html' %}
+  {% include 'plant_partials/timeline_card.html' %}
+  {% include 'plant_partials/actions_card.html' %}
+</div>
 
-      <!-- Timeline Section -->
-      <div class="card shadow-sm mb-4">
-        <div class="card-header">
-          <i class="fas fa-history me-2 text-muted"></i>
-          <span class="fw-semibold">{{ t['Timeline'] }}</span>
-        </div>
-        <div class="card-body pb-2">
-          <ul class="timeline">
-            {% for h in plant.history|reverse %}
-              {% set evspec = event_map[h.action] %}
-              <li class="timeline-item">
-                <span class="timeline-icon {{ evspec.color_class }}"><i class="fas {{ evspec.icon }}"></i></span>
-                <div class="timeline-content">
-                  <div class="d-flex justify-content-between flex-wrap">
-                    <strong class="{{ evspec.color_class }}">
-                      {% if h.action == 'custom' and h.custom_label %}
-                        {{ h.custom_label }}
-                      {% else %}
-                        {{ t[evspec.label] if evspec.label in t else evspec.label }}
-                      {% endif %}
-                    </strong>
-                    <span class="text-muted ms-2">{{ h.start }}</span>
-                  </div>
-                  
-                  {% if h.action == 'sow' %}
-                    <div class="text-muted small mt-1">
-                      {{ t['Expected sprout time'] }}: {{ h.range[0] }} {{ t[h.range[1]] }} – {{ h.range[2] }} {{ t[h.range[3]] }}
-                    </div>
-                  {% elif h.action == 'measure' %}
-                    {% set size_value = h.size[0]|float %}
-                    {% set size_display = size_value|int if size_value == size_value|int else size_value %}
-                    <div class="text-muted small mt-1">
-                      {{ size_display }}{{ h.size[1] }}
-                      {% set prev_measures = plant.history|selectattr('action', 'equalto', 'measure')|list %}
-                      {% set prev_measures = prev_measures|sort(attribute='start') %}
-                      {% set measure_idx = prev_measures.index(h) %}
-                      {% if measure_idx > 0 and prev_measures[measure_idx-1].size[1] == h.size[1] %}
-                        {% set prev = prev_measures[measure_idx-1] %}
-                        {% set current_val = h.size[0]|float %}
-                        {% set prev_val = prev.size[0]|float %}
-                        {% set current_date = h.start|todate %}
-                        {% set prev_date = prev.start|todate %}
-                        {% set days_between = (current_date - prev_date).days %}
-                        {% if days_between > 0 %}
-                          {% set growth = current_val - prev_val %}
-                          {% set growth_rate = (growth / days_between)|round(2) %}
-                          {% set growth_display = growth_rate|int if growth_rate == growth_rate|int else growth_rate %}
-                          {% if growth_rate > 0 %}
-                            <span class="ms-2 text-success">
-                              <i class="fas fa-arrow-up fa-xs"></i> {{ growth_display }} {{ h.size[1] }}/{{ t['day'] if 'day' in t else 'day' }}
-                            </span>
-                          {% elif growth_rate < 0 %}
-                            <span class="ms-2 text-danger">
-                              <i class="fas fa-arrow-down fa-xs"></i> {{ growth_display|abs }} {{ h.size[1] }}/{{ t['day'] if 'day' in t else 'day' }}
-                            </span>
-                          {% endif %}
-                        {% endif %}
-                      {% endif %}
-                    </div>
-                  {% elif h.action in ['soak', 'strat'] %}
-                    <div class="text-muted small mt-1">{{ h.duration[0] }} {{ t[h.duration[1]] }}</div>
-                  {% elif h.action == 'sprout' %}
-                    {% set sow = plant.history|selectattr('action','equalto','sow')|list|last %}
-                    {% if sow %}
-                      {% set sprouted_date = h.start|todate %}
-                      {% set sow_date = sow.start|todate %}
-                      {% set germ_days = (sprouted_date - sow_date).days %}
-                      <div class="text-muted small mt-1">
-                        {{ t['Sprouted in'] }} {{ germ_days }} {{ t['days'] }}
-                      </div>
-                    {% endif %}
-                  {% elif h.action == 'custom' %}
-                    <div class="text-muted small mt-1">{{ h.custom_note }}</div>
-                  {% endif %}
-                </div>
-                <a href="{{ url_for('edit_stage', action_id=h.id, lang=lang) }}" class="text-secondary ms-2 timeline-edit" title="{{ t['Edit stage'] }}">
-                  <i class="fas fa-edit"></i>
-                </a>
-              </li>
-            {% endfor %}
-          </ul>
-        </div>
-      </div>
-    </div>
-
-    <!-- Sidebar with Quick Stats and Actions -->
-  {# --- Compute all quick stats first --- #}
-  {% set sprout_event = plant.history|selectattr('action','equalto','sprout')|list|first %}
-  {% set measurements = plant.history|selectattr('action', 'equalto', 'measure')|list %}
-  {% set last_measurement = measurements|sort(attribute='start')|last if measurements else None %}
-  {% set water_events = plant.history|selectattr('action','equalto','water')|list %}
-  {% set last_water = water_events|sort(attribute='start')|last if water_events else None %}
-  {% set fertilize_events = plant.history|selectattr('action','equalto','fertilize')|list %}
-  {% set last_fertilize = fertilize_events|sort(attribute='start')|last if fertilize_events else None %}
-
+<!-- DESKTOP: two columns, compact and traditional layout -->
+<div class="row d-none d-lg-flex">
+  <div class="col-lg-8 mb-4">
+    {% include 'plant_partials/main_card.html' %}
+    {% include 'plant_partials/timeline_card.html' %}
+  </div>
   <div class="col-lg-4 mb-4">
-    {# -- Only show card if at least one stat exists -- #}
-    {% if sprout_event or last_measurement or last_water or last_fertilize %}
-      <div class="card shadow-sm mb-4">
-        <div class="card-header">
-          <i class="fas fa-chart-simple me-2 text-muted"></i>
-          <span class="fw-semibold">{{ t['Quick Stats'] }}</span>
-        </div>
-        <div class="card-body">
-          <ul class="list-group list-group-flush">
-            {% if sprout_event %}
-              {% set sprouted_date = sprout_event.start|todate %}
-              {% set now_date = today %}
-              {% set age_days = (now_date - sprouted_date).days %}
-              <li class="list-group-item d-flex justify-content-between align-items-center">
-                <span><i class="fas fa-calendar-day me-2 text-success"></i> {{ t['Age'] }}</span>
-                <span class="badge bg-success rounded-pill">{{ age_days }} {{ t['days'] }}</span>
-              </li>
-            {% endif %}
-
-            {% if last_measurement %}
-              {% set size_value = last_measurement.size[0]|float %}
-              {% set size_display = size_value|int if size_value == size_value|int else size_value %}
-              {% set size_unit = last_measurement.size[1] %}
-              <li class="list-group-item d-flex justify-content-between align-items-center">
-                <span><i class="fas fa-ruler me-2 text-secondary"></i> {{ t['Latest size'] }}</span>
-                <span class="badge bg-secondary rounded-pill">{{ size_display }}{{ size_unit }}</span>
-              </li>
-            {% endif %}
-
-            {% if last_water %}
-              {% set water_date = last_water.start|todate %}
-              {% set now_date = today %}
-              {% set days_since = (now_date - water_date).days %}
-              <li class="list-group-item d-flex justify-content-between align-items-center">
-                <span><i class="fas fa-droplet me-2 text-primary"></i> {{ t['Last watered'] }}</span>
-                <span class="badge bg-primary rounded-pill">{{ days_since }} {{ t['days ago'] }}</span>
-              </li>
-            {% endif %}
-
-            {% if last_fertilize %}
-              {% set fertilize_date = last_fertilize.start|todate %}
-              {% set now_date = today %}
-              {% set days_since = (now_date - fertilize_date).days %}
-              <li class="list-group-item d-flex justify-content-between align-items-center">
-                <span><i class="fas fa-bottle-water me-2 text-warning text-opacity-85"></i> {{ t['Last fertilized'] }}</span>
-                <span class="badge bg-warning text-dark rounded-pill">{{ days_since }} {{ t['days ago'] }}</span>
-              </li>
-            {% endif %}
-          </ul>
-        </div>
-      </div>
-    {% endif %}
-    {% if plant.current %}
-      <div class="card shadow-sm mb-4">
-        <div class="card-header">
-          <i class="fas fa-circle-info me-2 text-muted"></i>
-          <span class="fw-semibold">{{ t['Current stage'] if 'Current stage' in t else 'Current stage' }}</span>
-        </div>
-        <div class="card-body">
-          {% set action = plant.current.action %}
-          {% if action == 'custom' and plant.current.custom_label %}
-            {% set label_text = t['{event} on'].replace('{event}', plant.current.custom_label) if '{event} on' in t else plant.current.custom_label ~ ' on' %}
-            <div class="fw-bold">{{ label_text }} {{ plant.current.start }}</div>
-          {% else %}
-            {% set label = human_names[action] if action in human_names else action %}
-            <div class="fw-bold">{{ t[label] if label in t else label }} {{ plant.current.start }}</div>
-          {% endif %}
-          <div class="mt-2">
-          {% if plant.current.action == 'sow' and 'range' in plant.current %}
-            {% set min_val, current_unit, max_val, max_unit = plant.current.range %}
-            {% set min_days = duration_to_days(min_val, current_unit) %}
-            {% set max_days = duration_to_days(max_val, max_unit) %}
-            {% set min_date = plant.current.start | dateadd(days=min_days) %}
-            {% set max_date = plant.current.start | dateadd(days=max_days) %}
-            {% set now_date = today %}
-            {% set days_left = (max_date - now_date).days %}
-            {% set days_passed = (now_date - min_date).days %}
-            {% set total_window = (max_date - min_date).days %}
-            {% set progress = (days_passed / total_window * 100)|round|int %}
-            {% set progress = 100 if progress > 100 else (0 if progress < 0 else progress) %}
-            {% set gradient_class = "bg-success" if progress < 33 else "bg-warning" if progress < 66 else "bg-danger" %}
-            <div class="mb-2 text-muted" style="font-size:1rem;">
-              <strong>{{ t['Expected sprout time'] }}:</strong>
-              {{ min_val }} {{ t[current_unit] }} – {{ max_val }} {{ t[max_unit] }}
-            </div>
-            <div>
-              <div class="progress" style="height:8px;">
-                <div class="progress-bar {{ gradient_class }}" style="width:{{ progress }}%;"></div>
-              </div>
-              <div class="d-flex justify-content-between mt-2 small align-items-center">
-                {% if now_date > max_date %}
-                  <span class="badge bg-danger px-3 py-2 fs-6">{{ t['Overdue'] if 'Overdue' in t else 'Overdue' }}</span>
-                {% elif now_date >= min_date %}
-                  <span class="text-success fw-semibold">{{ t['Any day now'] if 'Any day now' in t else 'Any day now' }}</span>
-                  <span class="badge bg-success-subtle text-success px-3 py-2 fs-6">{{ days_left }} {{ t['days left'] }}</span>
-                {% else %}
-                  <span class="text-muted fw-semibold">{{ t['Not yet due'] if 'Not yet due' in t else 'Not yet due' }}</span>
-                  <span class="badge bg-secondary px-3 py-2 fs-6">{{ days_left }} {{ t['days left'] }}</span>
-                {% endif %}
-              </div>
-            </div>
-          {% elif plant.current.action in ['soak', 'strat'] and 'duration' in plant.current %}
-            {% set val, unit = plant.current.duration %}
-            {% set duration_days = duration_to_days(val, unit) %}
-            {% set end_date = plant.current.start | dateadd(days=duration_days) %}
-            {% set now_date = today %}
-            <div class="mb-2 text-muted">
-              <strong>{{ t['Duration'] }}:</strong> {{ val }} {{ t[unit] }}
-            </div>
-            <div>
-              {% if now_date >= end_date %}
-                <span class="badge bg-success px-3 py-2 fs-6">{{ t['Done'] }}</span>
-              {% else %}
-                {% set days_left = (end_date - now_date).days %}
-                <span class="badge bg-secondary px-3 py-2 fs-6">{{ days_left }} {{ t['days left'] }}</span>
-              {% endif %}
-            </div>
-          {% elif plant.current.action == 'measure' and 'size' in plant.current %}
-            {% set size_value = plant.current.size[0]|float %}
-            {% set size_display = size_value|int if size_value == size_value|int else size_value %}
-            {% set size_unit = plant.current.size[1] %}
-            <div class="mb-2 text-muted"><strong>{{ t['Size'] }}:</strong> {{ size_display }}{{ size_unit }}</div>
-            {# Optionally: Add growth rate here #}
-          {% elif plant.current.action == 'sprout' %}
-            {% set sprouted_date = plant.current.start|todate %}
-            {% set now_date = today %}
-            {% set age_days = (now_date - sprouted_date).days %}
-            <div class="mb-2 text-muted"><strong>{{ t['Age'] }}:</strong> {{ age_days }} {{ t['days'] }}</div>
-          {% endif %}
-          </div>
-        </div>
-      </div>
-      {% endif %}
-
-
-      <!-- Actions Card -->
-      <div class="card shadow-sm">
-        <div class="card-header">
-          <i class="fas fa-bolt me-2 text-muted"></i>
-          <span class="fw-semibold">{{ t['Actions'] }}</span>
-        </div>
-        <div class="card-body">
-          <div class="d-grid gap-2">
-            <a href="{{ url_for('add_stage', idx=plant.id, lang=lang) }}" class="btn btn-primary">
-              <i class="fas fa-plus me-1"></i> {{ t['Add stage'] }}
-            </a>
-            <a href="{{ url_for('edit_plant', idx=plant.id, lang=lang) }}" class="btn btn-outline-secondary">
-              <i class="fas fa-edit me-1"></i> {{ t['Edit plant'] }}
-            </a>
-            <a href="{{ url_for('index', lang=lang) }}" class="btn btn-outline-dark">
-              <i class="fas fa-arrow-left me-1"></i> {{ t['Back to dashboard'] }}
-            </a>
-          </div>
-        </div>
-      </div>
-    </div>
+    {% include 'plant_partials/quick_stats_card.html' %}
+    {% include 'plant_partials/current_stage_card.html' %}
+    {% include 'plant_partials/actions_card.html' %}
   </div>
 </div>
 
-<style>
-  .timeline {
-    position: relative;
-    list-style: none;
-    padding: 0;
-    margin: 0;
-  }
-  .timeline:before {
-    content: '';
-    position: absolute;
-    top: 0;
-    bottom: 0;
-    left: 14px;
-    width: 2px;
-    background: #e9ecef;
-    z-index: 0;
-  }
-  .timeline-item {
-    position: relative;
-    display: flex;
-    align-items: flex-start;
-    padding-left: 40px;
-    margin-bottom: 1.5rem;
-  }
-  .timeline-item:last-child:before {
-    content: '';
-    position: absolute;
-    left: 14px;
-    top: 30px;
-    bottom: 0;
-    width: 2px;
-    background: #fff;
-    z-index: 1;
-  }
-  .timeline-icon {
-    position: absolute;
-    left: 0;
-    width: 30px;
-    height: 30px;
-    border-radius: 50%;
-    background: #fff;
-    border: 2px solid currentColor;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    z-index: 2;
-    font-size: 0.8rem;
-  }
-  .timeline-content {
-    flex: 1;
-  }
-  .timeline-edit {
-    align-self: flex-start;
-    font-size: 0.9rem;
-  }
-  .plant-icon-circle {
-    width: 50px;
-    height: 50px;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border: 2px solid #28a745;
-  }
-  .plant-icon-circle i {
-    font-size: 1.5rem;
-  }
-  .timeline-icon.text-success { border-color: #28a745; }
-  .timeline-icon.text-info { border-color: #17a2b8; }
-  .timeline-icon.text-warning { border-color: #ffc107; }
-  .timeline-icon.text-danger { border-color: #dc3545; }
-  .timeline-icon.text-secondary { border-color: #6c757d; }
-  @media (max-width: 576px) {
-    .timeline-item { padding-left: 35px; }
-    .timeline:before { left: 13px; }
-    .timeline-item:last-child:before { left: 13px; }
-  }
-  .progress { background-color: rgba(0,0,0,0.1); }
-  .badge .progress-bar { transition: width 0.6s ease; }
-</style>
+  <style>
+    .timeline {
+      position: relative;
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+    .timeline:before {
+      content: '';
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      left: 14px;
+      width: 2px;
+      background: #e9ecef;
+      z-index: 0;
+    }
+    .timeline-item {
+      position: relative;
+      display: flex;
+      align-items: flex-start;
+      padding-left: 40px;
+      margin-bottom: 1.5rem;
+    }
+    .timeline-item:last-child:before {
+      content: '';
+      position: absolute;
+      left: 14px;
+      top: 30px;
+      bottom: 0;
+      width: 2px;
+      background: #fff;
+      z-index: 1;
+    }
+    .timeline-icon {
+      position: absolute;
+      left: 0;
+      width: 30px;
+      height: 30px;
+      border-radius: 50%;
+      background: #fff;
+      border: 2px solid currentColor;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 2;
+      font-size: 0.8rem;
+    }
+    .timeline-content {
+      flex: 1;
+    }
+    .timeline-edit {
+      align-self: flex-start;
+      font-size: 0.9rem;
+    }
+    .plant-icon-circle {
+      width: 50px;
+      height: 50px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: 2px solid #28a745;
+    }
+    .plant-icon-circle i {
+      font-size: 1.5rem;
+    }
+    .timeline-icon.text-success { border-color: #28a745; }
+    .timeline-icon.text-info { border-color: #17a2b8; }
+    .timeline-icon.text-warning { border-color: #ffc107; }
+    .timeline-icon.text-danger { border-color: #dc3545; }
+    .timeline-icon.text-secondary { border-color: #6c757d; }
+    @media (max-width: 576px) {
+      .timeline-item { padding-left: 35px; }
+      .timeline:before { left: 13px; }
+      .timeline-item:last-child:before { left: 13px; }
+    }
+    .progress { background-color: rgba(0,0,0,0.1); }
+    .badge .progress-bar { transition: width 0.6s ease; }
+  </style>
+</div>
 {% endblock %}
