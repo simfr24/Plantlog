@@ -114,6 +114,13 @@ translations = {
     "Watered on": "Watered on",
     "Age": "Age",
     "{event} on": "{event} on",
+    "Sprouting window has passed": "Sprouting window has passed",
+    "Waiting period": "Waiting period",
+    "days until sprouting window begins": "days until sprouting window begins",
+    "Ready for next stage": "Ready for next stage",
+    "Complete": "Complete",
+    "In progress": "In progress",
+
 
     # ────────── plant actions & stats ──────────
     "Actions": "Actions",

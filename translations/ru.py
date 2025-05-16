@@ -114,6 +114,13 @@ translations = {
     "Watered on": "Полито",
     "Age": "Возраст",
     "{event} on": "{event} —",
+    "Sprouting window has passed": "Окно прорастания прошло",
+    "Waiting period": "Период ожидания",
+    "days until sprouting window begins": "дней до начала окна прорастания",
+    "Ready for next stage": "Готово к следующему этапу",
+    "Complete": "Завершено",
+    "In progress": "В процессе",
+
 
     # ────────── plant actions & stats ──────────
     "Actions": "Действия",

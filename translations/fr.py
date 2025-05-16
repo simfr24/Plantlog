@@ -114,6 +114,13 @@ translations = {
     "Watered on": "Arrosé le",
     "Age": "Age",
     "{event} on": "{event} le",
+    "Sprouting window has passed": "La fenêtre de germination est dépassée",
+    "Waiting period": "Période d'attente",
+    "days until sprouting window begins": "jours avant le début de la fenêtre de germination",
+    "Ready for next stage": "Prêt pour l'étape suivante",
+    "Complete": "Terminé",
+    "In progress": "En cours",
+
 
     # ────────── plant actions & stats ──────────
     "Actions": "Actions",
@@ -195,4 +202,3 @@ translations = {
     "Help transition Custom Event detailed": "Les événements personnalisés ne changent pas l’état.",
     "Help transition Death detailed": "La plante passe à l’état 'Mort'.",
 }
-
