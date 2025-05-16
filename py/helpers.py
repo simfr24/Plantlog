@@ -244,6 +244,7 @@ def load_one(plant_id: int) -> Optional[Dict[str, Any]]:
                 state = dict(state_row)
 
     return {
+        "user_id": p["user_id"],
         "id": p["id"],
         "common": p["common"],
         "latin": p["latin"],

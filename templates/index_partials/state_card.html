@@ -200,15 +200,20 @@
                   {% endfor %}
                 </ul>
                 <div class="d-flex flex-wrap gap-2 mt-3">
-                  <a href="{{ url_for('view_plant', idx=idx, lang=lang) }}" class="btn btn-outline-success btn-sm">
-                  <i class="fas fa-leaf me-1"></i> {{ t['Plant details'] }}
-                  </a>
+                 
                   {% if not public_view %}
                   <a href="{{ url_for('edit_plant', idx=idx, lang=lang) }}" class="btn btn-outline-secondary btn-sm">
                     <i class="fas fa-edit me-1"></i> {{ t['Edit plant'] }}
                   </a>
                   <a href="{{ url_for('add_stage', idx=idx, lang=lang) }}" class="btn btn-outline-primary btn-sm">
                     <i class="fas fa-plus-circle me-1"></i> {{ t['Add stage'] }}
+                  </a>
+                  <a href="{{ url_for('view_plant', idx=idx, lang=lang) }}" class="btn btn-outline-success btn-sm">
+                    <i class="fas fa-leaf me-1"></i> {{ t['Plant details'] }}
+                  </a>
+                  {% else %}
+                  <a href="{{ url_for('public_view_plant', idx=idx, lang=lang) }}" class="btn btn-outline-success btn-sm">
+                    <i class="fas fa-leaf me-1"></i> {{ t['Plant details'] }}
                   </a>
                   {% endif %}
                 </div>

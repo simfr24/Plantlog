@@ -164,6 +164,35 @@ def login_required(view):
 
     return wrapped_view
 
+def login_required_for_plant(view):
+    @wraps(view)
+    def wrapped_view(idx, *args, **kwargs):
+        if g.user is None:
+            flash("You must be logged in to access this page.", "warning")
+            return redirect(url_for("login", next=request.path))
+        plant = load_one(idx)
+        if plant is None or plant.get("user_id") != g.user["id"]:
+            abort(403)
+        return view(idx, *args, **kwargs)
+    return wrapped_view
+
+def login_required_for_action(view):
+    @wraps(view)
+    def wrapped_view(action_id, *args, **kwargs):
+        if g.user is None:
+            flash("You must be logged in to access this page.", "warning")
+            return redirect(url_for("login", next=request.path))
+        action = get_action_by_id(action_id)
+        # Find the owning plant, then compare user_id
+        if action is None:
+            abort(404)
+        plant = load_one(action.get("plant_id"))
+        if plant is None or plant.get("user_id") != g.user["id"]:
+            abort(403)
+        return view(action_id, *args, **kwargs)
+    return wrapped_view
+
+
 
 ###############################################################################
 # Routes – dashboard & list views
@@ -213,6 +242,22 @@ def view_plant(idx):
         lang=g.lang,
         t=get_translations(g.lang),
         duration_to_days = duration_to_days,
+        today=date.today()
+    )
+
+@app.route("/p/<int:idx>")
+def public_view_plant(idx):
+    plant = load_one(idx)
+    if plant is None or plant["id"] is None:
+        abort(404)
+
+    return render_template(
+        "plant.html",
+        plant=plant,
+        lang=g.lang,
+        t=get_translations(g.lang),
+        duration_to_days = duration_to_days,
+        public_view=True,
         today=date.today()
     )
 
@@ -287,7 +332,7 @@ def add_plant():
 
 
 @app.route("/edit_plant/<int:idx>", methods=["GET", "POST"])
-@login_required
+@login_required_for_plant
 def edit_plant(idx):
     plant = load_one(idx)
     if plant is None:
@@ -317,7 +362,7 @@ def edit_plant(idx):
 
 
 @app.route("/delete_plant/<int:idx>")
-@login_required
+@login_required_for_plant
 def delete_plant(idx):
     process_delete_plant(idx, g.user["id"])
     return redirect(url_for("index", lang=g.lang))
@@ -328,7 +373,7 @@ def delete_plant(idx):
 ###############################################################################
 
 @app.route("/add_stage/<int:idx>", methods=["GET", "POST"])
-@login_required
+@login_required_for_plant
 def add_stage(idx):
     plant = load_one(idx) or abort(404)
 
@@ -364,7 +409,7 @@ def add_stage(idx):
 
 
 @app.route("/edit_stage/<int:action_id>", methods=["GET", "POST"])
-@login_required
+@login_required_for_action
 def edit_stage(action_id):
     ev = get_action_by_id(action_id) or abort(404)
 
@@ -395,7 +440,7 @@ def edit_stage(action_id):
 
 
 @app.route("/delete_stage/<int:action_id>", methods=["POST"])
-@login_required
+@login_required_for_action
 def delete_stage(action_id):
     process_delete_action(action_id, g.user["id"])
     return redirect(url_for("index", lang=g.lang))

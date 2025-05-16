@@ -1,4 +1,5 @@
-<div class="card shadow-sm mb-4">
+{% if not public_view %}
+ <div class="card shadow-sm mb-4">
   <div class="card-header">
     <i class="fas fa-bolt me-2 text-muted"></i>
     <span class="fw-semibold">{{ t['Actions'] }}</span>
@@ -17,3 +18,4 @@
     </div>
   </div>
 </div>
+{% endif %}
