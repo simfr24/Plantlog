@@ -1,67 +1,17 @@
 # -*- coding: utf-8 -*-
 """
-French UI strings for Plantlog  – pruned & completed
+French UI strings for Plantlog – semantically grouped & cleaned up
 """
 translations = {
-    # ────────── navigation / layout ──────────
+    # ────────── navigation & layout ──────────
     "Plant Tracker": "Suivi de Plantes",
     "My plants": "Mes plantes",
     "{name}'s plants": "Plantes de {name}",
-    "Add plant": "Ajouter une plante",
-    "Add stage": "Ajouter étape",
-    "Add stage for": "Ajouter une étape pour",
-    "Edit plant": "Modifier la plante",
-    "Edit stage": "Modifier l’étape",
-    "Edit stage for": "Modifier l’étape pour",
-    "Save": "Enregistrer",
-    "Save changes": "Enregistrer les modifications",
     "Language": "Langue",
     "Log out": "Se déconnecter",
+    "Back to dashboard": "Retour au tableau de bord",
 
-    # ────────── plant & stage forms ──────────
-    "Common name": "Nom commun",
-    "Latin name": "Nom latin",
-    "Location": "Emplacement",
-    "Notes": "Notes",
-    "Current stage": "Étape actuelle",
-    "e.g. Tomato": "ex. : Tomate",
-    "e.g. Latin name": "ex. : Solanum lycopersicum",
-    "e.g. Greenhouse": "ex. : Serre",
-    "e.g. Notes": "ex. : Germe vite, aime la chaleur",
-
-    # stage-specific inputs
-    "Event date": "Date de l'événement",
-    "Est. sprout time (min)": "Germination min.",
-    "Est. sprout time (max)": "Germination max.",
-    "Duration": "Durée",
-    "Size": "Taille",
-
-    # ────────── units ──────────
-    "hours": "heures",
-    "days": "jours",
-    "day": "jour",
-    "week": "semaine",
-    "weeks": "semaines",
-    "month": "mois",
-    "months": "mois",
-    "years": "ans",
-    "year": "an",
-
-    # ────────── timeline / badges ──────────
-    "Overdue": "En retard",
-    "Anytime soon": "Imminent",
-    "left": "restant",
-    "Done": "Terminé",
-    "Expected sprout time": "Temps de germination prévu",
-    "Sprouted on": "Germé le",
-    "Sprouted in": "Germé en",
-    "No plants yet": "Aucune plante pour l’instant",
-    "Confirm delete plant": "Voulez-vous vraiment supprimer cette plante ?",
-    "Delete plant": "Supprimer la plante",
-    "Confirm delete stage": "Voulez-vous vraiment supprimer cette étape ?",
-    "Delete stage": "Supprimer l’étape",
-
-    # ────────── authentication ──────────
+    # ────────── authentication & user ──────────
     "login_title": "Connexion",
     "login_heading": "Connectez-vous à votre compte",
     "username_label": "Nom d'utilisateur",
@@ -75,7 +25,45 @@ translations = {
     "create_account": "Créer un compte",
     "i_have_an_account": "J'ai déjà un compte",
 
-    # ────────── core event labels ──────────
+    # ────────── plant & stage forms ──────────
+    "Add plant": "Ajouter une plante",
+    "Add stage": "Ajouter étape",
+    "Add stage for": "Ajouter une étape pour",
+    "Edit plant": "Modifier la plante",
+    "Edit stage": "Modifier l’étape",
+    "Edit stage for": "Modifier l’étape pour",
+    "Save": "Enregistrer",
+    "Save changes": "Enregistrer les modifications",
+    "Plant details": "Page plante",
+    "Common name": "Nom commun",
+    "Latin name": "Nom latin",
+    "Location": "Emplacement",
+    "Notes": "Notes",
+    "Current stage": "Étape actuelle",
+    "e.g. Tomato": "ex. : Tomate",
+    "e.g. Latin name": "ex. : Solanum lycopersicum",
+    "e.g. Greenhouse": "ex. : Serre",
+    "e.g. Notes": "ex. : Germe vite, aime la chaleur",
+    "Event date": "Date de l'événement",
+    "Est. sprout time (min)": "Germination min.",
+    "Est. sprout time (max)": "Germination max.",
+    "Duration": "Durée",
+    "Size": "Taille",
+    "Note content": "Détails",
+
+    # ────────── units ──────────
+    "hours": "heures",
+    "days": "jours",
+    "day": "jour",
+    "week": "semaine",
+    "weeks": "semaines",
+    "month": "mois",
+    "months": "mois",
+    "year": "an",
+    "years": "ans",
+
+    # ────────── event & state labels ──────────
+    # --- events
     "Sow": "Semis",
     "Soak": "Trempage",
     "Strat": "Stratification",
@@ -85,26 +73,11 @@ translations = {
     "Death": "Mort",
     "Measurement": "Mesure",
     "Plant": "Plantation",
-
-    # ────────── human-readable summaries ──────────
-    "Sowing started on": "Semé le",
-    "Soaking since": "Trempe depuis le",
-    "Stratification started on": "Stratification commencée le",
-    "Germinated on": "Germé le",
-    "Flowering since": "Fleuri le",
-    "Fruiting since": "Fructification depuis le",
-    "Died on": "Mort le",
-    "Measurement taken on": "Mesure prise le",
-    "Planted on": "Planté le",
-    "Age": "Age",
-
-    # ────────── Custom events ──────────
-    "{event} on": "{event} le",
-    "Event title": "Titre de l'événement",
-    "Note content": "Détails",
+    "Water": "Arrosage",
+    "Fertilize": "Fertilisation",
     "Custom Event": "Entrée perso",
-
-    # ────────── core state labels ──────────
+    "Event title": "Titre de l'événement",
+    # --- states
     "Sown": "Semé",
     "Soaking": "Trempage",
     "Stratifying": "Stratification",
@@ -114,7 +87,56 @@ translations = {
     "Dead": "Mort",
     "Planted": "Planté",
 
-    # ────────── backend flash messages (login / register) ──────────
+    # ────────── timeline & badges ──────────
+    "Timeline": "Chronologie",
+    "Anytime soon": "Imminent",
+    "Any day now": "Imminent",
+    "Overdue": "En retard",
+    "Done": "Terminé",
+    "left": "restant",
+    "days left": "jours restants",
+    "No plants yet": "Aucune plante pour l’instant",
+    "Not yet due": "Pas encore prévu",
+    "Expected sprout time": "Temps de germination prévu",
+
+    # ────────── human-readable summaries ──────────
+    "Sowing started on": "Semé le",
+    "Soaking since": "Trempe depuis le",
+    "Stratification started on": "Stratification commencée le",
+    "Germinated on": "Germé le",
+    "Sprouted in": "Germé en",
+    "Flowering since": "Fleuri le",
+    "Fruiting since": "Fructification depuis le",
+    "Died on": "Mort le",
+    "Measurement taken on": "Mesure prise le",
+    "Planted on": "Planté le",
+    "Fertilized on": "Fertilisé le",
+    "Watered on": "Arrosé le",
+    "Age": "Age",
+    "{event} on": "{event} le",
+
+    # ────────── plant actions & stats ──────────
+    "Actions": "Actions",
+    "Quick Stats": "Statistiques rapides",
+    "Latest size": "Hauteur actuelle",
+    "Last watered": "Dernier arrosage",
+    "Last fertilized": "Dernière fertilisation",
+    "days ago": "jours",
+    "Plants": "Plantes",
+    "Public page": "Page publique",
+
+    # ────────── confirmation dialogs ──────────
+    "Confirm delete plant": "Confirmer la suppression de la plante",
+    "Are you sure you want to delete this plant?": "Êtes-vous sûr de vouloir supprimer cette plante ?",
+    "Delete plant": "Supprimer la plante",
+    "Confirm delete stage": "Confirmer la suppression de l’étape",
+    "Are you sure you want to delete this stage?": "Êtes-vous sûr de vouloir supprimer cette étape ?",
+    "Delete stage": "Supprimer l’étape",
+    "Delete": "Supprimer",
+    "Cancel": "Annuler",
+    "Close": "Fermer",
+
+    # ────────── backend/flash messages ──────────
     "Username & password required": "Nom d'utilisateur et mot de passe requis",
     "Username already taken": "Nom d'utilisateur déjà pris",
     "Account created – you can now log in": "Compte créé – vous pouvez maintenant vous connecter",
@@ -124,32 +146,20 @@ translations = {
     "You must be logged in to access this page.": "Vous devez être connecté pour accéder à cette page.",
     "Size must be > 0.": "La taille doit être > 0.",
 
-    # ─────────────── admin ───────────────
+    # ────────── admin ──────────
     "Logins today": "Connexions aujourd’hui",
     "ID": "ID",
     "Username": "Nom d’utilisateur",
-    "Plants": "Plantes",
-    "Public page": "Page publique",
     "Created": "Créé le",
     "Last login": "Dernière connexion",
 
-    # ─────────────── confirm modals ───────────────
-    "Confirm delete plant": "Confirmer la suppression de la plante",
-    "Are you sure you want to delete this plant?": "Êtes-vous sûr de vouloir supprimer cette plante ?",
-    "Confirm delete stage": "Confirmer la suppression de l’étape",
-    "Are you sure you want to delete this stage?": "Êtes-vous sûr de vouloir supprimer cette étape ?",
-    "Delete": "Supprimer",
-    "Cancel": "Annuler",
-    "Close": "Fermer",
-
-    # ─────────────── help page ───────────────
+    # ────────── help section ──────────
     "Help": "Aide",
     "Overview": "Aperçu",
-    
-    # Aide – contenu enrichi
     "Help overview detailed": "Bienvenue dans Plantlog ! Cette application vous permet de suivre l'évolution de vos plantes, étape par étape. Vous pouvez enregistrer des événements clés, visualiser les changements d'état, et garder un historique détaillé de chaque plante.",
 
-    # États des plantes
+    # --- help: states ---
+    "Plant States": "États de la plante",
     "Help state Sown detailed": "L'état 'Semé' indique que la graine a été placée dans un substrat, comme du terreau ou du coton humide, dans l'espoir de la voir germer.",
     "Help state Soaking detailed": "Le trempage est souvent utilisé pour ramollir l'enveloppe des graines dures avant le semis. Cela peut durer de quelques heures à plusieurs jours.",
     "Help state Stratifying detailed": "La stratification froide imite l’hiver naturel : certaines graines ont besoin d’une période de froid et d’humidité pour lever leur dormance. Cette étape est souvent effectuée au réfrigérateur.",
@@ -158,7 +168,8 @@ translations = {
     "Help state Fruiting detailed": "La plante porte des fruits, signe qu'elle a été fécondée avec succès après la floraison.",
     "Help state Dead detailed": "L’état 'Mort' signifie que la plante est morte ou qu’aucune croissance n’a été observée après un long moment.",
 
-    # Événements des plantes
+    # --- help: events ---
+    "Plant Events": "Événements de la plante",
     "Help event Sow detailed": "Enregistrez le moment où vous semez une graine. Vous pouvez aussi estimer combien de temps elle mettra à germer (durée min et max).",
     "Help event Soak detailed": "Notez le début du trempage. Cela aide pour les espèces qui germent mieux après un contact prolongé avec l’eau.",
     "Help event Strat detailed": "Indiquez quand commence la stratification. Vous pouvez spécifier la durée prévue (ex. 6 semaines à 4°C).",
@@ -170,7 +181,8 @@ translations = {
     "Help event Custom Event detailed": "Un événement libre que vous pouvez nommer et commenter, comme 'Rempotage', 'Maladie', etc.",
     "Help event Death detailed": "Signale que la plante est morte (flétrie, moisie, desséchée…).",
 
-    # Transitions d'état
+    # --- help: transitions ---
+    "How States Change": "Comment les états évoluent",
     "Help transitions description detailed": "Chaque événement peut entraîner un changement d’état de la plante. Voici comment cela fonctionne :",
     "Help transition Sow detailed": "Après un semis, la plante passe à l’état 'Semé'.",
     "Help transition Soak detailed": "Un trempage place la graine dans l’état 'Trempage'.",
@@ -182,12 +194,5 @@ translations = {
     "Help transition Measurement detailed": "Une mesure n’affecte pas l’état de la plante.",
     "Help transition Custom Event detailed": "Les événements personnalisés ne changent pas l’état.",
     "Help transition Death detailed": "La plante passe à l’état 'Mort'.",
-
-    "Plant States": "États de la plante",
-    "Plant Events": "Événements de la plante",
-    "How States Change": "Comment les états évoluent",
-
-    # Footer
-    "Back to dashboard": "Retour au tableau de bord",
-
 }
+

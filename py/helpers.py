@@ -148,7 +148,7 @@ def _events_for_plant(conn, plant_id: int) -> List[Dict[str, Any]]:
         """
         SELECT e.id, et.code AS action, e.happened_on AS start,
                e.range_min, e.range_min_u, e.range_max, e.range_max_u,
-               e.dur_val,  e.dur_unit,
+               e.dur_val,  e.dur_unit, 
                e.measure_val, e.measure_unit,
                e.custom_label, e.custom_note
         FROM events      e
@@ -180,12 +180,21 @@ def _events_for_plant(conn, plant_id: int) -> List[Dict[str, Any]]:
 
 
 def load_one(plant_id: int) -> Optional[Dict[str, Any]]:
-    """Return one plant dict with history + current event."""
     with get_conn() as conn:
         p = conn.execute("SELECT * FROM plants WHERE id = ?", (plant_id,)).fetchone()
         if p is None:
             return None
         history = _events_for_plant(conn, plant_id)
+
+        # Fetch the current state
+        state = None
+        if p["current_state_id"] is not None:
+            state_row = conn.execute("""
+                SELECT code, label, color_class, icon_class
+                FROM state_types WHERE id = ?
+            """, (p["current_state_id"],)).fetchone()
+            if state_row:
+                state = dict(state_row)
 
     return {
         "id": p["id"],
@@ -195,6 +204,7 @@ def load_one(plant_id: int) -> Optional[Dict[str, Any]]:
         "notes": p["notes"],
         "history": history,
         "current": history[-1] if history else None,
+        "state": state,
     }
 
 

@@ -81,17 +81,47 @@ CREATE TABLE IF NOT EXISTS events (
 );
 """
 
+def upsert_state_types(conn, state_types):
+    for code, label, color_class, icon_class, sort_rank in state_types:
+        conn.execute("""
+            INSERT OR IGNORE INTO state_types (code, label, color_class, icon_class, sort_rank)
+            VALUES (?, ?, ?, ?, ?)
+        """, (code, label, color_class, icon_class, sort_rank))
+        # Update in case label, color_class, icon_class, or sort_rank have changed
+        conn.execute("""
+            UPDATE state_types
+            SET label = ?, color_class = ?, icon_class = ?, sort_rank = ?
+            WHERE code = ?
+        """, (label, color_class, icon_class, sort_rank, code))
+
+def upsert_event_types(conn, event_types):
+    for code, label, color_class, icon_class, new_state_code, sort_rank in event_types:
+        # Get new_state_id, may be None
+        new_state_id = None
+        if new_state_code:
+            row = conn.execute("SELECT id FROM state_types WHERE code = ?", (new_state_code,)).fetchone()
+            if row:
+                new_state_id = row['id']
+        # Insert if not exists
+        conn.execute("""
+            INSERT OR IGNORE INTO event_types
+                (code, label, color_class, icon_class, new_state_id, sort_rank)
+            VALUES (?, ?, ?, ?, ?, ?)
+        """, (code, label, color_class, icon_class, new_state_id, sort_rank))
+        # Update fields in case of changes
+        conn.execute("""
+            UPDATE event_types
+            SET label = ?, color_class = ?, icon_class = ?, new_state_id = ?, sort_rank = ?
+            WHERE code = ?
+        """, (label, color_class, icon_class, new_state_id, sort_rank, code))
+
+
 def init_and_fill_db():
-    # 1) create fresh schema
+    # 1) create fresh schema if needed
     with get_conn() as conn:
         conn.executescript(SCHEMA)
-
-        # 2) seed state_types
-        conn.executemany("""
-            INSERT OR IGNORE INTO state_types
-                (code,      label,        color_class,  icon_class,     sort_rank)
-            VALUES (?,        ?,            ?,             ?,             ?)
-            """, [
+        # 2) upsert state_types
+        state_types = [
             ('seed',       'Sown',        'text-success','fa-seedling',  10),
             ('soaked',     'Soaking',     'text-primary','fa-tint',      5),
             ('strat',      'Stratifying', 'text-info',   'fa-snowflake', 5),
@@ -99,26 +129,25 @@ def init_and_fill_db():
             ('flowering',  'Flowering',   'text-warning','fa-fan',       30),
             ('fruiting',   'Fruiting',    'text-danger', 'fa-apple-whole',40),
             ('dead',       'Dead',        'text-dark',   'fa-skull',     90),
-            ])
+        ]
+        upsert_state_types(conn, state_types)
 
-            # event_types
-        conn.executemany("""
-            INSERT OR IGNORE INTO event_types
-                (code,label,color_class,icon_class,new_state_id,sort_rank)
-            VALUES (?,      ?,       ?,           ?,
-                    (SELECT id FROM state_types WHERE code=?), ?)
-            """, [
-              ('soak',      'Soak',         'text-primary',   'fa-tint',       'soaked',     4),
-              ('strat',     'Strat',        'text-info',      'fa-snowflake',  'strat',      5),
-              ('sow',       'Sow',          'text-success',   'fa-seedling',   'seed',       10),
-              ('plant',     'Plant',        'text-success',   'fa-tree',       'growing',    15),
-              ('sprout',    'Sprout',       'text-success',   'fa-leaf',       'growing',    20),
-              ('flower',    'Flower',       'text-warning',   'fa-fan',        'flowering',  30),
-              ('fruit',     'Fruit',        'text-danger',    'fa-apple-whole','fruiting',   40),
-              ('measure',   'Measurement',  'text-secondary', 'fa-ruler',       None,        50),
-              ('custom',    'Custom Event', 'text-secondary', 'fa-star',       None,        60),
-              ('dead',      'Death',        'text-dark',      'fa-skull',      'dead',       90),
-            ])
+        # 3) upsert event_types
+        event_types = [
+            ('soak',      'Soak',         'text-primary',   'fa-tint',         'soaked',    4),
+            ('strat',     'Strat',        'text-info',      'fa-snowflake',    'strat',     5),
+            ('sow',       'Sow',          'text-success',   'fa-seedling',     'seed',      10),
+            ('plant',     'Plant',        'text-success',   'fa-tree',         'growing',   15),
+            ('sprout',    'Sprout',       'text-success',   'fa-leaf',         'growing',   20),
+            ('water',     'Water',        'text-primary',   'fa-droplet',      None,        25),
+            ('fertilize', 'Fertilize',    'text-warning',   'fa-bottle-water', None,        28),
+            ('flower',    'Flower',       'text-warning',   'fa-fan',          'flowering', 30),
+            ('fruit',     'Fruit',        'text-danger',    'fa-apple-whole',  'fruiting',  40),
+            ('measure',   'Measurement',  'text-secondary', 'fa-ruler',        None,        50),
+            ('custom',    'Custom Event', 'text-secondary', 'fa-star',         None,        60),
+            ('dead',      'Death',        'text-dark',      'fa-skull',        'dead',      90),
+        ]
+        upsert_event_types(conn, event_types)
 
         conn.commit()
 

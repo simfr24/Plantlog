@@ -193,6 +193,21 @@ def public_view(username):
     ctx  = build_dashboard_context(user, lang)
     return render_template("index.html", public_view=True, **ctx)
 
+@app.route("/plant/<int:idx>")
+@login_required
+def view_plant(idx):
+    plant = load_one(idx)
+    if plant is None or plant["id"] is None:
+        abort(404)
+
+    return render_template(
+        "plant.html",
+        plant=plant,
+        lang=g.lang,
+        t=get_translations(g.lang),
+        duration_to_days = duration_to_days,
+        today=date.today()
+    )
 
 ###############################################################################
 # Routes – Admin

@@ -1,67 +1,17 @@
 # -*- coding: utf-8 -*-
 """
-English UI strings for Plantlog
+English UI strings for Plantlog – semantically grouped
 """
 translations = {
-    # ────────── navigation / layout ──────────
+    # ────────── navigation & layout ──────────
     "Plant Tracker": "Plant Tracker",
     "My plants": "My plants",
     "{name}'s plants": "{name}'s plants",
-    "Add plant": "Add plant",
-    "Add stage": "Add stage",
-    "Add stage for": "Add stage for",
-    "Edit plant": "Edit plant",
-    "Edit stage": "Edit stage",
-    "Edit stage for": "Edit stage for",
-    "Save": "Save",
-    "Save changes": "Save changes",
     "Language": "Language",
     "Log out": "Log out",
+    "Back to dashboard": "Back to Dashboard",
 
-    # ────────── plant & stage forms ──────────
-    "Common name": "Common name",
-    "Latin name": "Latin name",
-    "Location": "Location",
-    "Notes": "Notes",
-    "Current stage": "Current stage",
-    "e.g. Tomato": "e.g. Tomato",
-    "e.g. Latin name": "e.g. Solanum lycopersicum",
-    "e.g. Greenhouse": "e.g. Greenhouse",
-    "e.g. Notes": "e.g. Germinates quickly, likes warmth",
-
-    # stage-specific inputs
-    "Event date": "Event date",
-    "Est. sprout time (min)": "Est. sprout time (min)",
-    "Est. sprout time (max)": "Est. sprout time (max)",
-    "Duration": "Duration",
-    "Size": "Size",
-
-    # ────────── units ──────────
-    "hours": "hours",
-    "days": "days",
-    "day": "day",
-    "week": "week",
-    "weeks": "weeks",
-    "month": "month",
-    "months": "months",
-    "years": "years",
-    "year": "year",
-
-    # ────────── timeline / badges ──────────
-    "Overdue": "Overdue",
-    "Anytime soon": "Anytime soon",
-    "left": "left",
-    "Done": "Done",
-    "Expected sprout time": "Expected sprout time",
-    "Sprouted on": "Sprouted on",
-    "Sprouted in": "Sprouted in",
-    "No plants yet": "No plants yet",
-    "Confirm delete plant": "Are you sure you want to delete this plant?",
-    "Delete plant": "Delete plant",
-    "Confirm delete stage": "Are you sure you want to delete this stage?",
-    "Delete stage": "Delete stage",
-
-    # ────────── authentication ──────────
+    # ────────── authentication & user ──────────
     "login_title": "Login",
     "login_heading": "Log in to your account",
     "username_label": "Username",
@@ -75,7 +25,45 @@ translations = {
     "create_account": "Create account",
     "i_have_an_account": "I already have an account",
 
-    # ────────── core event labels ──────────
+    # ────────── plant & stage forms ──────────
+    "Add plant": "Add plant",
+    "Add stage": "Add stage",
+    "Add stage for": "Add stage for",
+    "Edit plant": "Edit plant",
+    "Edit stage": "Edit stage",
+    "Edit stage for": "Edit stage for",
+    "Save": "Save",
+    "Save changes": "Save changes",
+    "Plant details": "Plant details",
+    "Common name": "Common name",
+    "Latin name": "Latin name",
+    "Location": "Location",
+    "Notes": "Notes",
+    "Current stage": "Current stage",
+    "e.g. Tomato": "e.g. Tomato",
+    "e.g. Latin name": "e.g. Solanum lycopersicum",
+    "e.g. Greenhouse": "e.g. Greenhouse",
+    "e.g. Notes": "e.g. Germinates quickly, likes warmth",
+    "Event date": "Event date",
+    "Est. sprout time (min)": "Est. sprout time (min)",
+    "Est. sprout time (max)": "Est. sprout time (max)",
+    "Duration": "Duration",
+    "Size": "Size",
+    "Note content": "Details",
+
+    # ────────── units ──────────
+    "hours": "hours",
+    "days": "days",
+    "day": "day",
+    "week": "week",
+    "weeks": "weeks",
+    "month": "month",
+    "months": "months",
+    "year": "year",
+    "years": "years",
+
+    # ────────── event & state labels ──────────
+    # events
     "Sow": "Sow",
     "Soak": "Soak",
     "Strat": "Strat",
@@ -85,26 +73,11 @@ translations = {
     "Death": "Death",
     "Measurement": "Measurement",
     "Plant": "Plant",
-
-    # ────────── human-readable summaries ──────────
-    "Sowing started on": "Sowing started on",
-    "Soaking since": "Soaking since",
-    "Stratification started on": "Stratification started on",
-    "Germinated on": "Germinated on",
-    "Flowering since": "Flowering since",
-    "Fruiting since": "Fruiting since",
-    "Died on": "Died on",
-    "Measurement taken on": "Measurement taken on",
-    "Planted on": "Planted on",
-    "Age": "Age",
-
-    # ────────── Custom events ──────────
-    "{event} on": "{event} on",
-    "Event title": "Event title",
-    "Note content": "Details",
+    "Water": "Water",
+    "Fertilize": "Fertilize",
     "Custom Event": "Custom Event",
-
-    # ────────── core state labels ──────────
+    "Event title": "Event title",
+    # states
     "Sown": "Sown",
     "Soaking": "Soaking",
     "Stratifying": "Stratifying",
@@ -112,9 +85,58 @@ translations = {
     "Flowering": "Flowering",
     "Fruiting": "Fruiting",
     "Dead": "Dead",
-    "Planted": "Planté",
+    "Planted": "Planted",
 
-    # ────────── backend flash messages (login / register) ──────────
+    # ────────── timeline & badges ──────────
+    "Timeline": "Timeline",
+    "Anytime soon": "Anytime soon",
+    "Any day now": "Any day now",
+    "Overdue": "Overdue",
+    "Done": "Done",
+    "left": "left",
+    "days left": "days left",
+    "No plants yet": "No plants yet",
+    "Not yet due": "Not yet due",
+    "Expected sprout time": "Expected sprout time",
+
+    # ────────── human-readable summaries ──────────
+    "Sowing started on": "Sowing started on",
+    "Soaking since": "Soaking since",
+    "Stratification started on": "Stratification started on",
+    "Germinated on": "Germinated on",
+    "Sprouted in": "Sprouted in",
+    "Flowering since": "Flowering since",
+    "Fruiting since": "Fruiting since",
+    "Died on": "Died on",
+    "Measurement taken on": "Measurement taken on",
+    "Planted on": "Planted on",
+    "Fertilized on": "Fertilized on",
+    "Watered on": "Watered on",
+    "Age": "Age",
+    "{event} on": "{event} on",
+
+    # ────────── plant actions & stats ──────────
+    "Actions": "Actions",
+    "Quick Stats": "Quick Stats",
+    "Latest size": "Latest size",
+    "Last watered": "Last watered",
+    "Last fertilized": "Last fertilized",
+    "days ago": "days ago",
+    "Plants": "Plants",
+    "Public page": "Public page",
+
+    # ────────── confirmation dialogs ──────────
+    "Confirm delete plant": "Confirm delete plant",
+    "Are you sure you want to delete this plant?": "Are you sure you want to delete this plant?",
+    "Delete plant": "Delete plant",
+    "Confirm delete stage": "Confirm delete stage",
+    "Are you sure you want to delete this stage?": "Are you sure you want to delete this stage?",
+    "Delete stage": "Delete stage",
+    "Delete": "Delete",
+    "Cancel": "Cancel",
+    "Close": "Close",
+
+    # ────────── backend/flash messages ──────────
     "Username & password required": "Username & password required",
     "Username already taken": "Username already taken",
     "Account created – you can now log in": "Account created – you can now log in",
@@ -124,32 +146,20 @@ translations = {
     "You must be logged in to access this page.": "You must be logged in to access this page.",
     "Size must be > 0.": "Size must be > 0.",
 
-    # ─────────────── admin ───────────────
+    # ────────── admin ──────────
     "Logins today": "Logins today",
     "ID": "ID",
     "Username": "Username",
-    "Plants": "Plants",
-    "Public page": "Public page",
     "Created": "Created",
     "Last login": "Last login",
 
-    # ─────────────── confirm modals ───────────────
-    "Confirm delete plant": "Confirm delete plant",
-    "Are you sure you want to delete this plant?": "Are you sure you want to delete this plant?",
-    "Confirm delete stage": "Confirm delete stage",
-    "Are you sure you want to delete this stage?": "Are you sure you want to delete this stage?",
-    "Delete": "Delete",
-    "Cancel": "Cancel",
-    "Close": "Close",
-
-    # ─────────────── help page ───────────────
+    # ────────── help section ──────────
     "Help": "Help",
     "Overview": "Overview",
-    
-    # Help – enriched content
     "Help overview detailed": "Welcome to Plantlog! This app helps you track your plants’ development step by step. You can log key events, view state changes, and maintain a detailed history for each plant.",
 
-    # Plant states
+    # --- help: states ---
+    "Plant States": "Plant States",
     "Help state Sown detailed": "The 'Sown' state means the seed has been placed in a substrate like soil or moist cotton in hopes it will germinate.",
     "Help state Soaking detailed": "Soaking is often used to soften hard seed coats before sowing. It can last from a few hours to several days.",
     "Help state Stratifying detailed": "Cold stratification mimics winter: some seeds need a period of cold and moisture to break dormancy. This is often done in a refrigerator.",
@@ -158,7 +168,8 @@ translations = {
     "Help state Fruiting detailed": "The plant is bearing fruit, indicating successful pollination after flowering.",
     "Help state Dead detailed": "The 'Dead' state means the plant has died or no growth has been observed for a long time.",
 
-    # Plant events
+    # --- help: events ---
+    "Plant Events": "Plant Events",
     "Help event Sow detailed": "Log the moment you sow a seed. You can also estimate how long it will take to germinate (minimum and maximum duration).",
     "Help event Soak detailed": "Record the start of soaking. This is useful for species that germinate better after prolonged contact with water.",
     "Help event Strat detailed": "Indicate when stratification begins. You can specify the expected duration (e.g. 6 weeks at 4°C).",
@@ -170,7 +181,8 @@ translations = {
     "Help event Custom Event detailed": "A free-form event you can name and describe, such as 'Repotting', 'Disease', etc.",
     "Help event Death detailed": "Marks that the plant has died (wilted, rotted, dried out…).",
 
-    # State transitions
+    # --- help: transitions ---
+    "How States Change": "How States Change",
     "Help transitions description detailed": "Each event can cause a change in the plant's state. Here's how it works:",
     "Help transition Sow detailed": "After sowing, the plant enters the 'Sown' state.",
     "Help transition Soak detailed": "Soaking puts the seed into the 'Soaking' state.",
@@ -182,12 +194,4 @@ translations = {
     "Help transition Measurement detailed": "A measurement doesn’t change the plant’s state.",
     "Help transition Custom Event detailed": "Custom events do not change the state.",
     "Help transition Death detailed": "The plant transitions to the 'Dead' state.",
-
-    "Plant States": "Plant States",
-    "Plant Events": "Plant Events",
-    "How States Change": "How States Change",
-
-    # Footer
-    "Back to dashboard": "Back to Dashboard",
-    
 }
