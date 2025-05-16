@@ -218,6 +218,87 @@
         </div>
       </div>
     {% endif %}
+    {% if plant.current %}
+      <div class="card shadow-sm mb-4">
+        <div class="card-header">
+          <i class="fas fa-circle-info me-2 text-muted"></i>
+          <span class="fw-semibold">{{ t['Current stage'] if 'Current stage' in t else 'Current stage' }}</span>
+        </div>
+        <div class="card-body">
+          {% set action = plant.current.action %}
+          {% if action == 'custom' and plant.current.custom_label %}
+            {% set label_text = t['{event} on'].replace('{event}', plant.current.custom_label) if '{event} on' in t else plant.current.custom_label ~ ' on' %}
+            <div class="fw-bold">{{ label_text }} {{ plant.current.start }}</div>
+          {% else %}
+            {% set label = human_names[action] if action in human_names else action %}
+            <div class="fw-bold">{{ t[label] if label in t else label }} {{ plant.current.start }}</div>
+          {% endif %}
+          <div class="mt-2">
+          {% if plant.current.action == 'sow' and 'range' in plant.current %}
+            {% set min_val, current_unit, max_val, max_unit = plant.current.range %}
+            {% set min_days = duration_to_days(min_val, current_unit) %}
+            {% set max_days = duration_to_days(max_val, max_unit) %}
+            {% set min_date = plant.current.start | dateadd(days=min_days) %}
+            {% set max_date = plant.current.start | dateadd(days=max_days) %}
+            {% set now_date = today %}
+            {% set days_left = (max_date - now_date).days %}
+            {% set days_passed = (now_date - min_date).days %}
+            {% set total_window = (max_date - min_date).days %}
+            {% set progress = (days_passed / total_window * 100)|round|int %}
+            {% set progress = 100 if progress > 100 else (0 if progress < 0 else progress) %}
+            {% set gradient_class = "bg-success" if progress < 33 else "bg-warning" if progress < 66 else "bg-danger" %}
+            <div class="mb-2 text-muted" style="font-size:1rem;">
+              <strong>{{ t['Expected sprout time'] }}:</strong>
+              {{ min_val }} {{ t[current_unit] }} – {{ max_val }} {{ t[max_unit] }}
+            </div>
+            <div>
+              <div class="progress" style="height:8px;">
+                <div class="progress-bar {{ gradient_class }}" style="width:{{ progress }}%;"></div>
+              </div>
+              <div class="d-flex justify-content-between mt-2 small align-items-center">
+                {% if now_date > max_date %}
+                  <span class="badge bg-danger px-3 py-2 fs-6">{{ t['Overdue'] if 'Overdue' in t else 'Overdue' }}</span>
+                {% elif now_date >= min_date %}
+                  <span class="text-success fw-semibold">{{ t['Any day now'] if 'Any day now' in t else 'Any day now' }}</span>
+                  <span class="badge bg-success-subtle text-success px-3 py-2 fs-6">{{ days_left }} {{ t['days left'] }}</span>
+                {% else %}
+                  <span class="text-muted fw-semibold">{{ t['Not yet due'] if 'Not yet due' in t else 'Not yet due' }}</span>
+                  <span class="badge bg-secondary px-3 py-2 fs-6">{{ days_left }} {{ t['days left'] }}</span>
+                {% endif %}
+              </div>
+            </div>
+          {% elif plant.current.action in ['soak', 'strat'] and 'duration' in plant.current %}
+            {% set val, unit = plant.current.duration %}
+            {% set duration_days = duration_to_days(val, unit) %}
+            {% set end_date = plant.current.start | dateadd(days=duration_days) %}
+            {% set now_date = today %}
+            <div class="mb-2 text-muted">
+              <strong>{{ t['Duration'] }}:</strong> {{ val }} {{ t[unit] }}
+            </div>
+            <div>
+              {% if now_date >= end_date %}
+                <span class="badge bg-success px-3 py-2 fs-6">{{ t['Done'] }}</span>
+              {% else %}
+                {% set days_left = (end_date - now_date).days %}
+                <span class="badge bg-secondary px-3 py-2 fs-6">{{ days_left }} {{ t['days left'] }}</span>
+              {% endif %}
+            </div>
+          {% elif plant.current.action == 'measure' and 'size' in plant.current %}
+            {% set size_value = plant.current.size[0]|float %}
+            {% set size_display = size_value|int if size_value == size_value|int else size_value %}
+            {% set size_unit = plant.current.size[1] %}
+            <div class="mb-2 text-muted"><strong>{{ t['Size'] }}:</strong> {{ size_display }}{{ size_unit }}</div>
+            {# Optionally: Add growth rate here #}
+          {% elif plant.current.action == 'sprout' %}
+            {% set sprouted_date = plant.current.start|todate %}
+            {% set now_date = today %}
+            {% set age_days = (now_date - sprouted_date).days %}
+            <div class="mb-2 text-muted"><strong>{{ t['Age'] }}:</strong> {{ age_days }} {{ t['days'] }}</div>
+          {% endif %}
+          </div>
+        </div>
+      </div>
+      {% endif %}
 
 
       <!-- Actions Card -->
