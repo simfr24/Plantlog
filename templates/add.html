@@ -7,26 +7,50 @@
       <h1 class="mb-0 display-6 text-success">{{ t['Add plant'] }}</h1>
     </div>
     {% if errors %}<div class="alert alert-danger"><ul class="mb-0">{% for error in errors %}<li>{{ error }}</li>{% endfor %}</ul></div>{% endif %}
+    
+    <!-- AI Success/Error Messages -->
+    <div id="ai-success" class="alert alert-success d-none">
+      <i class="fas fa-magic me-1"></i> AI suggestions applied successfully!
+    </div>
+    <div id="ai-error" class="alert alert-danger d-none">
+      <i class="fas fa-exclamation-triangle me-1"></i> <span id="ai-error-text"></span>
+    </div>
+    
     <div class="card shadow-sm">
       <div class="card-body">
         <form method="post">
           <div class="row g-3">
             <div class="col-md-6">
               <label class="form-label fw-semibold">{{ t['Common name'] }}</label>
-              <input class="form-control" name="common" value="{{ form.common }}" placeholder="{{ t['e.g. Tomato'] }}">
+              <div class="input-group">
+                <input class="form-control" name="common" id="common" value="{{ form.common }}" placeholder="{{ t['e.g. Tomato'] }}">
+                {% if app_config.features.ai_completion %}
+                <button type="button" class="ai-complete-btn btn btn-outline-primary" data-field="common" title="Use AI to complete plant information from common name">
+                  <i class="fas fa-magic"></i>
+                  <span class="d-none d-md-inline ms-1"></span>
+                </button>
+                {% endif %}
+              </div>
             </div>
             <div class="col-md-6">
               <label class="form-label fw-semibold">{{ t['Latin name'] }}</label>
-              <input class="form-control" name="latin" value="{{ form.latin }}" placeholder="{{ t['e.g. Latin name'] }}">
+              <div class="input-group">
+                <input class="form-control" name="latin" id="latin" value="{{ form.latin }}" placeholder="{{ t['e.g. Latin name'] }}">
+                {% if app_config.features.ai_completion %}
+                <button type="button" class="ai-complete-btn btn btn-outline-primary" data-field="latin" title="Use AI to complete plant information from latin name">
+                  <i class="fas fa-magic"></i>
+                </button>
+                {% endif %}
+              </div>
             </div>
             <div class="col-md-6">
               <label class="form-label fw-semibold">{{ t['Location'] }}</label>
-              <input class="form-control" name="location" list="locations" value="{{ form.location }}" placeholder="{{ t['e.g. Greenhouse'] }}">
+              <input class="form-control" name="location" id="location" list="locations" value="{{ form.location }}" placeholder="{{ t['e.g. Greenhouse'] }}">
               <datalist id="locations">{% for location in locations %}<option value="{{ location }}">{% endfor %}</datalist>
             </div>
             <div class="col-md-6">
               <label class="form-label fw-semibold">{{ t['Notes'] }}</label>
-              <textarea class="form-control" name="notes" placeholder="{{ t['e.g. Notes'] }}">{{ form.notes }}</textarea>
+              <textarea class="form-control" name="notes" id="notes" placeholder="{{ t['e.g. Notes'] }}">{{ form.notes }}</textarea>
             </div>
           </div>
           <hr class="my-4">
@@ -37,11 +61,206 @@
       </div>
     </div>
   </div>
+  
   <script>
-    document.addEventListener('change',function(){
-      const sel=document.querySelector('input[name="status"]:checked').value;
-      document.querySelectorAll('.stage-section').forEach(s => s.style.display=s.id==='stage-'+sel?'block':'none');
+    // Existing stage switching logic
+    document.addEventListener('change', function() {
+      const sel = document.querySelector('input[name="status"]:checked').value;
+      document.querySelectorAll('.stage-section').forEach(s => s.style.display = s.id === 'stage-' + sel ? 'block' : 'none');
     });
-    document.addEventListener('DOMContentLoaded',()=>document.dispatchEvent(new Event('change')));
+    document.addEventListener('DOMContentLoaded', () => document.dispatchEvent(new Event('change')));
+    
+    // AI completion functionality
+    {% if app_config.features.ai_completion %}
+    document.querySelectorAll('.ai-complete-btn').forEach(button => {
+      button.addEventListener('click', async function() {
+        const fieldType = this.dataset.field; // 'common' or 'latin'
+        const inputField = document.getElementById(fieldType);
+        const plantName = inputField.value.trim();
+        
+        if (!plantName) {
+          showError(`Please enter a ${fieldType} name first`);
+          return;
+        }
+        
+        // Get current stage
+        const currentStage = document.querySelector('input[name="status"]:checked')?.value || 'sow';
+        
+        // Show loading state
+        this.disabled = true;
+        const originalContent = this.innerHTML;
+        this.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+        
+        // Hide previous messages
+        hideMessages();
+        
+        try {
+          // Create request payload with only the relevant field
+          const requestData = {
+            status: currentStage
+          };
+          requestData[fieldType] = plantName; // Only send the field that was clicked
+          
+          const response = await fetch('{{ url_for("ai_complete_plant") }}', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(requestData)
+          });
+          
+          const data = await response.json();
+          
+          if (!response.ok) {
+            throw new Error(data.error || 'Failed to get AI suggestions');
+          }
+          
+          console.log('AI Response:', data);
+          console.log('Current Stage:', currentStage);
+          console.log('Source Field:', fieldType);
+          
+          // Always replace ALL form fields with AI data
+          const commonField = document.getElementById('common');
+          const latinField = document.getElementById('latin');
+          const notesField = document.getElementById('notes');
+          
+          if (data.common) {
+            commonField.value = data.common;
+          }
+          if (data.latin) {
+            latinField.value = data.latin;
+          }
+          if (data.notes) {
+            notesField.value = data.notes;
+          }
+          
+          // Ensure the correct stage is selected and visible
+          const stageRadio = document.querySelector(`input[name="status"][value="${currentStage}"]`);
+          if (stageRadio && !stageRadio.checked) {
+            stageRadio.checked = true;
+            stageRadio.dispatchEvent(new Event('change'));
+          }
+          
+          // Fill stage-specific fields after ensuring stage section is visible
+          setTimeout(() => {
+            fillStageFields(currentStage, data);
+          }, 100);
+          
+          // Show success with source information
+          showSuccess(data.source);
+          
+        } catch (error) {
+          console.error('AI completion error:', error);
+          showError(error.message || 'Failed to get AI suggestions. Please try again.');
+        } finally {
+          // Restore button state
+          this.disabled = false;
+          this.innerHTML = originalContent;
+        }
+      });
+    });
+    
+    function fillStageFields(currentStage, data) {
+      console.log('Filling stage fields for:', currentStage);
+      
+      // Clear all stage-specific fields first
+      clearStageFields();
+      
+      if (currentStage === 'sow' && (data.event_range_min || data.event_range_max)) {
+        const minField = document.querySelector('input[name="event_range_min"]');
+        const maxField = document.querySelector('input[name="event_range_max"]');
+        const minUnitField = document.querySelector('select[name="event_range_min_u"]');
+        const maxUnitField = document.querySelector('select[name="event_range_max_u"]');
+        
+        console.log('Sow fields found:', { 
+          minField: !!minField, 
+          maxField: !!maxField,
+          minUnitField: !!minUnitField,
+          maxUnitField: !!maxUnitField
+        });
+        
+        if (data.event_range_min && minField) {
+          minField.value = data.event_range_min;
+          console.log('Set min field to:', data.event_range_min);
+        }
+        if (data.event_range_min_unit && minUnitField) {
+          minUnitField.value = data.event_range_min_unit;
+          console.log('Set min unit to:', data.event_range_min_unit);
+        }
+        if (data.event_range_max && maxField) {
+          maxField.value = data.event_range_max;
+          console.log('Set max field to:', data.event_range_max);
+        }
+        if (data.event_range_max_unit && maxUnitField) {
+          maxUnitField.value = data.event_range_max_unit;
+          console.log('Set max unit to:', data.event_range_max_unit);
+        }
+      }
+      
+      if ((currentStage === 'soak' || currentStage === 'strat') && data.event_dur_val) {
+        const durField = document.querySelector('input[name="event_dur_val"]');
+        const durUnitField = document.querySelector('select[name="event_dur_unit"]');
+        
+        console.log('Duration fields found:', { 
+          durField: !!durField,
+          durUnitField: !!durUnitField
+        });
+        
+        if (durField) {
+          durField.value = data.event_dur_val;
+          console.log('Set duration field to:', data.event_dur_val);
+        }
+        if (data.event_dur_unit && durUnitField) {
+          durUnitField.value = data.event_dur_unit;
+          console.log('Set duration unit to:', data.event_dur_unit);
+        }
+      }
+    }
+    
+    function clearStageFields() {
+      // Clear all stage-specific numeric fields
+      const stageFields = document.querySelectorAll('.stage-extra input[type="number"]');
+      stageFields.forEach(field => {
+        field.value = '';
+      });
+      
+      // Clear any other stage-specific fields as needed
+      const stageDateFields = document.querySelectorAll('.stage-extra input[type="date"]');
+      stageDateFields.forEach(field => {
+        field.value = '';
+      });
+    }
+    
+    function showSuccess(source) {
+      const successDiv = document.getElementById('ai-success');
+      
+      if (source === 'boutique_vegetale') {
+        successDiv.innerHTML = '<i class="fas fa-leaf me-1"></i> {{ t["Information found on Boutique Végétale and processed with AI!"] }}';
+        successDiv.className = 'alert alert-success';
+      } else if (source === 'mistral_large') {
+        successDiv.innerHTML = '<i class="fas fa-robot me-1"></i> {{ t["Information provided by Mistral Large AI model!"] }}';
+        successDiv.className = 'alert alert-info';
+      } else {
+        successDiv.innerHTML = '<i class="fas fa-magic me-1"></i> {{ t["AI suggestions applied successfully!"] }}';
+        successDiv.className = 'alert alert-success';
+      }
+      
+      successDiv.classList.remove('d-none');
+      setTimeout(() => successDiv.classList.add('d-none'), 5000);
+    }
+    
+    function showError(message) {
+      const errorDiv = document.getElementById('ai-error');
+      const errorText = document.getElementById('ai-error-text');
+      errorText.textContent = message;
+      errorDiv.classList.remove('d-none');
+      setTimeout(() => errorDiv.classList.add('d-none'), 6000);
+    }
+    
+    function hideMessages() {
+      document.getElementById('ai-success').classList.add('d-none');
+      document.getElementById('ai-error').classList.add('d-none');
+    }
+    {% endif %}
   </script>
 {% endblock %}

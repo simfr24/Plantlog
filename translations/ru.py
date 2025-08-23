@@ -152,6 +152,9 @@ translations = {
     "Bad credentials": "Неверные учетные данные",
     "You must be logged in to access this page.": "Вы должны войти, чтобы получить доступ к этой странице.",
     "Size must be > 0.": "Размер должен быть больше 0.",
+    "Information found on Boutique Végétale and processed with AI!": "Информация найдена на Boutique Végétale и обработана ИИ!",
+    "Information provided by Mistral Large AI model!": "Информация предоставлена моделью Mistral Large ИИ!",
+    "AI suggestions applied successfully!": "Предложения ИИ успешно применены!",
 
     # ────────── admin ──────────
     "Logins today": "Входов сегодня",

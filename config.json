@@ -1,0 +1,14 @@
+{
+  "mistral_small": {
+    "api_key": "",
+    "enabled": true
+  },
+  "mistral_large": {
+    "api_key": "",
+    "enabled": true
+  },
+  "features": {
+    "ai_completion": true,
+    "public_profiles": true
+  }
+}

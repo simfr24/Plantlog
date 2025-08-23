@@ -13,6 +13,7 @@ from __future__ import annotations
 import os
 from datetime import date
 from functools import wraps
+import json
 
 from flask import (
     Flask,
@@ -23,7 +24,8 @@ from flask import (
     session,
     abort,
     g,
-    flash
+    flash,
+    jsonify
 )
 from werkzeug.security import check_password_hash
 
@@ -72,6 +74,11 @@ from py.helpers import (
 
 )
 from py.processing import sort_key, get_unique_locations
+try:
+    from py.plant_ai import get_plant_info
+    AI_AVAILABLE = True
+except ImportError:
+    AI_AVAILABLE = False
 
 ###############################################################################
 # Flask app setup
@@ -82,12 +89,74 @@ app.secret_key = os.environ.get("SECRET_KEY", "plantlog-secret-key")
 app.template_filter("dateadd")(dateadd)
 init_db()
 
+def load_config():
+    """Load configuration from config.json file."""
+    config_path = "config.json"
+    
+    # Default configuration
+    default_config = {
+        "mistral_small": {
+            "api_key": None,
+            "enabled": False
+        },
+        "mistral_large": {
+            "api_key": None, 
+            "enabled": False
+        },
+        "features": {
+            "ai_completion": False,
+            "public_profiles": True
+        }
+    }
+    
+    try:
+        with open(config_path, 'r', encoding='utf-8') as f:
+            user_config = json.load(f)
+        
+        # Merge user config with defaults
+        config = default_config.copy()
+        config.update(user_config)
+        
+        # Enable AI completion if any model is configured
+        small_enabled = (config["mistral_small"]["enabled"] and 
+                        config["mistral_small"]["api_key"])
+        large_enabled = (config["mistral_large"]["enabled"] and 
+                        config["mistral_large"]["api_key"])
+        
+        if small_enabled or large_enabled:
+            config["features"]["ai_completion"] = True
+        else:
+            config["features"]["ai_completion"] = False
+        
+        return config
+        
+    except FileNotFoundError:
+        print(f"Warning: {config_path} not found, using default configuration")
+        return default_config
+        
+    except json.JSONDecodeError as e:
+        print(f"Error: Invalid JSON in {config_path}: {e}")
+        print("Using default configuration")
+        return default_config
+        
+    except Exception as e:
+        print(f"Error loading config: {e}")
+        return default_config
+    
+# Replace the existing load_config() function with this one
+CONFIG = load_config()
+
 @app.context_processor
 def inject_event_specs():
     # event_specs -> list[dict]   event_map -> dict[code -> dict]
     specs = get_event_specs()
     return dict(event_specs=specs,
                 event_map={s["code"]: s for s in specs})
+
+@app.context_processor
+def inject_custom_config():
+    """Make custom configuration available in templates."""
+    return dict(app_config=CONFIG)
 
 AVAILABLE_LANGS = ["en", "fr", "ru"]
 
@@ -500,6 +569,51 @@ def help_page():
 def favicon():
     return app.send_static_file("favicon.ico")
 
+###############################################################################
+# AI Routes - Simplified
+###############################################################################
+
+@app.route("/ai/complete_plant", methods=["POST"])
+@login_required
+def ai_complete_plant():
+    """Get plant information using simplified AI service."""
+    
+    # Check if AI is enabled
+    if not CONFIG.get("features", {}).get("ai_completion", False):
+        return jsonify({"error": "AI completion not enabled"}), 503
+    
+    if not AI_AVAILABLE:
+        return jsonify({"error": "AI service not available"}), 503
+    
+    try:
+        data = request.get_json()
+        if not data:
+            return jsonify({"error": "No data provided"}), 400
+        
+        # Get plant name (common or latin)
+        plant_name = data.get('common', '').strip() or data.get('latin', '').strip()
+        if not plant_name:
+            return jsonify({"error": "Plant name required"}), 400
+        
+        stage = data.get('status', 'sown')
+        
+        # Get plant information
+        result = get_plant_info(CONFIG, plant_name, stage, g.lang)
+        
+        # Add flash message based on source with more detail
+        source = result.get('source', 'ai')
+        if source == 'boutique_vegetale':
+            flash(f"✨ Plant information found on Boutique Végétale and processed with Mistral AI", "success")
+        elif source == 'mistral_large':
+            flash(f"🤖 Plant information provided by Mistral Large AI model", "info")
+        else:
+            flash(f"🤖 Plant information provided by Mistral AI", "info")
+        
+        return jsonify(result)
+        
+    except Exception as e:
+        app.logger.error(f"AI completion error: {e}")
+        return jsonify({"error": str(e)}), 500
 
 ###############################################################################
 # Main entry point

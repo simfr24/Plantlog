@@ -152,6 +152,9 @@ translations = {
     "Bad credentials": "Bad credentials",
     "You must be logged in to access this page.": "You must be logged in to access this page.",
     "Size must be > 0.": "Size must be > 0.",
+    "Information found on Boutique Végétale and processed with AI!": "Information found on Boutique Végétale and processed with AI!",
+    "Information provided by Mistral Large AI model!": "Information provided by Mistral Large AI model!",
+    "AI suggestions applied successfully!": "AI suggestions applied successfully!",
 
     # ────────── admin ──────────
     "Logins today": "Logins today",
