@@ -6,11 +6,29 @@
       {% set state_obj = example_plant.state %}
       {% set state_icon = state_obj.icon_class if state_obj else 'fa-question' %}
       {% set state_color = 'text-muted' if is_dead_state else (state_obj.color_class if state_obj else 'text-muted') %}
-      <i class="fas {{ state_icon }} {{ state_color }} me-2"></i>
-      <span class="{{ state_color }} fw-semibold text-uppercase">{{ t[state] if state in t else state }}</span>
-      <span class="badge bg-secondary ms-2">{{ state_plants|length }}</span>
+      {% if is_dead_state %}
+        <button class="btn w-100 text-start d-flex align-items-center p-0 collapsed"
+                type="button"
+                data-bs-toggle="collapse"
+                data-bs-target="#group-{{ state|lower }}-collapse"
+                aria-expanded="false"
+                aria-controls="group-{{ state|lower }}-collapse">
+          <i class="fas {{ state_icon }} {{ state_color }} me-2"></i>
+          <span class="{{ state_color }} fw-semibold text-uppercase">{{ t[state] if state in t else state }}</span>
+          <span class="badge bg-secondary ms-2">{{ state_plants|length }}</span>
+          <i class="fas fa-chevron-down ms-auto"></i>
+        </button>
+      {% else %}
+        <i class="fas {{ state_icon }} {{ state_color }} me-2"></i>
+        <span class="{{ state_color }} fw-semibold text-uppercase">{{ t[state] if state in t else state }}</span>
+        <span class="badge bg-secondary ms-2">{{ state_plants|length }}</span>
+      {% endif %}
     </div>
+    {% if is_dead_state %}
+    <div class="card-body p-0 collapse" id="group-{{ state|lower }}-collapse">
+    {% else %}
     <div class="card-body p-0">
+    {% endif %}
       <div class="accordion" id="plants-acc-{{ state|lower }}">
         {% for p in state_plants %}
           {% set idx = p.id %}
@@ -118,14 +136,14 @@
                   {% if p.location %}
                     <div class="small text-muted"><i class="fas fa-location-dot me-1"></i>{{ p.location }}</div>
                   {% endif %}
-                  {% if p.notes %}
-                    <div class="small text-muted"><i class="fas fa-sticky-note me-1"></i>{{ p.notes }}</div>
-                  {% endif %}
-                </div>
+</div>
               </button>
             </h2>
             <div id="collapse-{{ state|lower }}-{{ idx }}" class="accordion-collapse collapse" data-bs-parent="#plants-acc-{{ state|lower }}">
               <div class="accordion-body">
+                {% if p.notes %}
+                <div class="mb-3 text-muted"><i class="fas fa-sticky-note me-1"></i>{{ p.notes }}</div>
+                {% endif %}
                 <ul class="timeline">
                   {% for h in p.history|reverse %}
                     {% set evspec = event_map[h.action] %}
