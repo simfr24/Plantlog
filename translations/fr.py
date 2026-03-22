@@ -229,7 +229,7 @@ translations.update({
     "settings_wrong_password": "Mot de passe incorrect.",
     "settings_key_revoked": "Clé API révoquée.",
     "plant_nickname": "Surnom",
-    "plant_nickname_placeholder": "ex. Grande Rouge, Bob…",
+    "plant_nickname_placeholder": "ex. Maggie, Monsieur Pik-Pik,…",
     "optional": "optionnel",
     "plant_count": "Quantité",
     "plant_count_hint": "Nombre de plantes physiques représentées par cet enregistrement.",
