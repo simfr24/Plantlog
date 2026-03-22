@@ -107,7 +107,7 @@ def mdrender_filter(text):
     if not text:
         return ""
     from markupsafe import Markup
-    return Markup(_md.markdown(text, extensions=["nl2br", "fenced_code"]))
+    return Markup(_md.markdown(text, extensions=["nl2br", "fenced_code", "tables"]))
 
 init_db()
 
