@@ -52,7 +52,7 @@ if not API_KEY:
     print("ERROR: PLANTLOG_API_KEY env var not set.", file=sys.stderr)
     sys.exit(1)
 
-HEADERS = {"Authorization": f"Bearer {API_KEY}"}
+HEADERS = {"X-API-Key": API_KEY}
 
 mcp = FastMCP("Plantlog")
 

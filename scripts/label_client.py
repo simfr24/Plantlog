@@ -290,7 +290,7 @@ def main():
     cfg = load_config()
 
     base_url = cfg["url"].rstrip("/")
-    headers  = {"Authorization": f"Bearer {cfg['api_key']}"}
+    headers  = {"X-API-Key": cfg["api_key"]}
     mac      = cfg["printer_mac"]
     port     = cfg["printer_port"]
     interval = cfg["poll_interval"]

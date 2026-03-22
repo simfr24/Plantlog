@@ -821,11 +821,15 @@ def settings_reveal_key():
 ###############################################################################
 
 def _api_user():
-    """Resolve the user from an Authorization: Bearer <key> header."""
-    auth = request.headers.get("Authorization", "")
-    if not auth.startswith("Bearer "):
+    """Resolve the user from Authorization: Bearer or X-API-Key header."""
+    key = request.headers.get("X-API-Key", "")
+    if not key:
+        auth = request.headers.get("Authorization", "")
+        if auth.startswith("Bearer "):
+            key = auth[7:]
+    if not key:
         return None
-    return get_user_by_api_key(auth[7:])
+    return get_user_by_api_key(key)
 
 
 def _api_auth_required(view):
