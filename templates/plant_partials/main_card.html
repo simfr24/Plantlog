@@ -20,6 +20,17 @@
         </div>
       </div>
       {% endif %}
+      {% if plant.variety %}
+      <div class="col-md-6">
+        <div class="d-flex align-items-start">
+          <i class="fas fa-tag me-2 text-muted mt-1"></i>
+          <div>
+            <strong>Variety:</strong>
+            <div class="text-muted">{{ plant.variety }}</div>
+          </div>
+        </div>
+      </div>
+      {% endif %}
       {% if plant.notes %}
       <div class="col-md-12">
         <div class="d-flex">

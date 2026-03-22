@@ -37,7 +37,15 @@
 } %}
 
 {% if plants %}
-  
+
+{# Search bar #}
+{% if not public_view %}
+<div class="mb-3">
+  <input type="search" id="plantSearch" class="form-control"
+         placeholder="Search plants, location, variety…" autocomplete="off">
+</div>
+{% endif %}
+
 {# Mobile: one column, original order #}
 <div class="d-lg-none plant-columns">
   {% set all_cards = left_col + right_col %}
@@ -65,6 +73,56 @@
 {% else %}
   <p class="text-muted">{{ t['No plants yet'] }}</p>
 {% endif %}
+
+<script>
+// Quick-log (water / fertilize) via AJAX
+document.addEventListener('click', function(e) {
+  const btn = e.target.closest('.quick-log-btn');
+  if (!btn) return;
+  const plantId = btn.dataset.plantId;
+  const event   = btn.dataset.event;
+  btn.disabled  = true;
+  const orig    = btn.innerHTML;
+  btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+  fetch(`/quick_log/${plantId}`, {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({event})
+  })
+  .then(r => r.json())
+  .then(data => {
+    if (data.ok) {
+      btn.innerHTML = '<i class="fas fa-check"></i>';
+      btn.classList.add('btn-success');
+      btn.classList.remove('btn-outline-primary', 'btn-outline-warning');
+      setTimeout(() => location.reload(), 600);
+    } else {
+      btn.innerHTML = orig;
+      btn.disabled = false;
+      alert(data.errors || data.error || 'Error');
+    }
+  })
+  .catch(() => { btn.innerHTML = orig; btn.disabled = false; });
+});
+
+// Dashboard search filter
+const searchInput = document.getElementById('plantSearch');
+if (searchInput) {
+  searchInput.addEventListener('input', function() {
+    const q = this.value.toLowerCase();
+    document.querySelectorAll('.accordion-item').forEach(item => {
+      const text = item.textContent.toLowerCase();
+      item.style.display = (!q || text.includes(q)) ? '' : 'none';
+    });
+    // Hide state-card groups that now have no visible plants
+    document.querySelectorAll('.plant-card').forEach(card => {
+      const items = card.querySelectorAll('.accordion-item');
+      const anyVisible = [...items].some(i => i.style.display !== 'none');
+      card.style.display = anyVisible ? '' : 'none';
+    });
+  });
+}
+</script>
 
 {# Add some additional CSS for the enhanced badge and card styling #}
 <style>

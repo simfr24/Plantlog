@@ -205,3 +205,27 @@ translations = {
     "Help transition Custom Event detailed": "Les événements personnalisés ne changent pas l’état.",
     "Help transition Death detailed": "La plante passe à l’état 'Mort'.",
 }
+# ────────── settings page ──────────
+translations.update({
+    "Settings": "Paramètres",
+    "settings_api_key": "Votre clé API",
+    "settings_api_active": "Active",
+    "settings_key_none": "Aucune clé API définie.",
+    "settings_api_reveal": "Afficher la clé",
+    "settings_api_confirm_pw": "Entrez votre mot de passe pour révéler la clé",
+    "settings_api_generate": "Générer une clé API",
+    "settings_api_regenerate": "Régénérer la clé",
+    "settings_api_revoke": "Révoquer la clé",
+    "settings_api_revoke_confirm": "Révoquer cette clé ? Le client imprimante et le serveur MCP cesseront de fonctionner jusqu'à ce que vous en génériez une nouvelle.",
+    "settings_api_copy": "Copier",
+    "settings_api_copied": "Copié",
+    "settings_api_download_json": "Télécharger label_client.json (pré-rempli)",
+    "settings_api_download_py": "Télécharger label_client.py",
+    "settings_api_download_mcp": "Télécharger mcp_server.py",
+    "settings_printer_title": "Configuration du client imprimante",
+    "settings_mcp_title": "Agent IA (MCP)",
+    "settings_printer_mac_label": "Adresse MAC Bluetooth de l'imprimante",
+    "settings_printer_mac_hint": "Trouvez-la dans les paramètres ou l'écran de jumelage de votre imprimante.",
+    "settings_wrong_password": "Mot de passe incorrect.",
+    "settings_key_revoked": "Clé API révoquée.",
+})

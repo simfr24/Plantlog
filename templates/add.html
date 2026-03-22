@@ -49,6 +49,10 @@
               <datalist id="locations">{% for location in locations %}<option value="{{ location }}">{% endfor %}</datalist>
             </div>
             <div class="col-md-6">
+              <label class="form-label fw-semibold">Variety / Batch <span class="text-muted fw-normal">(optional)</span></label>
+              <input class="form-control" name="variety" id="variety" value="{{ form.variety }}" placeholder="e.g. Batch A, Window box…">
+            </div>
+            <div class="col-md-12">
               <label class="form-label fw-semibold">{{ t['Notes'] }}</label>
               <textarea class="form-control" name="notes" id="notes" placeholder="{{ t['e.g. Notes'] }}">{{ form.notes }}</textarea>
             </div>

@@ -205,3 +205,28 @@ translations = {
     "Help transition Custom Event detailed": "Custom events do not change the state.",
     "Help transition Death detailed": "The plant transitions to the 'Dead' state.",
 }
+
+# ────────── settings page ──────────
+translations.update({
+    "Settings": "Settings",
+    "settings_api_key": "Your API key",
+    "settings_api_active": "Active",
+    "settings_key_none": "No API key set yet.",
+    "settings_api_reveal": "Show key",
+    "settings_api_confirm_pw": "Enter your password to reveal the key",
+    "settings_api_generate": "Generate API key",
+    "settings_api_regenerate": "Regenerate key",
+    "settings_api_revoke": "Revoke key",
+    "settings_api_revoke_confirm": "Revoke this key? The printer client and MCP server will stop working until you generate a new one.",
+    "settings_api_copy": "Copy",
+    "settings_api_copied": "Copied",
+    "settings_api_download_json": "Download label_client.json (pre-filled)",
+    "settings_api_download_py": "Download label_client.py",
+    "settings_api_download_mcp": "Download mcp_server.py",
+    "settings_printer_title": "Printer client setup",
+    "settings_mcp_title": "AI agent (MCP) setup",
+    "settings_printer_mac_label": "Printer Bluetooth MAC address",
+    "settings_printer_mac_hint": "Find it in your printer's settings or pairing screen.",
+    "settings_wrong_password": "Wrong password.",
+    "settings_key_revoked": "API key revoked.",
+})

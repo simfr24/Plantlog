@@ -10,5 +10,8 @@
   "features": {
     "ai_completion": true,
     "public_profiles": true
+  },
+  "mcp": {
+    "enabled": true
   }
 }

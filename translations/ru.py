@@ -205,3 +205,28 @@ translations = {
     "Help transition Custom Event detailed": "Пользовательские события не меняют состояние.",
     "Help transition Death detailed": "Растение переходит в состояние 'Мёртвое'.",
 }
+
+# ────────── settings page ──────────
+translations.update({
+    "Settings": "Настройки",
+    "settings_api_key": "Ваш API-ключ",
+    "settings_api_active": "Активен",
+    "settings_key_none": "API-ключ не задан.",
+    "settings_api_reveal": "Показать ключ",
+    "settings_api_confirm_pw": "Введите пароль для отображения ключа",
+    "settings_api_generate": "Создать API-ключ",
+    "settings_api_regenerate": "Пересоздать ключ",
+    "settings_api_revoke": "Отозвать ключ",
+    "settings_api_revoke_confirm": "Отозвать этот ключ? Клиент принтера и MCP-сервер перестанут работать до создания нового ключа.",
+    "settings_api_copy": "Копировать",
+    "settings_api_copied": "Скопировано",
+    "settings_api_download_json": "Скачать label_client.json (заполненный)",
+    "settings_api_download_py": "Скачать label_client.py",
+    "settings_api_download_mcp": "Скачать mcp_server.py",
+    "settings_printer_title": "Настройка клиента принтера",
+    "settings_mcp_title": "ИИ-агент (MCP)",
+    "settings_printer_mac_label": "Bluetooth MAC-адрес принтера",
+    "settings_printer_mac_hint": "Найдите его в настройках принтера или на экране сопряжения.",
+    "settings_wrong_password": "Неверный пароль.",
+    "settings_key_revoked": "API-ключ отозван.",
+})

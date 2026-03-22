@@ -5,6 +5,16 @@
     <span class="fw-semibold">{{ t['Actions'] }}</span>
   </div>
   <div class="card-body">
+    <div class="d-flex gap-2 mb-2">
+      <button class="btn btn-outline-primary flex-fill quick-log-btn"
+              data-plant-id="{{ plant.id }}" data-event="water">
+        <i class="fas fa-droplet me-1"></i> Water
+      </button>
+      <button class="btn btn-outline-warning flex-fill quick-log-btn"
+              data-plant-id="{{ plant.id }}" data-event="fertilize">
+        <i class="fas fa-bottle-water me-1"></i> Fertilize
+      </button>
+    </div>
     <div class="d-grid gap-2">
       <a href="{{ url_for('add_stage', idx=plant.id, lang=lang) }}" class="btn btn-primary">
         <i class="fas fa-plus me-1"></i> {{ t['Add stage'] }}
@@ -12,6 +22,14 @@
       <a href="{{ url_for('edit_plant', idx=plant.id, lang=lang) }}" class="btn btn-outline-secondary">
         <i class="fas fa-edit me-1"></i> {{ t['Edit plant'] }}
       </a>
+      <button type="button" class="btn btn-outline-dark" data-bs-toggle="modal" data-bs-target="#printLabelModal">
+        <i class="fas fa-print me-1"></i> Print Label
+      </button>
+      <form method="post" action="{{ url_for('clone_plant', idx=plant.id, lang=lang) }}" class="d-grid">
+        <button type="submit" class="btn btn-outline-secondary">
+          <i class="fas fa-copy me-1"></i> Duplicate plant
+        </button>
+      </form>
       <a href="{{ url_for('index', lang=lang) }}" class="btn btn-outline-dark">
         <i class="fas fa-arrow-left me-1"></i> {{ t['Back to dashboard'] }}
       </a>

@@ -61,6 +61,19 @@ CREATE TABLE IF NOT EXISTS plants (
   FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
 );
 
+CREATE TABLE IF NOT EXISTS print_jobs (
+  id          INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id     INTEGER NOT NULL,
+  plant_id    INTEGER NOT NULL,
+  style       TEXT    NOT NULL DEFAULT 'classic',
+  status      TEXT    NOT NULL DEFAULT 'pending',  -- pending | done | error
+  error_msg   TEXT,
+  created_at  TEXT    NOT NULL DEFAULT (datetime('now')),
+  updated_at  TEXT    NOT NULL DEFAULT (datetime('now')),
+  FOREIGN KEY(user_id)  REFERENCES users(id)  ON DELETE CASCADE,
+  FOREIGN KEY(plant_id) REFERENCES plants(id) ON DELETE CASCADE
+);
+
 CREATE TABLE IF NOT EXISTS events (
   id              INTEGER PRIMARY KEY AUTOINCREMENT,
   plant_id        INTEGER NOT NULL,
@@ -153,6 +166,39 @@ def init_and_fill_db():
 
 
 
+def _migrate(conn):
+    """Run any schema migrations needed for existing databases."""
+    plant_cols = {row[1] for row in conn.execute("PRAGMA table_info(plants)").fetchall()}
+    if "variety" not in plant_cols:
+        conn.execute("ALTER TABLE plants ADD COLUMN variety TEXT")
+
+    user_cols = {row[1] for row in conn.execute("PRAGMA table_info(users)").fetchall()}
+    if "api_key_hash" not in user_cols:
+        conn.execute("ALTER TABLE users ADD COLUMN api_key_hash TEXT")
+    if "api_key" not in user_cols:
+        conn.execute("ALTER TABLE users ADD COLUMN api_key TEXT")
+
+    # print_jobs table (for existing DBs that pre-date the SCHEMA addition)
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS print_jobs (
+          id         INTEGER PRIMARY KEY AUTOINCREMENT,
+          user_id    INTEGER NOT NULL,
+          plant_id   INTEGER NOT NULL,
+          style      TEXT    NOT NULL DEFAULT 'classic',
+          status     TEXT    NOT NULL DEFAULT 'pending',
+          error_msg  TEXT,
+          created_at TEXT    NOT NULL DEFAULT (datetime('now')),
+          updated_at TEXT    NOT NULL DEFAULT (datetime('now')),
+          FOREIGN KEY(user_id)  REFERENCES users(id)  ON DELETE CASCADE,
+          FOREIGN KEY(plant_id) REFERENCES plants(id) ON DELETE CASCADE
+        )
+    """)
+
+    conn.commit()
+
+
 def init_db():
     init_and_fill_db()
+    with get_conn() as conn:
+        _migrate(conn)
 

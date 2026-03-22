@@ -250,6 +250,7 @@ def load_one(plant_id: int) -> Optional[Dict[str, Any]]:
         "latin": p["latin"],
         "location": p["location"],
         "notes": p["notes"],
+        "variety": p["variety"] if "variety" in p.keys() else None,
         "history": history,
         "current": history[-1] if history else None,
         "state": state,
@@ -276,6 +277,7 @@ def load_data(user_id: int) -> List[Dict[str, Any]]:
                 "latin": p["latin"],
                 "location": p["location"],
                 "notes": p["notes"],
+                "variety": p["variety"] if "variety" in p.keys() else None,
                 "history": (hist := _events_for_plant(conn, p["id"])),
                 "current": hist[-1] if hist else None,
                 "state": None if p["state_label"] is None else {
@@ -283,7 +285,7 @@ def load_data(user_id: int) -> List[Dict[str, Any]]:
                     "icon_class":  p["state_icon"],
                     "color_class": p["state_color"],
                 },
-                "state_rank": p["state_rank"] if p["state_rank"] is not None else 999  # ➋ NEW
+                "state_rank": p["state_rank"] if p["state_rank"] is not None else 999
             }
             for p in plants
         ]
@@ -361,12 +363,13 @@ def save_new_plant(plant_dict: Dict[str, Any], first_event: Dict[str, Any], user
     with get_conn() as conn:
         cur = conn.cursor()
         cur.execute(
-            "INSERT INTO plants (common, latin, location, notes, user_id) VALUES (?,?,?,?,?)",
+            "INSERT INTO plants (common, latin, location, notes, variety, user_id) VALUES (?,?,?,?,?,?)",
             (
                 plant_dict["common"],
                 plant_dict["latin"],
                 plant_dict.get("location"),
                 plant_dict.get("notes"),
+                plant_dict.get("variety") or None,
                 user_id,
             ),
         )
@@ -379,12 +382,13 @@ def update_plant(plant_id: int, plant_dict: Dict[str, Any], new_event: Optional[
     with get_conn() as conn:
         cur = conn.cursor()
         cur.execute(
-            """UPDATE plants SET common = ?, latin = ?, location = ?, notes = ? WHERE id = ?""",
+            """UPDATE plants SET common = ?, latin = ?, location = ?, notes = ?, variety = ? WHERE id = ?""",
             (
                 plant_dict["common"],
                 plant_dict["latin"],
                 plant_dict.get("location"),
                 plant_dict.get("notes"),
+                plant_dict.get("variety") or None,
                 plant_id,
             ),
         )
@@ -565,6 +569,7 @@ def get_empty_form():
     return {
         "common": "",
         "latin": "",
+        "variety": "",
         "status": "sow",
         "event_date": "",
         "event_range_min": 0,
@@ -585,6 +590,7 @@ def get_form_data(request):
     return {
         "common": request.form.get("common", "").strip(),
         "latin": request.form.get("latin", "").strip(),
+        "variety": request.form.get("variety", "").strip(),
         "status": request.form.get("status", ""),
         "event_date": request.form.get("event_date", ""),
         "event_range_min": to_int(request.form.get("event_range_min")),
@@ -606,6 +612,7 @@ def get_form_from_plant(plant):
     form = get_empty_form()
     form["common"] = plant["common"]
     form["latin"] = plant["latin"]
+    form["variety"] = plant.get("variety", "") or ""
     form["location"] = plant.get("location", "") or ""
     form["notes"] = plant.get("notes", "") or ""
 

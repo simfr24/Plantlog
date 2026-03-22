@@ -1,0 +1,267 @@
+{% extends "base.html" %}
+{% block title %}{{ t['Settings'] }} – Plantlog{% endblock %}
+{% block content %}
+<div class="container py-4" style="max-width:720px;">
+  <h2 class="mb-4"><i class="fas fa-key me-2 text-secondary"></i>{{ t['Settings'] }}</h2>
+
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% for cat, msg in messages %}
+      <div class="alert alert-{{ cat }} alert-dismissible fade show">
+        {{ msg }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+      </div>
+    {% endfor %}
+  {% endwith %}
+
+  <div class="accordion shadow-sm" id="settingsAccordion">
+
+    {# ── API Key ── #}
+    <div class="accordion-item">
+      <h2 class="accordion-header">
+        <button class="accordion-button" type="button"
+                data-bs-toggle="collapse" data-bs-target="#collapseKey" aria-expanded="true">
+          <i class="fas fa-key me-2 text-secondary"></i>{{ t['settings_api_key'] }}
+          {% if has_key %}
+            <span class="badge bg-success ms-2 fw-normal"><i class="fas fa-circle me-1" style="font-size:.6rem"></i>{{ t['settings_api_active'] }}</span>
+          {% endif %}
+        </button>
+      </h2>
+      <div id="collapseKey" class="accordion-collapse collapse show" data-bs-parent="#settingsAccordion">
+        <div class="accordion-body">
+
+          {% if new_key or revealed_key %}
+          {% set display_key = new_key or revealed_key %}
+          <div class="alert alert-success mb-3">
+            {% if new_key %}<strong><i class="fas fa-check-circle me-1"></i>{{ t['settings_api_generate'] }}.</strong><br>{% endif %}
+            <div class="input-group mt-2">
+              <input type="text" class="form-control font-monospace" id="apiKeyField"
+                     value="{{ display_key }}" readonly autocomplete="off">
+              <button class="btn btn-outline-secondary" type="button" id="copyKeyBtn">
+                <i class="fas fa-copy"></i> {{ t['settings_api_copy'] }}
+              </button>
+            </div>
+          </div>
+
+          {% endif %}
+
+          {% if has_key and not new_key and not revealed_key %}
+          <p class="mb-3">
+            <span class="badge bg-success me-2"><i class="fas fa-circle"></i> {{ t['settings_api_active'] }}</span>
+          </p>
+          <form method="post" action="{{ url_for('settings_reveal_key', lang=lang) }}" class="mb-3">
+            <label class="form-label small text-muted">{{ t['settings_api_confirm_pw'] }}</label>
+            <div class="input-group" style="max-width:360px;">
+              <input type="password" name="password" class="form-control" required autocomplete="current-password">
+              <button type="submit" class="btn btn-outline-primary">
+                <i class="fas fa-eye me-1"></i> {{ t['settings_api_reveal'] }}
+              </button>
+            </div>
+          </form>
+          {% endif %}
+
+          {% if not has_key %}
+          <p class="text-muted mb-3">{{ t['settings_key_none'] }}</p>
+          {% endif %}
+
+          <div class="d-flex gap-2 flex-wrap">
+            {% if has_key %}
+            <form method="post" action="{{ url_for('settings_generate_key', lang=lang) }}">
+              <button class="btn btn-warning btn-sm" type="submit">
+                <i class="fas fa-rotate-right me-1"></i> {{ t['settings_api_regenerate'] }}
+              </button>
+            </form>
+            <form method="post" action="{{ url_for('settings_revoke_key', lang=lang) }}">
+              <button class="btn btn-outline-danger btn-sm" type="submit"
+                      onclick="return confirm('{{ t['settings_api_revoke_confirm'] }}')">
+                <i class="fas fa-trash me-1"></i> {{ t['settings_api_revoke'] }}
+              </button>
+            </form>
+            {% else %}
+            <form method="post" action="{{ url_for('settings_generate_key', lang=lang) }}">
+              <button class="btn btn-primary btn-sm" type="submit">
+                <i class="fas fa-key me-1"></i> {{ t['settings_api_generate'] }}
+              </button>
+            </form>
+            {% endif %}
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    {# ── MCP / AI agent ── #}
+    <div class="accordion-item">
+      <h2 class="accordion-header">
+        <button class="accordion-button collapsed" type="button"
+                data-bs-toggle="collapse" data-bs-target="#collapseMcp" aria-expanded="false">
+          <i class="fas fa-robot me-2 text-secondary"></i>{{ t['settings_mcp_title'] }}
+        </button>
+      </h2>
+      <div id="collapseMcp" class="accordion-collapse collapse" data-bs-parent="#settingsAccordion">
+        <div class="accordion-body">
+
+          <p class="small text-muted mb-2">
+            Run <code>mcp_server.py</code> locally — Claude Desktop will launch it automatically.
+            It calls this server's API using your key.
+          </p>
+
+          <h6 class="fw-semibold mb-1">1. Install dependencies</h6>
+          <pre class="bg-light rounded p-2 small">pip install mcp requests</pre>
+
+          <h6 class="fw-semibold mt-3 mb-1">2. Download the MCP server script</h6>
+          <a href="{{ url_for('download_mcp_server') }}" class="btn btn-outline-primary btn-sm">
+            <i class="fas fa-download me-1"></i> {{ t['settings_api_download_mcp'] }}
+          </a>
+
+          <h6 class="fw-semibold mt-3 mb-1">3. Claude Desktop config</h6>
+          <p class="small text-muted mb-1">
+            Linux: <code>~/.config/Claude/claude_desktop_config.json</code><br>
+            Mac: <code>~/Library/Application Support/Claude/claude_desktop_config.json</code>
+          </p>
+          <pre class="bg-light rounded p-2 small">{
+  "mcpServers": {
+    "plantlog": {
+      "command": "python3",
+      "args": ["/path/to/Plantlog/scripts/mcp_server.py"],
+      "env": {
+        "PLANTLOG_URL": "{{ request.host_url.rstrip('/') }}",
+        "PLANTLOG_API_KEY": "&lt;your-key&gt;"
+      }
+    }
+  }
+}</pre>
+
+        </div>
+      </div>
+    </div>
+
+    {# ── Printer client ── #}
+    <div class="accordion-item">
+      <h2 class="accordion-header">
+        <button class="accordion-button collapsed" type="button"
+                data-bs-toggle="collapse" data-bs-target="#collapsePrinter" aria-expanded="false">
+          <i class="fas fa-print me-2 text-secondary"></i>{{ t['settings_printer_title'] }}
+        </button>
+      </h2>
+      <div id="collapsePrinter" class="accordion-collapse collapse" data-bs-parent="#settingsAccordion">
+        <div class="accordion-body">
+
+          <div class="alert alert-info py-2 small mb-3">
+            <i class="fas fa-info-circle me-1"></i>
+            <code>label_client.py</code> is written for the <strong>YHK-835E</strong> Bluetooth thermal printer.
+            If you use a different model, the Bluetooth handshake and ESC/POS commands in the script may need to be adjusted.
+          </div>
+
+          <p class="text-muted small mb-3">
+            Run <code>label_client.py</code> on the machine physically connected to your printer.
+            It polls this server for print jobs and sends them to the printer automatically.
+          </p>
+
+          <h6 class="fw-semibold mb-1">1. Install dependencies</h6>
+          <pre class="bg-light rounded p-2 small">pip install requests Pillow</pre>
+
+          <h6 class="fw-semibold mt-3 mb-1">2. Download</h6>
+          <div class="d-flex gap-2 flex-wrap mb-3">
+            <a href="{{ url_for('download_label_client') }}" class="btn btn-outline-primary btn-sm">
+              <i class="fas fa-download me-1"></i> {{ t['settings_api_download_py'] }}
+            </a>
+          </div>
+          <label for="printerMacInput" class="form-label fw-semibold mb-1">{{ t['settings_printer_mac_label'] }}</label>
+          <input type="text" class="form-control font-monospace mb-1" id="printerMacInput"
+                 placeholder="XX:XX:XX:XX:XX:XX" autocomplete="off" style="max-width:280px;">
+          <div class="form-text mb-2">{{ t['settings_printer_mac_hint'] }}</div>
+          <button class="btn btn-success btn-sm" id="downloadConfigBtn">
+            <i class="fas fa-download me-1"></i> {{ t['settings_api_download_json'] }}
+          </button>
+
+          <h6 class="fw-semibold mt-3 mb-1">3. Run it</h6>
+          <p class="small text-muted mb-1">On first run it will ask for your server URL, API key, and printer MAC, then save a config file.</p>
+          <pre class="bg-light rounded p-2 small">python3 label_client.py</pre>
+
+          <p class="small text-muted mb-1">Or set env vars directly:</p>
+          <pre class="bg-light rounded p-2 small">PLANTLOG_URL=<strong>{{ request.host_url.rstrip('/') }}</strong> \
+PLANTLOG_API_KEY=&lt;your-key&gt; \
+PRINTER_MAC=&lt;your-printer-mac&gt; \
+python3 label_client.py</pre>
+
+          <h6 class="fw-semibold mt-3 mb-1">Config file location</h6>
+          <p class="small text-muted mb-0">
+            Linux / Mac: <code>~/.config/plantlog/label_client.json</code><br>
+            Windows: <code>%APPDATA%\plantlog\label_client.json</code>
+          </p>
+          <pre class="bg-light rounded p-2 small mt-1">{
+  "url": "{{ request.host_url.rstrip('/') }}",
+  "api_key": "&lt;your-key&gt;",
+  "printer_mac": "&lt;your-printer-mac&gt;",
+  "printer_port": 2,
+  "poll_interval": 5
+}</pre>
+
+          <h6 class="fw-semibold mt-3 mb-1">Run as a background service (Linux systemd)</h6>
+          <pre class="bg-light rounded p-2 small">[Unit]
+Description=Plantlog label client
+
+[Service]
+ExecStart=python3 /path/to/Plantlog/scripts/label_client.py
+Environment=PLANTLOG_URL={{ request.host_url.rstrip('/') }}
+Environment=PLANTLOG_API_KEY=&lt;your-key&gt;
+Environment=PRINTER_MAC=&lt;your-printer-mac&gt;
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=default.target</pre>
+          <p class="small text-muted">
+            Save as <code>~/.config/systemd/user/plantlog-printer.service</code> then:
+            <code>systemctl --user enable --now plantlog-printer</code>
+          </p>
+
+        </div>
+      </div>
+    </div>
+
+  </div>{# end accordion #}
+</div>
+
+<script>
+const copyBtn = document.getElementById('copyKeyBtn');
+if (copyBtn) {
+  copyBtn.addEventListener('click', function() {
+    navigator.clipboard.writeText(document.getElementById('apiKeyField').value).then(() => {
+      this.innerHTML = '<i class="fas fa-check"></i> {{ t["settings_api_copied"] }}';
+      setTimeout(() => { this.innerHTML = '<i class="fas fa-copy"></i> {{ t["settings_api_copy"] }}'; }, 2000);
+    });
+  });
+}
+
+const dlConfigBtn = document.getElementById('downloadConfigBtn');
+if (dlConfigBtn) {
+  dlConfigBtn.addEventListener('click', function() {
+    const keyField = document.getElementById('apiKeyField');
+    const mac = (document.getElementById('printerMacInput').value || '').trim();
+    if (!keyField) {
+      alert('{{ t["settings_api_confirm_pw"] }}');
+      document.getElementById('collapseKey').classList.add('show');
+      return;
+    }
+    if (!mac) {
+      document.getElementById('printerMacInput').focus();
+      document.getElementById('printerMacInput').classList.add('is-invalid');
+      return;
+    }
+    document.getElementById('printerMacInput').classList.remove('is-invalid');
+    const cfg = {
+      url:           "{{ request.host_url.rstrip('/') }}",
+      api_key:       keyField.value,
+      printer_mac:   mac,
+      printer_port:  2,
+      poll_interval: 5
+    };
+    const blob = new Blob([JSON.stringify(cfg, null, 2)], {type: 'application/json'});
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'label_client.json';
+    a.click();
+  });
+}
+</script>
+{% endblock %}

@@ -130,7 +130,8 @@
               <button class="accordion-button collapsed {{ 'bg-light text-muted' if is_dead_state else '' }}" type="button" data-bs-toggle="collapse" data-bs-target="#collapse-{{ state|lower }}-{{ idx }}">
                 <div class="flex-grow-1">
                   <div class="fw-semibold {{ 'text-muted' if is_dead_state else '' }}">
-                    {{ p.common }} <small class="text-muted fst-italic">({{ p.latin }})</small>
+                    {{ p.common }}{% if p.variety %} <small class="text-muted fw-normal">— {{ p.variety }}</small>{% endif %}
+                    <small class="text-muted fst-italic">({{ p.latin }})</small>
                   </div>
                   <div class="small text-muted">{{ summary|safe }}</div>
                   {% if p.location %}
@@ -218,12 +219,18 @@
                   {% endfor %}
                 </ul>
                 <div class="d-flex flex-wrap gap-2 mt-3">
-                 
                   {% if not public_view %}
-                  <a href="{{ url_for('edit_plant', idx=idx, lang=lang) }}" class="btn btn-outline-secondary btn-sm">
-                    <i class="fas fa-edit me-1"></i> {{ t['Edit plant'] }}
-                  </a>
-                  <a href="{{ url_for('add_stage', idx=idx, lang=lang) }}" class="btn btn-outline-primary btn-sm">
+                  <button class="btn btn-outline-primary btn-sm quick-log-btn"
+                          data-plant-id="{{ idx }}" data-event="water"
+                          title="Log watering">
+                    <i class="fas fa-droplet me-1"></i> Water
+                  </button>
+                  <button class="btn btn-outline-warning btn-sm quick-log-btn"
+                          data-plant-id="{{ idx }}" data-event="fertilize"
+                          title="Log fertilization">
+                    <i class="fas fa-bottle-water me-1"></i> Fertilize
+                  </button>
+                  <a href="{{ url_for('add_stage', idx=idx, lang=lang) }}" class="btn btn-outline-secondary btn-sm">
                     <i class="fas fa-plus-circle me-1"></i> {{ t['Add stage'] }}
                   </a>
                   <a href="{{ url_for('view_plant', idx=idx, lang=lang) }}" class="btn btn-outline-success btn-sm">

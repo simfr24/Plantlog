@@ -25,11 +25,12 @@ from flask import (
     abort,
     g,
     flash,
-    jsonify
+    jsonify,
+    Response,
 )
 from werkzeug.security import check_password_hash
 
-from py.db import init_db
+from py.db import init_db, get_conn
 from py.users import (
     create_user,
     login_user,
@@ -38,7 +39,12 @@ from py.users import (
     get_user_by_id,
     update_user_lang,
     get_all_users,
-    record_user_login
+    record_user_login,
+    generate_api_key,
+    revoke_api_key,
+    get_user_by_api_key,
+    has_api_key,
+    get_api_key,
 )
 from py.helpers import (
     # data helpers
@@ -80,6 +86,11 @@ try:
 except ImportError:
     AI_AVAILABLE = False
 
+from py.label_printer import (
+    create_label_classic, create_label_circular,
+    label_to_png_bytes,
+)
+
 ###############################################################################
 # Flask app setup
 ###############################################################################
@@ -100,12 +111,17 @@ def load_config():
             "enabled": False
         },
         "mistral_large": {
-            "api_key": None, 
+            "api_key": None,
             "enabled": False
         },
         "features": {
             "ai_completion": False,
             "public_profiles": True
+        },
+        "mcp": {
+            "enabled": False,
+            "user_id": 1,
+            "api_key": ""
         }
     }
     
@@ -614,6 +630,438 @@ def ai_complete_plant():
     except Exception as e:
         app.logger.error(f"AI completion error: {e}")
         return jsonify({"error": str(e)}), 500
+
+###############################################################################
+# Label / Printer Routes
+###############################################################################
+
+def _make_label_image(plant, style):
+    common   = plant.get("common", "")
+    latin    = plant.get("latin",  "")
+    variety  = plant.get("variety") or None
+    date_str = date.today().strftime("%d-%m-%Y")
+    if style == "circular":
+        return create_label_circular(common, latin, date_str, variety)
+    return create_label_classic(common, latin, date_str, variety)
+
+
+@app.route("/label_preview/<int:idx>")
+@login_required
+def label_preview(idx):
+    plant = load_one(idx) or abort(404)
+    if plant.get("user_id") != g.user["id"]:
+        abort(403)
+    style = request.args.get("style", "classic")
+    img = _make_label_image(plant, style)
+    return Response(label_to_png_bytes(img), mimetype="image/png")
+
+
+@app.route("/print_label/<int:idx>", methods=["POST"])
+@login_required
+def print_label_route(idx):
+    """Queue a print job — label_client.py on the user's machine picks it up."""
+    plant = load_one(idx) or abort(404)
+    if plant.get("user_id") != g.user["id"]:
+        abort(403)
+    data  = request.get_json(silent=True) or {}
+    style = data.get("style", "classic")
+    with get_conn() as conn:
+        cur = conn.execute(
+            "INSERT INTO print_jobs (user_id, plant_id, style) VALUES (?,?,?)",
+            (g.user["id"], idx, style),
+        )
+        job_id = cur.lastrowid
+        conn.commit()
+    return jsonify({"ok": True, "job_id": job_id})
+
+
+@app.route("/print_job_status/<int:job_id>")
+@login_required
+def print_job_status(job_id):
+    with get_conn() as conn:
+        row = conn.execute(
+            "SELECT status, error_msg FROM print_jobs WHERE id=? AND user_id=?",
+            (job_id, g.user["id"]),
+        ).fetchone()
+    if row is None:
+        return jsonify({"error": "Not found"}), 404
+    return jsonify({"status": row["status"], "error": row["error_msg"]})
+
+
+###############################################################################
+# Quick-log Route (AJAX)
+###############################################################################
+
+@app.route("/quick_log/<int:idx>", methods=["POST"])
+@login_required
+def quick_log(idx):
+    """Log a simple event (water / fertilize / custom) via AJAX from dashboard or plant page."""
+    plant = load_one(idx)
+    if plant is None or plant.get("user_id") != g.user["id"]:
+        abort(403)
+    data       = request.get_json(silent=True) or {}
+    event_code = data.get("event", "water")
+    happened   = data.get("date") or date.today().isoformat()
+    # Build a minimal form dict and reuse existing helpers
+    form = get_empty_form()
+    form["status"] = event_code
+    if event_code == "custom":
+        form["event_custom_label"] = data.get("custom_label", "Note")
+        form["event_custom_note"]  = data.get("custom_note", "")
+    form["event_date"] = happened
+    translations = get_translations(g.lang)
+    errors, event = validate_form(form, translations, context="add_stage")
+    if errors:
+        return jsonify({"ok": False, "errors": errors}), 400
+    plant_data = {k: plant.get(k, "") or "" for k in ("common", "latin", "location", "notes", "variety")}
+    update_plant(plant["id"], plant_data, new_event=event)
+    return jsonify({"ok": True})
+
+
+###############################################################################
+# Clone Plant Route
+###############################################################################
+
+@app.route("/clone_plant/<int:idx>", methods=["POST"])
+@login_required_for_plant
+def clone_plant(idx):
+    """Duplicate a plant's metadata (no event history) and redirect to the new plant."""
+    plant = load_one(idx) or abort(404)
+    form = {
+        "common":   plant["common"],
+        "latin":    plant["latin"],
+        "location": plant.get("location") or "",
+        "notes":    plant.get("notes") or "",
+        "variety":  plant.get("variety") or "",
+        "status":   "sow",
+        "date_happened": date.today().isoformat(),
+    }
+    translations = get_translations(g.lang)
+    errors, event = validate_form(form, translations, context="add")
+    if not errors:
+        save_new_plant(form, event, g.user["id"])
+    return redirect(url_for("index", lang=g.lang))
+
+
+###############################################################################
+# Downloads
+###############################################################################
+
+@app.route("/download/label_client.py")
+@login_required
+def download_label_client():
+    return Response(
+        open(os.path.join(os.path.dirname(__file__), "scripts", "label_client.py"), "rb").read(),
+        mimetype="text/x-python",
+        headers={"Content-Disposition": "attachment; filename=label_client.py"},
+    )
+
+
+@app.route("/download/mcp_server.py")
+@login_required
+def download_mcp_server():
+    return Response(
+        open(os.path.join(os.path.dirname(__file__), "scripts", "mcp_server.py"), "rb").read(),
+        mimetype="text/x-python",
+        headers={"Content-Disposition": "attachment; filename=mcp_server.py"},
+    )
+
+
+###############################################################################
+# Settings (API key management)
+###############################################################################
+
+@app.route("/settings", methods=["GET"])
+@login_required
+def settings():
+    return render_template(
+        "settings.html",
+        lang=g.lang,
+        t=get_translations(g.lang),
+        has_key=has_api_key(g.user["id"]),
+        new_key=session.pop("new_api_key", None),
+        revealed_key=session.pop("revealed_key", None),
+    )
+
+
+@app.route("/settings/generate_key", methods=["POST"])
+@login_required
+def settings_generate_key():
+    raw = generate_api_key(g.user["id"])
+    session["new_api_key"] = raw        # shown once via settings page
+    return redirect(url_for("settings", lang=g.lang))
+
+
+@app.route("/settings/revoke_key", methods=["POST"])
+@login_required
+def settings_revoke_key():
+    revoke_api_key(g.user["id"])
+    flash(get_translations(g.lang).get("settings_key_revoked", "API key revoked."), "info")
+    return redirect(url_for("settings", lang=g.lang))
+
+
+@app.route("/settings/reveal_key", methods=["POST"])
+@login_required
+def settings_reveal_key():
+    t = get_translations(g.lang)
+    password = request.form.get("password", "")
+    if check_password_hash(g.user["pw_hash"], password):
+        key = get_api_key(g.user["id"])
+        if key:
+            session["revealed_key"] = key
+        else:
+            flash(t.get("settings_key_none", "No API key set."), "warning")
+    else:
+        flash(t.get("settings_wrong_password", "Wrong password."), "danger")
+    return redirect(url_for("settings", lang=g.lang))
+
+
+###############################################################################
+# JSON API  (Bearer-token auth, consumed by the MCP server)
+###############################################################################
+
+def _api_user():
+    """Resolve the user from an Authorization: Bearer <key> header."""
+    auth = request.headers.get("Authorization", "")
+    if not auth.startswith("Bearer "):
+        return None
+    return get_user_by_api_key(auth[7:])
+
+
+def _api_auth_required(view):
+    @wraps(view)
+    def wrapped(*args, **kwargs):
+        user = _api_user()
+        if user is None:
+            return jsonify({"error": "Unauthorized"}), 401
+        g.api_user = user
+        return view(*args, **kwargs)
+    return wrapped
+
+
+def _plant_summary(p):
+    state   = p.get("state") or {}
+    current = p.get("current") or {}
+    return {
+        "id":       p["id"],
+        "common":   p["common"],
+        "latin":    p["latin"],
+        "variety":  p.get("variety"),
+        "location": p.get("location"),
+        "notes":    p.get("notes"),
+        "state":    state.get("label"),
+        "last_event": {
+            "type": current.get("action"),
+            "date": current.get("start"),
+        } if current else None,
+    }
+
+
+def _event_detail(h):
+    ev = {"id": h["id"], "type": h["action"], "date": h["start"]}
+    if h["action"] == "sow" and "range" in h:
+        ev["sprout_range"] = {
+            "min": h["range"][0], "min_unit": h["range"][1],
+            "max": h["range"][2], "max_unit": h["range"][3],
+        }
+    elif h["action"] in ("soak", "strat") and "duration" in h:
+        ev["duration"] = {"val": h["duration"][0], "unit": h["duration"][1]}
+    elif h["action"] == "measure" and "size" in h:
+        ev["size"] = {"val": h["size"][0], "unit": h["size"][1]}
+    elif h["action"] == "custom":
+        ev["label"] = h.get("custom_label")
+        ev["note"]  = h.get("custom_note")
+    return ev
+
+
+@app.route("/api/plants", methods=["GET"])
+@_api_auth_required
+def api_list_plants():
+    plants = load_data(g.api_user["id"])
+    return jsonify([_plant_summary(p) for p in plants])
+
+
+@app.route("/api/plants/<int:idx>", methods=["GET"])
+@_api_auth_required
+def api_get_plant(idx):
+    p = load_one(idx)
+    if p is None or p.get("user_id") != g.api_user["id"]:
+        return jsonify({"error": "Not found"}), 404
+    result = _plant_summary(p)
+    result["history"] = [_event_detail(h) for h in p.get("history", [])]
+    return jsonify(result)
+
+
+@app.route("/api/plants", methods=["POST"])
+@_api_auth_required
+def api_add_plant():
+    data = request.get_json(silent=True) or {}
+    form = get_empty_form()
+    form.update({
+        "common":            data.get("common", ""),
+        "latin":             data.get("latin", ""),
+        "variety":           data.get("variety", ""),
+        "location":          data.get("location", ""),
+        "notes":             data.get("notes", ""),
+        "status":            data.get("first_event", "sow"),
+        "event_date":        data.get("event_date") or date.today().isoformat(),
+        "event_range_min":   data.get("sprout_min_days", 14),
+        "event_range_min_u": "days",
+        "event_range_max":   data.get("sprout_max_days", 30),
+        "event_range_max_u": "days",
+        "event_dur_val":     data.get("duration_val", 24),
+        "event_dur_unit":    data.get("duration_unit", "hours"),
+    })
+    t = get_translations(g.api_user["lang"])
+    errors, event = validate_form(form, t, context="add")
+    if errors:
+        return jsonify({"error": errors}), 400
+    save_new_plant(form, event, g.api_user["id"])
+    return jsonify({"ok": True, "message": f"Plant '{form['common']}' added."}), 201
+
+
+@app.route("/api/plants/<int:idx>", methods=["PATCH"])
+@_api_auth_required
+def api_update_plant(idx):
+    p = load_one(idx)
+    if p is None or p.get("user_id") != g.api_user["id"]:
+        return jsonify({"error": "Not found"}), 404
+    data = request.get_json(silent=True) or {}
+    plant_data = {
+        "common":   data.get("common",   p["common"]),
+        "latin":    data.get("latin",    p["latin"]),
+        "location": data.get("location", p.get("location") or ""),
+        "notes":    data.get("notes",    p.get("notes") or ""),
+        "variety":  data.get("variety",  p.get("variety") or ""),
+    }
+    update_plant(idx, plant_data, new_event=None)
+    return jsonify({"ok": True})
+
+
+@app.route("/api/plants/<int:idx>", methods=["DELETE"])
+@_api_auth_required
+def api_delete_plant(idx):
+    p = load_one(idx)
+    if p is None or p.get("user_id") != g.api_user["id"]:
+        return jsonify({"error": "Not found"}), 404
+    process_delete_plant(idx, g.api_user["id"])
+    return jsonify({"ok": True})
+
+
+@app.route("/api/plants/<int:idx>/events", methods=["POST"])
+@_api_auth_required
+def api_add_event(idx):
+    p = load_one(idx)
+    if p is None or p.get("user_id") != g.api_user["id"]:
+        return jsonify({"error": "Not found"}), 404
+    data = request.get_json(silent=True) or {}
+    form = get_empty_form()
+    form.update({
+        "status":             data.get("event_type", "water"),
+        "event_date":         data.get("event_date") or date.today().isoformat(),
+        "event_range_min":    data.get("sprout_min_days", 14),
+        "event_range_min_u":  "days",
+        "event_range_max":    data.get("sprout_max_days", 30),
+        "event_range_max_u":  "days",
+        "event_dur_val":      data.get("duration_val", 24),
+        "event_dur_unit":     data.get("duration_unit", "hours"),
+        "event_size_val":     data.get("size_val", 0),
+        "event_size_unit":    data.get("size_unit", "cm"),
+        "event_custom_label": data.get("custom_label", ""),
+        "event_custom_note":  data.get("custom_note", ""),
+    })
+    t = get_translations(g.api_user["lang"])
+    errors, event = validate_form(form, t, context="add_stage")
+    if errors:
+        return jsonify({"error": errors}), 400
+    plant_data = {k: p.get(k) or "" for k in ("common", "latin", "location", "notes", "variety")}
+    update_plant(idx, plant_data, new_event=event)
+    return jsonify({"ok": True}), 201
+
+
+@app.route("/api/event_types", methods=["GET"])
+@_api_auth_required
+def api_event_types():
+    return jsonify(get_event_specs())
+
+
+@app.route("/api/print_queue", methods=["POST"])
+@_api_auth_required
+def api_queue_print():
+    """Queue a print job via API (e.g. from MCP tool)."""
+    data  = request.get_json(silent=True) or {}
+    idx   = data.get("plant_id")
+    if not idx:
+        return jsonify({"error": "plant_id required"}), 400
+    p = load_one(idx)
+    if p is None or p.get("user_id") != g.api_user["id"]:
+        return jsonify({"error": "Not found"}), 404
+    style = data.get("style", "classic")
+    with get_conn() as conn:
+        cur = conn.execute(
+            "INSERT INTO print_jobs (user_id, plant_id, style) VALUES (?,?,?)",
+            (g.api_user["id"], idx, style),
+        )
+        job_id = cur.lastrowid
+        conn.commit()
+    return jsonify({"ok": True, "job_id": job_id}), 201
+
+
+@app.route("/api/print_queue/pending", methods=["GET"])
+@_api_auth_required
+def api_print_queue_pending():
+    """Printer client polls this to get its pending jobs."""
+    with get_conn() as conn:
+        rows = conn.execute(
+            """SELECT j.id, j.style, j.created_at,
+                      p.common, p.latin, p.variety
+               FROM print_jobs j
+               JOIN plants p ON p.id = j.plant_id
+               WHERE j.user_id = ? AND j.status = 'pending'
+               ORDER BY j.created_at ASC""",
+            (g.api_user["id"],),
+        ).fetchall()
+    return jsonify([
+        {
+            "job_id":    r["id"],
+            "style":     r["style"],
+            "created_at": r["created_at"],
+            "plant": {
+                "common":  r["common"],
+                "latin":   r["latin"],
+                "variety": r["variety"],
+            },
+        }
+        for r in rows
+    ])
+
+
+@app.route("/api/print_queue/<int:job_id>/done", methods=["POST"])
+@_api_auth_required
+def api_print_job_done(job_id):
+    with get_conn() as conn:
+        conn.execute(
+            "UPDATE print_jobs SET status='done', updated_at=datetime('now') WHERE id=? AND user_id=?",
+            (job_id, g.api_user["id"]),
+        )
+        conn.commit()
+    return jsonify({"ok": True})
+
+
+@app.route("/api/print_queue/<int:job_id>/error", methods=["POST"])
+@_api_auth_required
+def api_print_job_error(job_id):
+    data = request.get_json(silent=True) or {}
+    msg  = data.get("error", "Unknown error")
+    with get_conn() as conn:
+        conn.execute(
+            """UPDATE print_jobs SET status='error', error_msg=?, updated_at=datetime('now')
+               WHERE id=? AND user_id=?""",
+            (msg, job_id, g.api_user["id"]),
+        )
+        conn.commit()
+    return jsonify({"ok": True})
+
 
 ###############################################################################
 # Main entry point

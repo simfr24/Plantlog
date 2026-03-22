@@ -24,7 +24,7 @@
       <i class="fas fa-seedling text-success"></i>
     </div>
     <div>
-      <h1 class="display-6 mb-0">{{ plant.common }}</h1>
+      <h1 class="display-6 mb-0">{{ plant.common }}{% if plant.variety %} <small class="text-muted fs-5 fw-normal">— {{ plant.variety }}</small>{% endif %}</h1>
       <p class="text-muted fst-italic mb-0">{{ plant.latin }}</p>
     </div>
   </div>
@@ -50,6 +50,254 @@
     {% include 'plant_partials/actions_card.html' %}
   </div>
 </div>
+
+  {% if app_config.get('printer', {}).get('enabled') %}
+  <!-- Print Label Modal (once, shared by mobile + desktop action buttons) -->
+  <div class="modal fade" id="printLabelModal" tabindex="-1" aria-labelledby="printLabelModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="printLabelModalLabel"><i class="fas fa-print me-2"></i>Print Label</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body text-center">
+          <div class="mb-3">
+            <div class="btn-group" role="group" id="styleSwitcher">
+              <input type="radio" class="btn-check" name="labelStyle" id="styleClassic" value="classic" checked>
+              <label class="btn btn-outline-secondary btn-sm" for="styleClassic">Classic</label>
+              <input type="radio" class="btn-check" name="labelStyle" id="styleCircular" value="circular">
+              <label class="btn btn-outline-secondary btn-sm" for="styleCircular">Circular</label>
+            </div>
+          </div>
+          <img id="labelPreview" src="/label_preview/{{ plant.id }}?style=classic" alt="Label preview"
+               class="img-fluid border rounded" style="max-height:220px;">
+          <p id="printStatus" class="mt-2 small text-muted"></p>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="button" class="btn btn-primary" id="printBtn">
+            <i class="fas fa-print me-1"></i> Print
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+  (function() {
+    const plantId = {{ plant.id }};
+
+    function currentStyle() {
+      return document.querySelector('input[name="labelStyle"]:checked').value;
+    }
+
+    function updatePreview() {
+      const img = document.getElementById('labelPreview');
+      img.src = `/label_preview/${plantId}?style=${currentStyle()}&_=${Date.now()}`;
+    }
+
+    document.querySelectorAll('input[name="labelStyle"]').forEach(function(r) {
+      r.addEventListener('change', updatePreview);
+    });
+
+    function pollJob(jobId, attempts) {
+      if (attempts <= 0) {
+        document.getElementById('printStatus').textContent = 'Timed out waiting for printer.';
+        document.getElementById('printBtn').disabled = false;
+        return;
+      }
+      fetch(`/print_job_status/${jobId}`)
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+          if (data.status === 'done') {
+            document.getElementById('printStatus').innerHTML = '<span class="text-success"><i class="fas fa-check-circle me-1"></i>Printed successfully!</span>';
+            document.getElementById('printBtn').disabled = false;
+          } else if (data.status === 'error') {
+            document.getElementById('printStatus').innerHTML = '<span class="text-danger"><i class="fas fa-exclamation-circle me-1"></i>' + (data.error_msg || 'Print failed') + '</span>';
+            document.getElementById('printBtn').disabled = false;
+          } else {
+            setTimeout(function() { pollJob(jobId, attempts - 1); }, 2000);
+          }
+        })
+        .catch(function() { setTimeout(function() { pollJob(jobId, attempts - 1); }, 2000); });
+    }
+
+    document.getElementById('printBtn').addEventListener('click', function() {
+      const btn = this;
+      btn.disabled = true;
+      document.getElementById('printStatus').innerHTML = '<span class="text-muted"><i class="fas fa-spinner fa-spin me-1"></i>Sending to printer…</span>';
+      fetch(`/print_label/${plantId}`, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({style: currentStyle()})
+      })
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        if (data.ok) {
+          document.getElementById('printStatus').innerHTML = '<span class="text-muted"><i class="fas fa-spinner fa-spin me-1"></i>Waiting for label_client…</span>';
+          pollJob(data.job_id, 30);
+        } else {
+          document.getElementById('printStatus').innerHTML = '<span class="text-danger">' + (data.error || 'Error') + '</span>';
+          btn.disabled = false;
+        }
+      })
+      .catch(function() {
+        document.getElementById('printStatus').textContent = 'Network error.';
+        btn.disabled = false;
+      });
+    });
+
+    document.getElementById('printLabelModal').addEventListener('hidden.bs.modal', function() {
+      document.getElementById('printStatus').textContent = '';
+      document.getElementById('printBtn').disabled = false;
+      document.getElementById('styleClassic').checked = true;
+      updatePreview();
+    });
+  })();
+  </script>
+  {% endif %}
+
+  <!-- Print Label Modal (once, shared by mobile + desktop action buttons) -->
+  <div class="modal fade" id="printLabelModal" tabindex="-1" aria-labelledby="printLabelModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="printLabelModalLabel"><i class="fas fa-print me-2"></i>Print Label</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body text-center">
+          <div class="mb-3">
+            <div class="btn-group" role="group">
+              <input type="radio" class="btn-check" name="labelStyle" id="styleClassic" value="classic" checked>
+              <label class="btn btn-outline-secondary btn-sm" for="styleClassic">Classic</label>
+              <input type="radio" class="btn-check" name="labelStyle" id="styleCircular" value="circular">
+              <label class="btn btn-outline-secondary btn-sm" for="styleCircular">Circular</label>
+            </div>
+          </div>
+          <img id="labelPreview" src="/label_preview/{{ plant.id }}?style=classic" alt="Label preview"
+               class="img-fluid border rounded" style="max-height:220px;">
+          <p id="printStatus" class="mt-2 small text-muted"></p>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="button" class="btn btn-primary" id="printBtn">
+            <i class="fas fa-print me-1"></i> Print
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+  (function() {
+    const plantId = {{ plant.id }};
+
+    function currentStyle() {
+      return document.querySelector('input[name="labelStyle"]:checked').value;
+    }
+
+    function updatePreview() {
+      document.getElementById('labelPreview').src =
+        `/label_preview/${plantId}?style=${currentStyle()}&_=${Date.now()}`;
+    }
+
+    document.querySelectorAll('input[name="labelStyle"]').forEach(function(r) {
+      r.addEventListener('change', updatePreview);
+    });
+
+    function pollJob(jobId, attempts) {
+      if (attempts <= 0) {
+        document.getElementById('printStatus').textContent = 'Timed out waiting for printer.';
+        document.getElementById('printBtn').disabled = false;
+        return;
+      }
+      fetch(`/print_job_status/${jobId}`)
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+          if (data.status === 'done') {
+            document.getElementById('printStatus').innerHTML =
+              '<span class="text-success"><i class="fas fa-check-circle me-1"></i>Printed successfully!</span>';
+            document.getElementById('printBtn').disabled = false;
+          } else if (data.status === 'error') {
+            document.getElementById('printStatus').innerHTML =
+              '<span class="text-danger"><i class="fas fa-exclamation-circle me-1"></i>' +
+              (data.error_msg || 'Print failed') + '</span>';
+            document.getElementById('printBtn').disabled = false;
+          } else {
+            setTimeout(function() { pollJob(jobId, attempts - 1); }, 2000);
+          }
+        })
+        .catch(function() { setTimeout(function() { pollJob(jobId, attempts - 1); }, 2000); });
+    }
+
+    document.getElementById('printBtn').addEventListener('click', function() {
+      const btn = this;
+      btn.disabled = true;
+      document.getElementById('printStatus').innerHTML =
+        '<span class="text-muted"><i class="fas fa-spinner fa-spin me-1"></i>Sending to printer…</span>';
+      fetch(`/print_label/${plantId}`, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({style: currentStyle()})
+      })
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        if (data.ok) {
+          document.getElementById('printStatus').innerHTML =
+            '<span class="text-muted"><i class="fas fa-spinner fa-spin me-1"></i>Waiting for label_client…</span>';
+          pollJob(data.job_id, 30);
+        } else {
+          document.getElementById('printStatus').innerHTML =
+            '<span class="text-danger">' + (data.error || 'Error') + '</span>';
+          btn.disabled = false;
+        }
+      })
+      .catch(function() {
+        document.getElementById('printStatus').textContent = 'Network error.';
+        btn.disabled = false;
+      });
+    });
+
+    document.getElementById('printLabelModal').addEventListener('hidden.bs.modal', function() {
+      document.getElementById('printStatus').textContent = '';
+      document.getElementById('printBtn').disabled = false;
+      document.getElementById('styleClassic').checked = true;
+      updatePreview();
+    });
+  })();
+  </script>
+
+  <script>
+  // Quick-log (water / fertilize) from plant detail page
+  document.addEventListener('click', function(e) {
+    const btn = e.target.closest('.quick-log-btn');
+    if (!btn) return;
+    const plantId = btn.dataset.plantId;
+    const event   = btn.dataset.event;
+    btn.disabled  = true;
+    const orig    = btn.innerHTML;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+    fetch(`/quick_log/${plantId}`, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({event})
+    })
+    .then(r => r.json())
+    .then(data => {
+      if (data.ok) {
+        btn.innerHTML = '<i class="fas fa-check"></i> Done!';
+        btn.classList.add('btn-success');
+        btn.classList.remove('btn-outline-primary', 'btn-outline-warning');
+        setTimeout(() => location.reload(), 800);
+      } else {
+        btn.innerHTML = orig;
+        btn.disabled = false;
+        alert(data.errors || data.error || 'Error');
+      }
+    })
+    .catch(() => { btn.innerHTML = orig; btn.disabled = false; });
+  });
+  </script>
 
   <style>
     .timeline {
