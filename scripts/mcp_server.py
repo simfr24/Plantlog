@@ -241,7 +241,7 @@ def print_label(plant_id: int, style: str = "classic") -> dict:
         plant_id: ID of the plant.
         style:    "classic" (rectangular) or "circular".
     """
-    return _post(f"/api/plants/{plant_id}/print", {"style": style})
+    return _post("/api/print_queue", {"plant_id": plant_id, "style": style})
 
 
 # ── entry point ──────────────────────────────────────────────────────────────
