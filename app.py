@@ -325,8 +325,12 @@ def index():
 @login_required
 def graveyard():
     t      = get_translations(g.lang)
-    plants = sorted(load_data(g.user["id"]), key=sort_key)
-    dead   = [p for p in plants if p.get("state", {}).get("label", "").lower() == "dead"]
+    plants = load_data(g.user["id"])
+    dead   = sorted(
+        [p for p in plants if p.get("state") and p["state"].get("label", "").lower() == "dead"],
+        key=lambda p: (p.get("current") or {}).get("start", ""),
+        reverse=True,
+    )
     return render_template("graveyard.html", dead=dead, t=t, lang=g.lang, today=date.today())
 
 @app.route("/explode/<int:idx>", methods=["POST"])
