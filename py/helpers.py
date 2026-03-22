@@ -358,7 +358,7 @@ def _insert_event(cur, plant_id: int, ev: Dict[str, Any]) -> None:
 # Public CRUD helpers
 ###############################################################################
 
-def save_new_plant(plant_dict: Dict[str, Any], first_event: Dict[str, Any], user_id: int) -> None:
+def save_new_plant(plant_dict: Dict[str, Any], first_event: Dict[str, Any], user_id: int) -> int:
     """Insert a **brand‑new** plant plus its first event in one transaction."""
     with get_conn() as conn:
         cur = conn.cursor()
@@ -376,6 +376,7 @@ def save_new_plant(plant_dict: Dict[str, Any], first_event: Dict[str, Any], user
         plant_id = cur.lastrowid
         _insert_event(cur, plant_id, first_event)
         conn.commit()
+        return plant_id
 
 
 def update_plant(plant_id: int, plant_dict: Dict[str, Any], new_event: Optional[Dict[str, Any]] = None) -> None:

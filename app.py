@@ -920,8 +920,8 @@ def api_add_plant():
     errors, event = validate_form(form, t, context="add")
     if errors:
         return jsonify({"error": errors}), 400
-    save_new_plant(form, event, g.api_user["id"])
-    return jsonify({"ok": True, "message": f"Plant '{form['common']}' added."}), 201
+    plant_id = save_new_plant(form, event, g.api_user["id"])
+    return jsonify({"ok": True, "id": plant_id, "message": f"Plant '{form['common']}' added."}), 201
 
 
 @app.route("/api/plants/<int:idx>", methods=["PATCH"])
