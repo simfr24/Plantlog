@@ -236,33 +236,66 @@ def make_label(job):
 
 # ── Bluetooth printing ────────────────────────────────────────────────────────
 
-def print_image(img, mac, port):
-    if img.width < PRINTER_WIDTH:
-        padded = PIL.Image.new("1", (PRINTER_WIDTH, img.height), 1)
-        padded.paste(img); img = padded
-    if img.size[0] % 8:
-        img2 = PIL.Image.new("1", (img.size[0] + 8 - img.size[0] % 8, img.size[1]), "white")
-        img2.paste(img, (0, 0)); img = img2
-    img = PIL.ImageOps.invert(img.convert("L")).convert("1")
-    buf = (
-        b"\x1d\x76\x30\x00"
-        + struct.pack("2B", img.size[0] // 8 % 256, img.size[0] // 8 // 256)
-        + struct.pack("2B", img.size[1] % 256, img.size[1] // 256)
-        + img.tobytes()
-    )
-    s = socket.socket(socket.AF_BLUETOOTH, socket.SOCK_STREAM, socket.BTPROTO_RFCOMM)
-    s.connect((mac, port))
-    try:
+class Printer:
+    """Persistent Bluetooth RFCOMM connection with auto-reconnect."""
+
+    def __init__(self, mac, port):
+        self.mac  = mac
+        self.port = port
+        self._sock = None
+
+    def _connect(self):
+        if self._sock:
+            try:
+                self._sock.close()
+            except Exception:
+                pass
+        s = socket.socket(socket.AF_BLUETOOTH, socket.SOCK_STREAM, socket.BTPROTO_RFCOMM)
+        s.connect((self.mac, self.port))
         s.send(b"\x1e\x47\x03"); s.recv(38); time.sleep(0.5)
         s.send(b"\x1D\x67\x39"); s.recv(21); time.sleep(0.5)
-        s.send(b"\x1b\x40");                  time.sleep(0.5)
-        s.send(b"\x1d\x49\xf0\x19");         time.sleep(0.5)
+        self._sock = s
+
+    def connect(self):
+        self._connect()
+
+    def print_image(self, img):
+        if img.width < PRINTER_WIDTH:
+            padded = PIL.Image.new("1", (PRINTER_WIDTH, img.height), 1)
+            padded.paste(img); img = padded
+        if img.size[0] % 8:
+            img2 = PIL.Image.new("1", (img.size[0] + 8 - img.size[0] % 8, img.size[1]), "white")
+            img2.paste(img, (0, 0)); img = img2
+        img = PIL.ImageOps.invert(img.convert("L")).convert("1")
+        buf = (
+            b"\x1d\x76\x30\x00"
+            + struct.pack("2B", img.size[0] // 8 % 256, img.size[0] // 8 // 256)
+            + struct.pack("2B", img.size[1] % 256, img.size[1] // 256)
+            + img.tobytes()
+        )
+        try:
+            self._send(buf, img.height)
+        except (OSError, BrokenPipeError):
+            # Connection dropped — reconnect once and retry
+            self._connect()
+            self._send(buf, img.height)
+
+    def _send(self, buf, img_height):
+        s = self._sock
+        s.send(b"\x1b\x40");          time.sleep(0.5)
+        s.send(b"\x1d\x49\xf0\x19"); time.sleep(0.5)
         for i in range(0, len(buf), 512):
             s.send(buf[i:i + 512]); time.sleep(0.02)
-        time.sleep(max(3, img.height * 0.03))
+        time.sleep(max(3, img_height * 0.03))
         s.send(b"\x0a\x0a\x0a\x0a"); time.sleep(1)
-    finally:
-        s.close()
+
+    def close(self):
+        if self._sock:
+            try:
+                self._sock.close()
+            except Exception:
+                pass
+            self._sock = None
 
 
 # ── API helpers ───────────────────────────────────────────────────────────────
@@ -307,27 +340,35 @@ def main():
     log.info("Printer: %s (port %s)", mac, port)
     log.info("Polling every %ss — Ctrl-C to stop", interval)
 
-    while True:
-        try:
-            jobs = fetch_pending(base_url, headers)
-            for job in jobs:
-                jid  = job["job_id"]
-                name = job["plant"]["common"]
-                log.info("Job #%s — printing '%s' (%s)", jid, name, job["style"])
-                try:
-                    img = make_label(job)
-                    print_image(img, mac, port)
-                    mark_done(base_url, headers, jid)
-                    log.info("Job #%s — done", jid)
-                except Exception as exc:
-                    log.error("Job #%s — FAILED: %s", jid, exc)
-                    mark_error(base_url, headers, jid, str(exc))
-        except requests.exceptions.ConnectionError:
-            log.warning("Cannot reach server — will retry")
-        except Exception as exc:
-            log.error("Unexpected error: %s", exc)
+    printer = Printer(mac, port)
+    log.info("Connecting to printer…")
+    printer.connect()
+    log.info("Printer connected")
 
-        time.sleep(interval)
+    try:
+        while True:
+            try:
+                jobs = fetch_pending(base_url, headers)
+                for job in jobs:
+                    jid  = job["job_id"]
+                    name = job["plant"]["common"]
+                    log.info("Job #%s — printing '%s' (%s)", jid, name, job["style"])
+                    try:
+                        img = make_label(job)
+                        printer.print_image(img)
+                        mark_done(base_url, headers, jid)
+                        log.info("Job #%s — done", jid)
+                    except Exception as exc:
+                        log.error("Job #%s — FAILED: %s", jid, exc)
+                        mark_error(base_url, headers, jid, str(exc))
+            except requests.exceptions.ConnectionError:
+                log.warning("Cannot reach server — will retry")
+            except Exception as exc:
+                log.error("Unexpected error: %s", exc)
+
+            time.sleep(interval)
+    finally:
+        printer.close()
 
 
 if __name__ == "__main__":
