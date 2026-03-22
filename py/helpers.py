@@ -155,18 +155,19 @@ def group_plants_by_state(plants):
         state_groups[state].append(plant)
     return state_groups
 
-def build_state_cards(state_groups):
+def build_state_cards(state_groups, include_dead=False):
     """
     Given OrderedDict of {state: [plants]}, returns two lists of cards for left/right columns.
     Each card is a tuple (state, state_plants, is_dead_state)
+    Dead plants are excluded unless include_dead=True.
     """
     state_cards = []
     total_plants = sum(len(plants) for plants in state_groups.values())
     for i, (state, plants) in enumerate(state_groups.items()):
         is_dead_state = (state.lower() == "dead")
-        # Like your old logic: only show dead at the end
-        if not is_dead_state or i == len(state_groups) - 1:
-            state_cards.append((state, plants, is_dead_state))
+        if is_dead_state and not include_dead:
+            continue
+        state_cards.append((state, plants, is_dead_state))
     # Split for columns:
     left, right = [], []
     left_count, right_count = 0, 0
@@ -251,6 +252,9 @@ def load_one(plant_id: int) -> Optional[Dict[str, Any]]:
         "location": p["location"],
         "notes": p["notes"],
         "variety": p["variety"] if "variety" in p.keys() else None,
+        "nickname": p["nickname"] if "nickname" in p.keys() else None,
+        "count": p["count"] if "count" in p.keys() else 1,
+        "batch_id": p["batch_id"] if "batch_id" in p.keys() else None,
         "history": history,
         "current": history[-1] if history else None,
         "state": state,
@@ -278,6 +282,9 @@ def load_data(user_id: int) -> List[Dict[str, Any]]:
                 "location": p["location"],
                 "notes": p["notes"],
                 "variety": p["variety"] if "variety" in p.keys() else None,
+                "nickname": p["nickname"] if "nickname" in p.keys() else None,
+                "count": p["count"] if "count" in p.keys() else 1,
+                "batch_id": p["batch_id"] if "batch_id" in p.keys() else None,
                 "history": (hist := _events_for_plant(conn, p["id"])),
                 "current": hist[-1] if hist else None,
                 "state": None if p["state_label"] is None else {
@@ -363,13 +370,16 @@ def save_new_plant(plant_dict: Dict[str, Any], first_event: Dict[str, Any], user
     with get_conn() as conn:
         cur = conn.cursor()
         cur.execute(
-            "INSERT INTO plants (common, latin, location, notes, variety, user_id) VALUES (?,?,?,?,?,?)",
+            "INSERT INTO plants (common, latin, location, notes, variety, nickname, count, batch_id, user_id) VALUES (?,?,?,?,?,?,?,?,?)",
             (
                 plant_dict["common"],
                 plant_dict["latin"],
                 plant_dict.get("location"),
                 plant_dict.get("notes"),
                 plant_dict.get("variety") or None,
+                plant_dict.get("nickname") or None,
+                plant_dict.get("count", 1) or 1,
+                plant_dict.get("batch_id") or None,
                 user_id,
             ),
         )
@@ -383,13 +393,15 @@ def update_plant(plant_id: int, plant_dict: Dict[str, Any], new_event: Optional[
     with get_conn() as conn:
         cur = conn.cursor()
         cur.execute(
-            """UPDATE plants SET common = ?, latin = ?, location = ?, notes = ?, variety = ? WHERE id = ?""",
+            """UPDATE plants SET common = ?, latin = ?, location = ?, notes = ?, variety = ?, nickname = ?, count = ? WHERE id = ?""",
             (
                 plant_dict["common"],
                 plant_dict["latin"],
                 plant_dict.get("location"),
                 plant_dict.get("notes"),
                 plant_dict.get("variety") or None,
+                plant_dict.get("nickname") or None,
+                plant_dict.get("count", 1) or 1,
                 plant_id,
             ),
         )
@@ -518,6 +530,73 @@ def process_delete_plant(plant_id: int, user_id: int) -> None:
             cur.execute("DELETE FROM plants WHERE id = ?", (plant_id,))
             conn.commit()
 
+
+def explode_plant(plant_id: int, count: int, user_id: int) -> List[int]:
+    """
+    Split a plant record into `count` individual plant records.
+    The original becomes member #1; count-1 new records are created.
+    All members share the same batch_id (= the original plant's id).
+    Returns list of all member IDs (including original).
+    """
+    plant = load_one(plant_id)
+    if plant is None or plant["user_id"] != user_id:
+        return []
+    count = max(2, count)
+    with get_conn() as conn:
+        cur = conn.cursor()
+        # Mark original as member #1 of its own batch
+        cur.execute(
+            "UPDATE plants SET count = 1, batch_id = ? WHERE id = ?",
+            (plant_id, plant_id),
+        )
+        new_ids = [plant_id]
+        for _ in range(count - 1):
+            cur.execute(
+                "INSERT INTO plants (common, latin, location, notes, variety, nickname, count, batch_id, user_id, current_state_id) "
+                "SELECT common, latin, location, notes, variety, nickname, 1, ?, user_id, current_state_id "
+                "FROM plants WHERE id = ?",
+                (plant_id, plant_id),
+            )
+            new_plant_id = cur.lastrowid
+            new_ids.append(new_plant_id)
+            # Copy all events to the new plant
+            events = conn.execute(
+                "SELECT event_type_id, happened_on, range_min, range_min_u, range_max, range_max_u, "
+                "dur_val, dur_unit, measure_val, measure_unit, custom_label, custom_note "
+                "FROM events WHERE plant_id = ? ORDER BY happened_on, id",
+                (plant_id,),
+            ).fetchall()
+            for ev in events:
+                cur.execute(
+                    "INSERT INTO events (plant_id, event_type_id, happened_on, range_min, range_min_u, "
+                    "range_max, range_max_u, dur_val, dur_unit, measure_val, measure_unit, custom_label, custom_note) "
+                    "VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)",
+                    (new_plant_id,) + tuple(ev),
+                )
+        conn.commit()
+    return new_ids
+
+
+def group_by_batch(plants: List[Dict[str, Any]]) -> List[Tuple[Optional[int], List[Dict[str, Any]]]]:
+    """
+    Group a list of plants into batches.
+    Returns list of (batch_id_or_None, [plants]).
+    Unbatched plants each get their own singleton group.
+    Batched plants are grouped together, ordered by batch_id.
+    """
+    batches: dict = {}
+    result = []
+    for p in plants:
+        bid = p.get("batch_id")
+        if bid is None:
+            result.append((None, [p]))
+        else:
+            if bid not in batches:
+                batches[bid] = []
+                result.append((bid, batches[bid]))
+            batches[bid].append(p)
+    return result
+
 ###############################################################################
 # Ancillary helpers (translations, forms…) – unchanged from previous version
 ###############################################################################
@@ -571,6 +650,8 @@ def get_empty_form():
         "common": "",
         "latin": "",
         "variety": "",
+        "nickname": "",
+        "count": 1,
         "status": "sow",
         "event_date": "",
         "event_range_min": 0,
@@ -592,6 +673,8 @@ def get_form_data(request):
         "common": request.form.get("common", "").strip(),
         "latin": request.form.get("latin", "").strip(),
         "variety": request.form.get("variety", "").strip(),
+        "nickname": request.form.get("nickname", "").strip(),
+        "count": max(1, to_int(request.form.get("count", 1))),
         "status": request.form.get("status", ""),
         "event_date": request.form.get("event_date", ""),
         "event_range_min": to_int(request.form.get("event_range_min")),
@@ -614,6 +697,8 @@ def get_form_from_plant(plant):
     form["common"] = plant["common"]
     form["latin"] = plant["latin"]
     form["variety"] = plant.get("variety", "") or ""
+    form["nickname"] = plant.get("nickname", "") or ""
+    form["count"] = plant.get("count", 1) or 1
     form["location"] = plant.get("location", "") or ""
     form["notes"] = plant.get("notes", "") or ""
 

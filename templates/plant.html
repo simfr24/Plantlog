@@ -24,8 +24,12 @@
       <i class="fas fa-seedling text-success"></i>
     </div>
     <div>
-      <h1 class="display-6 mb-0">{{ plant.common }}{% if plant.variety %} <small class="text-muted fs-5 fw-normal">— {{ plant.variety }}</small>{% endif %}</h1>
+      {% if plant.nickname %}
+      <div class="text-muted small fw-semibold text-uppercase mb-0" style="letter-spacing:.05em">{{ plant.nickname }}</div>
+      {% endif %}
+      <h1 class="display-6 mb-0">{{ plant.common }}{% if plant.variety %} <small class="text-muted fs-5 fw-normal">— {{ plant.variety }}</small>{% endif %}{% if plant.count and plant.count > 1 %} <span class="badge bg-secondary fs-6 fw-normal ms-1">×{{ plant.count }}</span>{% endif %}</h1>
       <p class="text-muted fst-italic mb-0">{{ plant.latin }}</p>
+      {% if plant.batch_id %}<p class="mb-0 small"><a href="{{ url_for('index', lang=lang) }}#batch-{{ plant.batch_id }}" class="text-muted"><i class="fas fa-layer-group me-1"></i>{{ t['plant_part_of_batch'] }}</a></p>{% endif %}
     </div>
   </div>
 

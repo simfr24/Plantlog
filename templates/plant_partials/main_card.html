@@ -20,6 +20,17 @@
         </div>
       </div>
       {% endif %}
+      {% if plant.nickname %}
+      <div class="col-md-6">
+        <div class="d-flex align-items-start">
+          <i class="fas fa-heart me-2 text-muted mt-1"></i>
+          <div>
+            <strong>{{ t['plant_nickname'] }}:</strong>
+            <div class="text-muted">{{ plant.nickname }}</div>
+          </div>
+        </div>
+      </div>
+      {% endif %}
       {% if plant.variety %}
       <div class="col-md-6">
         <div class="d-flex align-items-start">
@@ -31,13 +42,24 @@
         </div>
       </div>
       {% endif %}
+      {% if plant.count and plant.count > 1 %}
+      <div class="col-md-6">
+        <div class="d-flex align-items-start">
+          <i class="fas fa-layer-group me-2 text-muted mt-1"></i>
+          <div>
+            <strong>{{ t['plant_count'] }}:</strong>
+            <div class="text-muted">{{ plant.count }}</div>
+          </div>
+        </div>
+      </div>
+      {% endif %}
       {% if plant.notes %}
       <div class="col-md-12">
         <div class="d-flex">
           <i class="fas fa-sticky-note me-2 text-muted mt-1"></i>
-          <div>
+          <div class="flex-grow-1">
             <strong>{{ t['Notes'] }}:</strong>
-            <div class="mt-1 text-muted">{{ plant.notes }}</div>
+            <div class="mt-1 text-muted md-notes">{{ plant.notes | mdrender }}</div>
           </div>
         </div>
       </div>

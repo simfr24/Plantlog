@@ -14,6 +14,7 @@ import os
 from datetime import date
 from functools import wraps
 import json
+import markdown as _md
 
 from flask import (
     Flask,
@@ -77,6 +78,8 @@ from py.helpers import (
     get_daily_unique_logins,
     group_plants_by_state,
     build_state_cards,
+    group_by_batch,
+    explode_plant,
 
 )
 from py.processing import sort_key, get_unique_locations
@@ -98,6 +101,14 @@ from py.label_printer import (
 app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", "plantlog-secret-key")
 app.template_filter("dateadd")(dateadd)
+
+@app.template_filter("mdrender")
+def mdrender_filter(text):
+    if not text:
+        return ""
+    from markupsafe import Markup
+    return Markup(_md.markdown(text, extensions=["nl2br", "fenced_code"]))
+
 init_db()
 
 def load_config():
@@ -288,7 +299,8 @@ def build_dashboard_context(user_obj, lang):
     translations = get_translations(lang)
     plants       = sorted(load_data(user_obj["id"]), key=sort_key)
     state_groups = group_plants_by_state(plants)
-    left_col, right_col = build_state_cards(state_groups)
+    left_col, right_col = build_state_cards(state_groups, include_dead=False)
+    dead_count   = len(state_groups.get("Dead", []))
     return dict(
         lang      = lang,
         t         = translations,
@@ -299,6 +311,8 @@ def build_dashboard_context(user_obj, lang):
         state_groups = state_groups,
         left_col  = left_col,
         right_col = right_col,
+        dead_count = dead_count,
+        group_by_batch = group_by_batch,
     )
 
 @app.route("/")
@@ -306,6 +320,25 @@ def build_dashboard_context(user_obj, lang):
 def index():
     ctx = build_dashboard_context(g.user, g.lang)
     return render_template("index.html", **ctx)
+
+@app.route("/graveyard")
+@login_required
+def graveyard():
+    t      = get_translations(g.lang)
+    plants = sorted(load_data(g.user["id"]), key=sort_key)
+    dead   = [p for p in plants if p.get("state", {}).get("label", "").lower() == "dead"]
+    return render_template("graveyard.html", dead=dead, t=t, lang=g.lang, today=date.today())
+
+@app.route("/explode/<int:idx>", methods=["POST"])
+@login_required
+def explode_plant_route(idx):
+    plant = load_one(idx) or abort(404)
+    if plant["user_id"] != g.user["id"]:
+        abort(403)
+    count = max(2, int(request.form.get("count", 2)))
+    explode_plant(idx, count, g.user["id"])
+    return redirect(url_for("index", lang=g.lang))
+
 
 @app.route("/u/<username>")
 def public_view(username):
@@ -905,6 +938,8 @@ def api_add_plant():
         "common":            data.get("common", ""),
         "latin":             data.get("latin", ""),
         "variety":           data.get("variety", ""),
+        "nickname":          data.get("nickname", ""),
+        "count":             max(1, int(data.get("count", 1))),
         "location":          data.get("location", ""),
         "notes":             data.get("notes", ""),
         "status":            data.get("first_event", "sow"),
@@ -932,14 +967,28 @@ def api_update_plant(idx):
         return jsonify({"error": "Not found"}), 404
     data = request.get_json(silent=True) or {}
     plant_data = {
-        "common":   data.get("common",   p["common"]),
-        "latin":    data.get("latin",    p["latin"]),
-        "location": data.get("location", p.get("location") or ""),
-        "notes":    data.get("notes",    p.get("notes") or ""),
-        "variety":  data.get("variety",  p.get("variety") or ""),
+        "common":    data.get("common",    p["common"]),
+        "latin":     data.get("latin",     p["latin"]),
+        "location":  data.get("location",  p.get("location") or ""),
+        "notes":     data.get("notes",     p.get("notes") or ""),
+        "variety":   data.get("variety",   p.get("variety") or ""),
+        "nickname":  data.get("nickname",  p.get("nickname") or ""),
+        "count":     data.get("count",     p.get("count", 1)),
     }
     update_plant(idx, plant_data, new_event=None)
     return jsonify({"ok": True})
+
+
+@app.route("/api/plants/<int:idx>/explode", methods=["POST"])
+@_api_auth_required
+def api_explode_plant(idx):
+    p = load_one(idx)
+    if p is None or p.get("user_id") != g.api_user["id"]:
+        return jsonify({"error": "Not found"}), 404
+    data  = request.get_json(silent=True) or {}
+    count = max(2, int(data.get("count", 2)))
+    ids   = explode_plant(idx, count, g.api_user["id"])
+    return jsonify({"ok": True, "plant_ids": ids})
 
 
 @app.route("/api/plants/<int:idx>", methods=["DELETE"])

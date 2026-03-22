@@ -27,9 +27,18 @@
       </button>
       <form method="post" action="{{ url_for('clone_plant', idx=plant.id, lang=lang) }}" class="d-grid">
         <button type="submit" class="btn btn-outline-secondary">
-          <i class="fas fa-copy me-1"></i> Duplicate plant
+          <i class="fas fa-copy me-1"></i> {{ t['Duplicate plant'] }}
         </button>
       </form>
+      <button type="button" class="btn btn-outline-info" data-bs-toggle="collapse" data-bs-target="#explodeForm">
+        <i class="fas fa-layer-group me-1"></i> {{ t['plant_explode'] }}
+      </button>
+      <div class="collapse" id="explodeForm">
+        <form method="post" action="{{ url_for('explode_plant_route', idx=plant.id, lang=lang) }}" class="d-flex gap-2 align-items-center mt-1">
+          <input type="number" name="count" class="form-control form-control-sm" value="{{ plant.count or 2 }}" min="2" style="width:70px;">
+          <button type="submit" class="btn btn-info btn-sm text-white flex-fill">{{ t['plant_explode_confirm'] }}</button>
+        </form>
+      </div>
       <a href="{{ url_for('index', lang=lang) }}" class="btn btn-outline-dark">
         <i class="fas fa-arrow-left me-1"></i> {{ t['Back to dashboard'] }}
       </a>

@@ -111,29 +111,35 @@ def add_plant(
     location: str = "",
     notes: str = "",
     variety: str = "",
-    sprout_min_days: int = 14,
-    sprout_max_days: int = 30,
+    nickname: str = "",
+    count: int = 1,
+    sprout_min_days: int = 0,
+    sprout_max_days: int = 0,
 ) -> dict:
     """
     Add a new plant.
 
     Args:
-        common:          Common name (e.g. "Tomato").
+        common:          Common name (e.g. "Tomate cerise").
         latin:           Latin name (e.g. "Solanum lycopersicum").
         first_event:     First event type: sow, plant, soak, strat, sprout,
                          flower, fruit, water, fertilize, measure, custom.
                          Defaults to "sow".
         event_date:      ISO date YYYY-MM-DD. Defaults to today.
-        location:        Where the plant lives (e.g. "Greenhouse").
+        location:        Where the plant lives (e.g. "Serre").
         notes:           Free-text notes.
         variety:         Optional variety or batch label.
-        sprout_min_days: Min days to germination (for sow events).
-        sprout_max_days: Max days to germination (for sow events).
+        nickname:        Optional personal name for special individuals.
+        count:           Number of physical plants this record represents (default 1).
+        sprout_min_days: Min days to germination (required for sow — look up the species, do not guess).
+        sprout_max_days: Max days to germination (required for sow — look up the species, do not guess).
     """
     return _post("/api/plants", {
         "common":          common,
         "latin":           latin,
         "variety":         variety,
+        "nickname":        nickname,
+        "count":           count,
         "location":        location,
         "notes":           notes,
         "first_event":     first_event,
@@ -148,9 +154,9 @@ def log_event(
     plant_id: int,
     event_type: str,
     event_date: str = "",
-    sprout_min_days: int = 14,
-    sprout_max_days: int = 30,
-    duration_val: int = 24,
+    sprout_min_days: int = 0,
+    sprout_max_days: int = 0,
+    duration_val: int = 0,
     duration_unit: str = "hours",
     size_val: float = 0,
     size_unit: str = "cm",
@@ -165,9 +171,9 @@ def log_event(
         event_type:      Event type: sow, plant, soak, strat, sprout, flower,
                          fruit, water, fertilize, measure, custom, dead.
         event_date:      ISO date YYYY-MM-DD. Defaults to today.
-        sprout_min_days: Min germination days (for sow events).
-        sprout_max_days: Max germination days (for sow events).
-        duration_val:    Duration amount (for soak/strat events).
+        sprout_min_days: Min germination days (required for sow — look up the species, do not guess).
+        sprout_max_days: Max germination days (required for sow — look up the species, do not guess).
+        duration_val:    Duration amount (required for soak/strat events).
         duration_unit:   Duration unit: hours, days, weeks, months.
         size_val:        Measurement value (for measure events).
         size_unit:       Measurement unit (cm, mm, m…).
@@ -196,9 +202,11 @@ def update_plant(
     location: str = "",
     notes: str = "",
     variety: str = "",
+    nickname: str = "",
+    count: int = 0,
 ) -> dict:
     """
-    Update plant metadata. Only non-empty fields are changed.
+    Update plant metadata. Only non-empty/non-zero fields are changed.
 
     Args:
         plant_id:  ID of the plant.
@@ -207,12 +215,29 @@ def update_plant(
         location:  New location.
         notes:     New notes.
         variety:   New variety/batch label.
+        nickname:  Personal name for this individual plant.
+        count:     Number of physical plants (0 = unchanged).
     """
     payload = {k: v for k, v in {
         "common": common, "latin": latin, "location": location,
-        "notes": notes, "variety": variety,
+        "notes": notes, "variety": variety, "nickname": nickname,
     }.items() if v}
+    if count > 0:
+        payload["count"] = count
     return _patch(f"/api/plants/{plant_id}", payload)
+
+
+@mcp.tool()
+def explode_plant(plant_id: int, count: int) -> dict:
+    """
+    Split a plant record into multiple individual plant records sharing a batch.
+    The original becomes member #1; count-1 new records are created with the same events.
+
+    Args:
+        plant_id: ID of the plant to split.
+        count:    Total number of individual plants to create (minimum 2).
+    """
+    return _post(f"/api/plants/{plant_id}/explode", {"count": count})
 
 
 @mcp.tool()

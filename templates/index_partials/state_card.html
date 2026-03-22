@@ -30,7 +30,61 @@
     <div class="card-body p-0">
     {% endif %}
       <div class="accordion" id="plants-acc-{{ state|lower }}">
-        {% for p in state_plants %}
+        {% for batch_id, batch_plants in group_by_batch(state_plants) %}
+        {% if batch_id is not none and batch_plants|length > 1 %}
+        {# ── Batch group ── #}
+        <div class="accordion-item" id="batch-{{ batch_id }}">
+          <h2 class="accordion-header">
+            <button class="accordion-button collapsed bg-light" type="button"
+                    data-bs-toggle="collapse" data-bs-target="#batch-collapse-{{ batch_id }}">
+              <i class="fas fa-layer-group me-2 text-muted"></i>
+              <span class="fw-semibold">{{ batch_plants[0].common }}</span>
+              {% if batch_plants[0].variety %}<small class="text-muted ms-1">— {{ batch_plants[0].variety }}</small>{% endif %}
+              <span class="badge bg-info text-dark ms-2">×{{ batch_plants|length }}</span>
+            </button>
+          </h2>
+          <div id="batch-collapse-{{ batch_id }}" class="accordion-collapse collapse">
+            <div class="accordion-body p-0">
+              <div class="accordion" id="batch-inner-{{ batch_id }}">
+        {% for p in batch_plants %}
+        {% set idx = p.id %}{% set current_event = p.current %}{% set action = current_event.action %}
+        {% set last_non_custom = (p.history | rejectattr('action', 'equalto', 'custom') | list)[-1] if p.history | rejectattr('action', 'equalto', 'custom') | list else None %}
+        {% set event_spec = event_map[action] %}{% set state_obj = p.state %}
+        {% set state_label = state_obj.label if state_obj else '?' %}
+        {% set state_icon = state_obj.icon_class if state_obj else 'fa-question' %}
+        {% set state_color = state_obj.color_class if state_obj else 'text-muted' %}
+        {% set now_date = today %}{% set start_date = current_event.start %}
+        {% if action == 'custom' %}{% set label = current_event.custom_label or '?' %}{% set label_text = t['{event} on'].replace('{event}', label) if '{event} on' in t else label ~ ' on' %}{% set summary = label_text ~ ' ' ~ start_date %}{% else %}{% set summary = (human_names[action] in t and t[human_names[action]] or human_names[action]) ~ ' ' ~ start_date %}{% endif %}
+          <div class="accordion-item">
+            <h2 class="accordion-header">
+              <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapse-batch-{{ idx }}">
+                <div class="flex-grow-1">
+                  <div class="fw-semibold">
+                    {% if p.nickname %}<span class="text-primary">{{ p.nickname }}</span> <small class="text-muted fw-normal">(#{{ loop.index }})</small>{% else %}#{{ loop.index }}{% endif %}
+                  </div>
+                  <div class="small text-muted">{{ summary|safe }}</div>
+                </div>
+              </button>
+            </h2>
+            <div id="collapse-batch-{{ idx }}" class="accordion-collapse collapse">
+              <div class="accordion-body">
+                <div class="d-flex flex-wrap gap-2">
+                  {% if not public_view %}
+                  <a href="{{ url_for('view_plant', idx=idx, lang=lang) }}" class="btn btn-outline-success btn-sm"><i class="fas fa-leaf me-1"></i>{{ t['Plant details'] }}</a>
+                  {% endif %}
+                </div>
+              </div>
+            </div>
+          </div>
+        {% endfor %}
+              </div>
+            </div>
+          </div>
+        </div>
+        {% else %}
+        {# ── Single plant (normal flow) ── #}
+        {% set p = batch_plants[0] %}
+        {% for p in batch_plants %}
           {% set idx = p.id %}
           {% set current_event = p.current %}
           {% set action = current_event.action %}
@@ -130,7 +184,9 @@
               <button class="accordion-button collapsed {{ 'bg-light text-muted' if is_dead_state else '' }}" type="button" data-bs-toggle="collapse" data-bs-target="#collapse-{{ state|lower }}-{{ idx }}">
                 <div class="flex-grow-1">
                   <div class="fw-semibold {{ 'text-muted' if is_dead_state else '' }}">
+                    {% if p.nickname %}<span class="text-primary me-1">{{ p.nickname }}</span>{% endif %}
                     {{ p.common }}{% if p.variety %} <small class="text-muted fw-normal">— {{ p.variety }}</small>{% endif %}
+                    {% if p.count and p.count > 1 %}<span class="badge bg-secondary ms-1">×{{ p.count }}</span>{% endif %}
                     <small class="text-muted fst-italic">({{ p.latin }})</small>
                   </div>
                   <div class="small text-muted">{{ summary|safe }}</div>
@@ -143,7 +199,7 @@
             <div id="collapse-{{ state|lower }}-{{ idx }}" class="accordion-collapse collapse" data-bs-parent="#plants-acc-{{ state|lower }}">
               <div class="accordion-body">
                 {% if p.notes %}
-                <div class="mb-3 text-muted"><i class="fas fa-sticky-note me-1"></i>{{ p.notes }}</div>
+                <div class="mb-3 text-muted md-notes"><i class="fas fa-sticky-note me-1"></i>{{ p.notes | mdrender }}</div>
                 {% endif %}
                 <ul class="timeline">
                   {% for h in p.history|reverse %}
@@ -246,6 +302,8 @@
             </div>
           </div>
         {% endfor %}
+        {% endif %}{# end single/batch conditional #}
+        {% endfor %}{# end group_by_batch loop #}
       </div>
     </div>
   </div>

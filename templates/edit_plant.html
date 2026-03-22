@@ -55,6 +55,15 @@
               <label class="form-label fw-semibold">Variety / Batch <span class="text-muted fw-normal">(optional)</span></label>
               <input class="form-control" name="variety" value="{{ form.variety }}">
             </div>
+            <div class="col-md-6">
+              <label class="form-label fw-semibold">{{ t['plant_nickname'] }} <span class="text-muted fw-normal">({{ t['optional'] }})</span></label>
+              <input class="form-control" name="nickname" value="{{ form.nickname }}" placeholder="{{ t['plant_nickname_placeholder'] }}">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-semibold">{{ t['plant_count'] }}</label>
+              <input class="form-control" type="number" name="count" value="{{ form.count }}" min="1">
+              <div class="form-text">{{ t['plant_count_hint'] }}</div>
+            </div>
             <div class="col-md-12">
               <label class="form-label fw-semibold">{{ t['Notes'] }}</label>
               <textarea class="form-control" name="notes">{{ form.notes }}</textarea>

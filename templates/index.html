@@ -74,6 +74,14 @@
   <p class="text-muted">{{ t['No plants yet'] }}</p>
 {% endif %}
 
+{% if dead_count %}
+<div class="text-center mt-4 mb-2">
+  <a href="{{ url_for('graveyard', lang=lang) }}" class="text-muted text-decoration-none small">
+    <i class="fas fa-skull me-1"></i>{{ dead_count }} {{ t['dead_plants_footer'] }}
+  </a>
+</div>
+{% endif %}
+
 <script>
 // Quick-log (water / fertilize) via AJAX
 document.addEventListener('click', function(e) {
