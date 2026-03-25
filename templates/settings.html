@@ -104,7 +104,6 @@
           <h6 class="fw-semibold mt-3 mb-1">{{ t['settings_mcp_step_config'] }}</h6>
           <p class="small text-muted mb-1">{{ t['settings_mcp_config_paths'] | safe }}</p>
           {% if new_key or revealed_key %}
-          <p class="small text-muted mb-1">{{ t['settings_mcp_config_paths'] | safe }}</p>
           <pre class="bg-light rounded p-2 small" id="mcpConfigBlock">{
   "mcpServers": {
     "plantlog": {
@@ -114,7 +113,6 @@
   }
 }</pre>
           {% else %}
-          <p class="small text-muted mb-1">{{ t['settings_mcp_config_paths'] | safe }}</p>
           <pre class="bg-light rounded p-2 small">{
   "mcpServers": {
     "plantlog": {
