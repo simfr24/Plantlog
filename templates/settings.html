@@ -101,25 +101,12 @@
 
           <p class="small text-muted mb-2">{{ t['settings_mcp_desc'] | safe }}</p>
 
-          <h6 class="fw-semibold mb-1">{{ t['settings_install_deps'] }}</h6>
-          <pre class="bg-light rounded p-2 small">pip install mcp requests</pre>
-
-          <h6 class="fw-semibold mt-3 mb-1">{{ t['settings_mcp_step_download'] }}</h6>
-          <a href="{{ url_for('download_mcp_server') }}" class="btn btn-outline-primary btn-sm">
-            <i class="fas fa-download me-1"></i> {{ t['settings_api_download_mcp'] }}
-          </a>
-
           <h6 class="fw-semibold mt-3 mb-1">{{ t['settings_mcp_step_config'] }}</h6>
           <p class="small text-muted mb-1">{{ t['settings_mcp_config_paths'] | safe }}</p>
           <pre class="bg-light rounded p-2 small">{
   "mcpServers": {
     "plantlog": {
-      "command": "python3",
-      "args": ["/path/to/Plantlog/scripts/mcp_server.py"],
-      "env": {
-        "PLANTLOG_URL": "{{ request.host_url.rstrip('/') }}",
-        "PLANTLOG_API_KEY": "&lt;your-key&gt;"
-      }
+      "url": "{{ request.host_url.rstrip('/') }}/mcp/sse?api_key=&lt;your-key&gt;"
     }
   }
 }</pre>

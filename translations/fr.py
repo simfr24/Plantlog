@@ -254,10 +254,10 @@ translations = {
     "print_network_error": "Erreur réseau.",
 
     # ────────── settings: mcp ──────────
-    "settings_mcp_desc": "Lancez <code>mcp_server.py</code> en local — Claude Desktop le démarrera automatiquement. Il appelle l'API de ce serveur en utilisant votre clé.",
+    "settings_mcp_desc": "Le serveur MCP est intégré à cette application aucun script supplémentaire n'est nécessaire. Pointez simplement Claude Desktop vers l'URL ci-dessous.",
     "settings_install_deps": "1. Installer les dépendances",
     "settings_mcp_step_download": "2. Télécharger le script serveur MCP",
-    "settings_mcp_step_config": "3. Configuration Claude Desktop",
+    "settings_mcp_step_config": "1. Configuration Claude Desktop",
     "settings_mcp_config_paths": "Linux : <code>~/.config/Claude/claude_desktop_config.json</code><br>Mac : <code>~/Library/Application Support/Claude/claude_desktop_config.json</code>",
 
     # ────────── settings: printer ──────────

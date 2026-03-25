@@ -83,6 +83,7 @@ from py.helpers import (
 
 )
 from py.processing import sort_key, get_unique_locations
+from py.mcp import blueprint as mcp_blueprint
 from py.label_printer import (
     create_label_classic, create_label_circular,
     label_to_png_bytes,
@@ -104,6 +105,7 @@ def mdrender_filter(text):
     return Markup(_md.markdown(text, extensions=["nl2br", "fenced_code", "tables"]))
 
 init_db()
+app.register_blueprint(mcp_blueprint)
 
 def load_config():
     """Load configuration from config.json file."""
