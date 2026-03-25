@@ -103,13 +103,27 @@
 
           <h6 class="fw-semibold mt-3 mb-1">{{ t['settings_mcp_step_config'] }}</h6>
           <p class="small text-muted mb-1">{{ t['settings_mcp_config_paths'] | safe }}</p>
-          <pre class="bg-light rounded p-2 small">{
+          {% if new_key or revealed_key %}
+          <p class="small text-muted mb-1">{{ t['settings_mcp_config_paths'] | safe }}</p>
+          <pre class="bg-light rounded p-2 small" id="mcpConfigBlock">{
   "mcpServers": {
     "plantlog": {
-      "url": "{{ request.host_url.rstrip('/') }}/mcp/sse?api_key=&lt;your-key&gt;"
+      "type": "streamable-http",
+      "url": "{{ request.host_url.rstrip('/') }}/mcp?api_key={{ new_key or revealed_key }}"
     }
   }
 }</pre>
+          {% else %}
+          <p class="small text-muted mb-1">{{ t['settings_mcp_config_paths'] | safe }}</p>
+          <pre class="bg-light rounded p-2 small">{
+  "mcpServers": {
+    "plantlog": {
+      "type": "streamable-http",
+      "url": "{{ request.host_url.rstrip('/') }}/mcp?api_key=&lt;your-key&gt;"
+    }
+  }
+}</pre>
+          {% endif %}
 
         </div>
       </div>

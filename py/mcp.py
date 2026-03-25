@@ -1,13 +1,14 @@
-"""py/mcp.py — MCP server as a Flask Blueprint (SSE transport).
+"""py/mcp.py — MCP server as a Flask Blueprint (Streamable HTTP transport).
 
-Implements the MCP JSON-RPC protocol directly over Flask SSE — no separate
-process, no ASGI bridge, no HTTP round-trips. Tools call helpers directly.
+Single POST endpoint — no persistent connections, WSGI-friendly.
+Works on PythonAnywhere and any standard WSGI host.
 
 Claude Desktop config  (~/.config/Claude/claude_desktop_config.json):
     {
       "mcpServers": {
         "plantlog": {
-          "url": "http://<host>:5000/mcp/sse?api_key=<your-key>"
+          "type": "streamable-http",
+          "url": "https://<host>/mcp?api_key=<your-key>"
         }
       }
     }
@@ -16,12 +17,9 @@ Claude Desktop config  (~/.config/Claude/claude_desktop_config.json):
 from __future__ import annotations
 
 import json
-import queue
-import threading
-import uuid
 from datetime import date
 
-from flask import Blueprint, Response, request, stream_with_context
+from flask import Blueprint, Response, request
 
 from py.db import get_conn
 from py.helpers import (
@@ -39,11 +37,6 @@ from py.helpers import (
 from py.users import get_user_by_api_key
 
 blueprint = Blueprint("mcp", __name__, url_prefix="/mcp")
-
-# ── session registry ──────────────────────────────────────────────────────────
-
-_sessions: dict[str, queue.Queue] = {}
-_lock = threading.Lock()
 
 # ── auth ──────────────────────────────────────────────────────────────────────
 
@@ -374,60 +367,25 @@ def _handle_rpc(msg: dict, user: dict) -> dict | None:
         return err(-32601, f"Method not found: {method}")
     return None
 
-# ── Flask routes ──────────────────────────────────────────────────────────────
+# ── Flask route ───────────────────────────────────────────────────────────────
 
-@blueprint.route("/sse")
-def sse():
+@blueprint.route("", methods=["POST"])
+def handle():
     user = _auth()
     if user is None:
         return Response("Unauthorized", status=401)
-
-    sid = uuid.uuid4().hex
-    q: queue.Queue = queue.Queue()
-    with _lock:
-        _sessions[sid] = q
-
-    def generate():
-        yield f"event: endpoint\ndata: /mcp/messages?session_id={sid}\n\n"
-        try:
-            while True:
-                try:
-                    msg = q.get(timeout=25)
-                except queue.Empty:
-                    yield ": keepalive\n\n"
-                    continue
-                if msg is None:
-                    break
-                yield f"data: {json.dumps(msg)}\n\n"
-        finally:
-            with _lock:
-                _sessions.pop(sid, None)
-
-    return Response(
-        stream_with_context(generate()),
-        mimetype="text/event-stream",
-        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
-    )
-
-
-@blueprint.route("/messages", methods=["POST"])
-def messages():
-    user = _auth()
-    if user is None:
-        return Response("Unauthorized", status=401)
-
-    sid = request.args.get("session_id", "")
-    with _lock:
-        q = _sessions.get(sid)
-    if q is None:
-        return Response("Session not found", status=404)
 
     msg = request.get_json(silent=True)
     if not msg:
         return Response("Bad request", status=400)
 
-    response = _handle_rpc(msg, user)
-    if response is not None:
-        q.put(response)
+    # Support JSON-RPC batch requests
+    if isinstance(msg, list):
+        responses = [r for r in (_handle_rpc(m, user) for m in msg) if r is not None]
+        return Response(json.dumps(responses), status=200, content_type="application/json")
 
-    return Response(status=202)
+    response = _handle_rpc(msg, user)
+    if response is None:
+        return Response(status=202)
+
+    return Response(json.dumps(response), status=200, content_type="application/json")
