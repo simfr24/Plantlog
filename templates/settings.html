@@ -99,24 +99,18 @@
       <div id="collapseMcp" class="accordion-collapse collapse" data-bs-parent="#settingsAccordion">
         <div class="accordion-body">
 
-          <p class="small text-muted mb-2">
-            Run <code>mcp_server.py</code> locally — Claude Desktop will launch it automatically.
-            It calls this server's API using your key.
-          </p>
+          <p class="small text-muted mb-2">{{ t['settings_mcp_desc'] | safe }}</p>
 
-          <h6 class="fw-semibold mb-1">1. Install dependencies</h6>
+          <h6 class="fw-semibold mb-1">{{ t['settings_install_deps'] }}</h6>
           <pre class="bg-light rounded p-2 small">pip install mcp requests</pre>
 
-          <h6 class="fw-semibold mt-3 mb-1">2. Download the MCP server script</h6>
+          <h6 class="fw-semibold mt-3 mb-1">{{ t['settings_mcp_step_download'] }}</h6>
           <a href="{{ url_for('download_mcp_server') }}" class="btn btn-outline-primary btn-sm">
             <i class="fas fa-download me-1"></i> {{ t['settings_api_download_mcp'] }}
           </a>
 
-          <h6 class="fw-semibold mt-3 mb-1">3. Claude Desktop config</h6>
-          <p class="small text-muted mb-1">
-            Linux: <code>~/.config/Claude/claude_desktop_config.json</code><br>
-            Mac: <code>~/Library/Application Support/Claude/claude_desktop_config.json</code>
-          </p>
+          <h6 class="fw-semibold mt-3 mb-1">{{ t['settings_mcp_step_config'] }}</h6>
+          <p class="small text-muted mb-1">{{ t['settings_mcp_config_paths'] | safe }}</p>
           <pre class="bg-light rounded p-2 small">{
   "mcpServers": {
     "plantlog": {
@@ -147,19 +141,15 @@
 
           <div class="alert alert-info py-2 small mb-3">
             <i class="fas fa-info-circle me-1"></i>
-            <code>label_client.py</code> is written for the <strong>YHK-835E</strong> Bluetooth thermal printer.
-            If you use a different model, the Bluetooth handshake and ESC/POS commands in the script may need to be adjusted.
+            {{ t['settings_printer_warning'] | safe }}
           </div>
 
-          <p class="text-muted small mb-3">
-            Run <code>label_client.py</code> on the machine physically connected to your printer.
-            It polls this server for print jobs and sends them to the printer automatically.
-          </p>
+          <p class="text-muted small mb-3">{{ t['settings_printer_desc'] | safe }}</p>
 
-          <h6 class="fw-semibold mb-1">1. Install dependencies</h6>
+          <h6 class="fw-semibold mb-1">{{ t['settings_install_deps'] }}</h6>
           <pre class="bg-light rounded p-2 small">pip install requests Pillow</pre>
 
-          <h6 class="fw-semibold mt-3 mb-1">2. Download</h6>
+          <h6 class="fw-semibold mt-3 mb-1">{{ t['settings_printer_step_download'] }}</h6>
           <div class="d-flex gap-2 flex-wrap mb-3">
             <a href="{{ url_for('download_label_client') }}" class="btn btn-outline-primary btn-sm">
               <i class="fas fa-download me-1"></i> {{ t['settings_api_download_py'] }}
@@ -173,21 +163,18 @@
             <i class="fas fa-download me-1"></i> {{ t['settings_api_download_json'] }}
           </button>
 
-          <h6 class="fw-semibold mt-3 mb-1">3. Run it</h6>
-          <p class="small text-muted mb-1">On first run it will ask for your server URL, API key, and printer MAC, then save a config file.</p>
+          <h6 class="fw-semibold mt-3 mb-1">{{ t['settings_printer_step_run'] }}</h6>
+          <p class="small text-muted mb-1">{{ t['settings_printer_run_desc'] }}</p>
           <pre class="bg-light rounded p-2 small">python3 label_client.py</pre>
 
-          <p class="small text-muted mb-1">Or set env vars directly:</p>
+          <p class="small text-muted mb-1">{{ t['settings_printer_env_desc'] }}</p>
           <pre class="bg-light rounded p-2 small">PLANTLOG_URL=<strong>{{ request.host_url.rstrip('/') }}</strong> \
 PLANTLOG_API_KEY=&lt;your-key&gt; \
 PRINTER_MAC=&lt;your-printer-mac&gt; \
 python3 label_client.py</pre>
 
-          <h6 class="fw-semibold mt-3 mb-1">Config file location</h6>
-          <p class="small text-muted mb-0">
-            Linux / Mac: <code>~/.config/plantlog/label_client.json</code><br>
-            Windows: <code>%APPDATA%\plantlog\label_client.json</code>
-          </p>
+          <h6 class="fw-semibold mt-3 mb-1">{{ t['settings_printer_config_location'] }}</h6>
+          <p class="small text-muted mb-0">{{ t['settings_printer_config_paths'] | safe }}</p>
           <pre class="bg-light rounded p-2 small mt-1">{
   "url": "{{ request.host_url.rstrip('/') }}",
   "api_key": "&lt;your-key&gt;",
@@ -196,7 +183,7 @@ python3 label_client.py</pre>
   "poll_interval": 5
 }</pre>
 
-          <h6 class="fw-semibold mt-3 mb-1">Run as a background service (Linux systemd)</h6>
+          <h6 class="fw-semibold mt-3 mb-1">{{ t['settings_printer_systemd'] }}</h6>
           <pre class="bg-light rounded p-2 small">[Unit]
 Description=Plantlog label client
 
@@ -210,10 +197,7 @@ RestartSec=10
 
 [Install]
 WantedBy=default.target</pre>
-          <p class="small text-muted">
-            Save as <code>~/.config/systemd/user/plantlog-printer.service</code> then:
-            <code>systemctl --user enable --now plantlog-printer</code>
-          </p>
+          <p class="small text-muted">{{ t['settings_printer_systemd_save'] | safe }}</p>
 
         </div>
       </div>

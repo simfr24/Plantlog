@@ -145,6 +145,7 @@
                 {% endif %}
                 <ul class="timeline">
                   {% for h in p.history|reverse %}
+                    {% if h.action not in ['water', 'fertilize', 'measure'] %}
                     {% set evspec = event_map[h.action] %}
                     <li class="timeline-item">
                       <span class="timeline-icon {{ evspec.color_class }}"><i class="fas {{ evspec.icon }}"></i></span>
@@ -159,10 +160,6 @@
                         {% endif %}
                         {% if h.action == 'sow' and 'range' in h %}
                           <div class="text-muted small">{{ t['Expected sprout time'] }}: {{ h.range[0] }} {{ t[h.range[1]] }} – {{ h.range[2] }} {{ t[h.range[3]] }}</div>
-                        {% elif h.action == 'measure' %}
-                          {% set size_value = h.size[0]|float %}
-                          {% set size_display = size_value|int if size_value == size_value|int else size_value %}
-                          <div class="text-muted small">{{ size_display }}{{ h.size[1] }}</div>
                         {% elif h.action in ['soak','strat'] %}
                           <div class="text-muted small">{{ h.duration[0] }} {{ t[h.duration[1]] }}</div>
                         {% elif h.action == 'sprout' %}
@@ -173,6 +170,10 @@
                             {% set germ_days = (sprouted_date - sow_date).days %}
                             <div class="text-muted small">{{ t['Sprouted in'] }} {{ germ_days }} {{ t['days'] }}</div>
                           {% endif %}
+                        {% elif h.action in ['flower', 'fruit'] and h.ended_on %}
+                          <div class="text-muted small">
+                            {{ t['Ended flowering on'] if h.action == 'flower' else t['Ended fruiting on'] }} {{ h.ended_on }}
+                          </div>
                         {% endif %}
                       </div>
                       {% if not public_view %}
@@ -181,16 +182,24 @@
                       </a>
                       {% endif %}
                     </li>
+                    {% endif %}
                   {% endfor %}
                 </ul>
                 <div class="d-flex flex-wrap gap-2 mt-3">
                   {% if not public_view %}
-                  <button class="btn btn-outline-primary btn-sm quick-log-btn" data-plant-id="{{ idx }}" data-event="water" title="Log watering">
-                    <i class="fas fa-droplet me-1"></i> Water
+                  <button class="btn btn-outline-primary btn-sm quick-log-btn" data-plant-id="{{ idx }}" data-event="water" title="{{ t['Log watering'] }}">
+                    <i class="fas fa-droplet me-1"></i> {{ t['Water'] }}
                   </button>
-                  <button class="btn btn-outline-warning btn-sm quick-log-btn" data-plant-id="{{ idx }}" data-event="fertilize" title="Log fertilization">
-                    <i class="fas fa-bottle-water me-1"></i> Fertilize
+                  <button class="btn btn-outline-warning btn-sm quick-log-btn" data-plant-id="{{ idx }}" data-event="fertilize" title="{{ t['Log fertilization'] }}">
+                    <i class="fas fa-bottle-water me-1"></i> {{ t['Fertilize'] }}
                   </button>
+                  {% set p_state = p.state.label if p.state else '' %}
+                  {% if p_state in ['Flowering', 'Fruiting'] %}
+                  <button class="btn btn-outline-warning btn-sm end-phase-btn" data-plant-id="{{ idx }}">
+                    <i class="fas fa-flag-checkered me-1"></i>
+                    {{ t['End of flowering'] if p_state == 'Flowering' else t['End of fruiting'] }}
+                  </button>
+                  {% endif %}
                   <a href="{{ url_for('add_stage', idx=idx, lang=lang) }}" class="btn btn-outline-secondary btn-sm">
                     <i class="fas fa-plus-circle me-1"></i> {{ t['Add stage'] }}
                   </a>
@@ -333,6 +342,7 @@
                 {% endif %}
                 <ul class="timeline">
                   {% for h in p.history|reverse %}
+                    {% if h.action not in ['water', 'fertilize', 'measure'] %}
                     {% set evspec = event_map[h.action] %}
                     <li class="timeline-item {{ 'dead' if is_dead_state else '' }}">
                       <span class="timeline-icon {{ evspec.color_class }}"><i class="fas {{ evspec.icon }}"></i></span>
@@ -351,37 +361,6 @@
                           <div class="text-muted small">
                             {{ t['Expected sprout time'] }}: {{ h.range[0] }} {{ t[h.range[1]] }} – {{ h.range[2] }} {{ t[h.range[3]] }}
                           </div>
-                        {% elif h.action == 'measure' %}
-                          {% set size_value = h.size[0]|float %}
-                          {% set size_display = size_value|int if size_value == size_value|int else size_value %}
-                          <div class="text-muted small">
-                            {{ size_display }}{{ h.size[1] }}
-                            {% set prev_measures = p.history|selectattr('action', 'equalto', 'measure')|list %}
-                            {% set prev_measures = prev_measures|sort(attribute='start') %}
-                            {% set measure_idx = prev_measures.index(h) %}
-                            {% if measure_idx > 0 and prev_measures[measure_idx-1].size[1] == h.size[1] %}
-                              {% set prev = prev_measures[measure_idx-1] %}
-                              {% set current_val = h.size[0]|float %}
-                              {% set prev_val = prev.size[0]|float %}
-                              {% set current_date = h.start|todate %}
-                              {% set prev_date = prev.start|todate %}
-                              {% set days_between = (current_date - prev_date).days %}
-                              {% if days_between > 0 %}
-                                {% set growth = current_val - prev_val %}
-                                {% set growth_rate = (growth / days_between)|round(2) %}
-                                {% set growth_display = growth_rate|int if growth_rate == growth_rate|int else growth_rate %}
-                                {% if growth_rate > 0 %}
-                                  <span class="ms-2 text-success">
-                                    <i class="fas fa-arrow-up fa-xs"></i> {{ growth_display }} {{ h.size[1] }}/{{ t['day'] if 'day' in t else 'day' }}
-                                  </span>
-                                {% elif growth_rate < 0 %}
-                                  <span class="ms-2 text-danger">
-                                    <i class="fas fa-arrow-down fa-xs"></i> {{ growth_display|abs }} {{ h.size[1] }}/{{ t['day'] if 'day' in t else 'day' }}
-                                  </span>
-                                {% endif %}
-                              {% endif %}
-                            {% endif %}
-                          </div>
                         {% elif h.action in ['soak','strat'] %}
                           <div class="text-muted small">{{ h.duration[0] }} {{ t[h.duration[1]] }}</div>
                         {% elif h.action == 'sprout' %}
@@ -394,6 +373,10 @@
                               {{ t['Sprouted in'] }} {{ germ_days }} {{ t['days'] }}
                             </div>
                           {% endif %}
+                        {% elif h.action in ['flower', 'fruit'] and h.ended_on %}
+                          <div class="text-muted small">
+                            {{ t['Ended flowering on'] if h.action == 'flower' else t['Ended fruiting on'] }} {{ h.ended_on }}
+                          </div>
                         {% endif %}
                       </div>
                       {% if not public_view %}
@@ -402,6 +385,7 @@
                       </a>
                       {% endif %}
                     </li>
+                    {% endif %}
                   {% endfor %}
                 </ul>
                 <div class="d-flex flex-wrap gap-2 mt-3">

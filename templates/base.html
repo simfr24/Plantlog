@@ -108,13 +108,13 @@
               <ul class="dropdown-menu dropdown-menu-end">
                 <li>
                   <a class="dropdown-item" href="{{ url_for('settings') }}">
-                    <i class="fa-solid fa-key"></i> API Key
+                    <i class="fa-solid fa-key"></i> {{ t['Settings'] }}
                   </a>
                 </li>
                 {% if g.user and g.user.id == 1 %}
                 <li>
                   <a class="dropdown-item" href="{{ url_for('admin_users') }}">
-                    <i class="fa-solid fa-users-gear"></i> Admin
+                    <i class="fa-solid fa-users-gear"></i> {{ t['Admin'] }}
                   </a>
                 </li>
                 {% endif %}

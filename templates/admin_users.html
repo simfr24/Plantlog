@@ -1,8 +1,8 @@
 {% extends "base.html" %}
-{% block title %}Admin – Users{% endblock %}
+{% block title %}{{ t['Admin'] }} – {{ t['Username'] }}s{% endblock %}
 
 {% block content %}
-<h1 class="mb-4">🌱 Users</h1>
+<h1 class="mb-4">🌱 {{ t['Username'] }}s</h1>
 
 <p class="mb-4">
     <span class="badge bg-info">
@@ -13,7 +13,7 @@
 <table class="table table-striped">
   <thead>
     <tr>
-      <th>ID</th>
+      <th>{{ t['ID'] }}</th>
       <th>{{ t['Username'] }}</th>
       <th>{{ t['Plants'] }}</th>
       <th>{{ t.get('Created', 'Created') }}</th>

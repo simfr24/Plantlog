@@ -152,9 +152,6 @@ translations = {
     "Bad credentials": "Identifiants incorrects",
     "You must be logged in to access this page.": "Vous devez être connecté pour accéder à cette page.",
     "Size must be > 0.": "La taille doit être > 0.",
-    "Information found on Boutique Végétale and processed with AI!": "Informations trouvées sur Boutique Végétale et traitées par IA !",
-    "Information provided by Mistral Large AI model!": "Informations fournies par le modèle Mistral Large IA !",
-    "AI suggestions applied successfully!": "Suggestions IA appliquées avec succès !",
 
     # ────────── admin ──────────
     "Logins today": "Connexions aujourd’hui",
@@ -203,10 +200,9 @@ translations = {
     "Help transition Fruit detailed": "L’apparition de fruits est notée, la plante reste à l’état 'En croissance'.",
     "Help transition Measurement detailed": "Une mesure n’affecte pas l’état de la plante.",
     "Help transition Custom Event detailed": "Les événements personnalisés ne changent pas l’état.",
-    "Help transition Death detailed": "La plante passe à l’état 'Mort'.",
-}
-# ────────── settings page ──────────
-translations.update({
+    "Help transition Death detailed": "La plante passe à l’état ‘Mort’.",
+
+    # ────────── settings page ──────────
     "Settings": "Paramètres",
     "settings_api_key": "Votre clé API",
     "settings_api_active": "Active",
@@ -240,4 +236,52 @@ translations.update({
     "graveyard_title": "Cimetière",
     "graveyard_empty": "Aucune plante morte pour l'instant.",
     "dead_plants_footer": "plantes mortes dans le cimetière",
-})
+
+    # ────────── variety / batch field ──────────
+    "Variety / Batch": "Variété / Lot",
+    "e.g. variety": "ex. : Lot A, Jardinière…",
+
+    # ────────── print label ──────────
+    "Print Label": "Imprimer l'étiquette",
+    "Classic": "Classique",
+    "Circular": "Circulaire",
+    "Print": "Imprimer",
+    "print_timeout": "Délai d'attente de l'imprimante dépassé.",
+    "print_success": "Imprimé avec succès !",
+    "print_failed": "Échec de l'impression",
+    "print_sending": "Envoi à l'imprimante…",
+    "print_waiting": "En attente du client d'impression…",
+    "print_network_error": "Erreur réseau.",
+
+    # ────────── settings: mcp ──────────
+    "settings_mcp_desc": "Lancez <code>mcp_server.py</code> en local — Claude Desktop le démarrera automatiquement. Il appelle l'API de ce serveur en utilisant votre clé.",
+    "settings_install_deps": "1. Installer les dépendances",
+    "settings_mcp_step_download": "2. Télécharger le script serveur MCP",
+    "settings_mcp_step_config": "3. Configuration Claude Desktop",
+    "settings_mcp_config_paths": "Linux : <code>~/.config/Claude/claude_desktop_config.json</code><br>Mac : <code>~/Library/Application Support/Claude/claude_desktop_config.json</code>",
+
+    # ────────── settings: printer ──────────
+    "settings_printer_warning": "<code>label_client.py</code> est écrit pour l'imprimante thermique Bluetooth <strong>YHK-835E</strong>. Si vous utilisez un modèle différent, le handshake Bluetooth et les commandes ESC/POS du script devront peut-être être ajustés.",
+    "settings_printer_desc": "Lancez <code>label_client.py</code> sur la machine physiquement connectée à votre imprimante. Il interroge ce serveur pour les tâches d'impression et les envoie automatiquement à l'imprimante.",
+    "settings_printer_step_download": "2. Télécharger",
+    "settings_printer_step_run": "3. Lancer",
+    "settings_printer_run_desc": "Au premier lancement, il demandera l'URL du serveur, la clé API et l'adresse MAC de l'imprimante, puis sauvegardera un fichier de configuration.",
+    "settings_printer_env_desc": "Ou définir les variables d'environnement directement :",
+    "settings_printer_config_location": "Emplacement du fichier de configuration",
+    "settings_printer_config_paths": "Linux / Mac : <code>~/.config/plantlog/label_client.json</code><br>Windows : <code>%APPDATA%\\plantlog\\label_client.json</code>",
+    "settings_printer_systemd": "Lancer en tant que service en arrière-plan (Linux systemd)",
+    "settings_printer_systemd_save": "Enregistrer sous <code>~/.config/systemd/user/plantlog-printer.service</code> puis : <code>systemctl --user enable --now plantlog-printer</code>",
+
+    # ────────── misc ui ──────────
+    "quick_log_done": "Fait !",
+    "search_placeholder": "Rechercher plantes, emplacement, variété…",
+    "Log watering": "Enregistrer l'arrosage",
+    "Log fertilization": "Enregistrer la fertilisation",
+    "Admin": "Admin",
+    "End date": "Date de fin",
+    "optional_end_date_hint": "Si renseignée, marque la fin de cette phase et fait revenir la plante en croissance.",
+    "Ended flowering on": "Fin de floraison le",
+    "Ended fruiting on": "Fin de fructification le",
+    "End of flowering": "Fin de floraison",
+    "End of fruiting": "Fin de fructification",
+}

@@ -8,13 +8,23 @@
     <div class="d-flex gap-2 mb-2">
       <button class="btn btn-outline-primary flex-fill quick-log-btn"
               data-plant-id="{{ plant.id }}" data-event="water">
-        <i class="fas fa-droplet me-1"></i> Water
+        <i class="fas fa-droplet me-1"></i> {{ t['Water'] }}
       </button>
       <button class="btn btn-outline-warning flex-fill quick-log-btn"
               data-plant-id="{{ plant.id }}" data-event="fertilize">
-        <i class="fas fa-bottle-water me-1"></i> Fertilize
+        <i class="fas fa-bottle-water me-1"></i> {{ t['Fertilize'] }}
       </button>
     </div>
+    {% set state_label = plant.state.label if plant.state else '' %}
+    {% if state_label in ['Flowering', 'Fruiting'] %}
+    <div class="d-grid mb-2">
+      <button class="btn btn-outline-warning end-phase-btn"
+              data-plant-id="{{ plant.id }}">
+        <i class="fas fa-flag-checkered me-1"></i>
+        {{ t['End of flowering'] if state_label == 'Flowering' else t['End of fruiting'] }}
+      </button>
+    </div>
+    {% endif %}
     <div class="d-grid gap-2">
       <a href="{{ url_for('add_stage', idx=plant.id, lang=lang) }}" class="btn btn-primary">
         <i class="fas fa-plus me-1"></i> {{ t['Add stage'] }}
@@ -23,7 +33,7 @@
         <i class="fas fa-edit me-1"></i> {{ t['Edit plant'] }}
       </a>
       <button type="button" class="btn btn-outline-dark" data-bs-toggle="modal" data-bs-target="#printLabelModal">
-        <i class="fas fa-print me-1"></i> Print Label
+        <i class="fas fa-print me-1"></i> {{ t['Print Label'] }}
       </button>
       <form method="post" action="{{ url_for('clone_plant', idx=plant.id, lang=lang) }}" class="d-grid">
         <button type="submit" class="btn btn-outline-secondary">

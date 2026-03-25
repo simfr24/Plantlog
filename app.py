@@ -83,12 +83,6 @@ from py.helpers import (
 
 )
 from py.processing import sort_key, get_unique_locations
-try:
-    from py.plant_ai import get_plant_info
-    AI_AVAILABLE = True
-except ImportError:
-    AI_AVAILABLE = False
-
 from py.label_printer import (
     create_label_classic, create_label_circular,
     label_to_png_bytes,
@@ -117,16 +111,7 @@ def load_config():
     
     # Default configuration
     default_config = {
-        "mistral_small": {
-            "api_key": None,
-            "enabled": False
-        },
-        "mistral_large": {
-            "api_key": None,
-            "enabled": False
-        },
         "features": {
-            "ai_completion": False,
             "public_profiles": True
         },
         "mcp": {
@@ -135,26 +120,15 @@ def load_config():
             "api_key": ""
         }
     }
-    
+
     try:
         with open(config_path, 'r', encoding='utf-8') as f:
             user_config = json.load(f)
-        
+
         # Merge user config with defaults
         config = default_config.copy()
         config.update(user_config)
-        
-        # Enable AI completion if any model is configured
-        small_enabled = (config["mistral_small"]["enabled"] and 
-                        config["mistral_small"]["api_key"])
-        large_enabled = (config["mistral_large"]["enabled"] and 
-                        config["mistral_large"]["api_key"])
-        
-        if small_enabled or large_enabled:
-            config["features"]["ai_completion"] = True
-        else:
-            config["features"]["ai_completion"] = False
-        
+
         return config
         
     except FileNotFoundError:
@@ -626,48 +600,6 @@ def favicon():
 # AI Routes - Simplified
 ###############################################################################
 
-@app.route("/ai/complete_plant", methods=["POST"])
-@login_required
-def ai_complete_plant():
-    """Get plant information using simplified AI service."""
-    
-    # Check if AI is enabled
-    if not CONFIG.get("features", {}).get("ai_completion", False):
-        return jsonify({"error": "AI completion not enabled"}), 503
-    
-    if not AI_AVAILABLE:
-        return jsonify({"error": "AI service not available"}), 503
-    
-    try:
-        data = request.get_json()
-        if not data:
-            return jsonify({"error": "No data provided"}), 400
-        
-        # Get plant name (common or latin)
-        plant_name = data.get('common', '').strip() or data.get('latin', '').strip()
-        if not plant_name:
-            return jsonify({"error": "Plant name required"}), 400
-        
-        stage = data.get('status', 'sown')
-        
-        # Get plant information
-        result = get_plant_info(CONFIG, plant_name, stage, g.lang)
-        
-        # Add flash message based on source with more detail
-        source = result.get('source', 'ai')
-        if source == 'boutique_vegetale':
-            flash(f"✨ Plant information found on Boutique Végétale and processed with Mistral AI", "success")
-        elif source == 'mistral_large':
-            flash(f"🤖 Plant information provided by Mistral Large AI model", "info")
-        else:
-            flash(f"🤖 Plant information provided by Mistral AI", "info")
-        
-        return jsonify(result)
-        
-    except Exception as e:
-        app.logger.error(f"AI completion error: {e}")
-        return jsonify({"error": str(e)}), 500
-
 ###############################################################################
 # Label / Printer Routes
 ###############################################################################
@@ -752,6 +684,30 @@ def quick_log(idx):
         return jsonify({"ok": False, "errors": errors}), 400
     plant_data = {k: plant.get(k, "") or "" for k in ("common", "latin", "location", "notes", "variety")}
     update_plant(plant["id"], plant_data, new_event=event)
+    return jsonify({"ok": True})
+
+
+@app.route("/end_phase/<int:idx>", methods=["POST"])
+@login_required
+def end_phase(idx):
+    """Set ended_on = today on the most recent flower/fruit event."""
+    plant = load_one(idx)
+    if plant is None or plant.get("user_id") != g.user["id"]:
+        abort(403)
+    data = request.get_json(silent=True) or {}
+    ended = data.get("date") or date.today().isoformat()
+    with get_conn() as conn:
+        row = conn.execute(
+            """SELECT e.id, et.code FROM events e
+               JOIN event_types et ON et.id = e.event_type_id
+               WHERE e.plant_id = ? AND et.code IN ('flower','fruit')
+               ORDER BY e.happened_on DESC, e.id DESC LIMIT 1""",
+            (idx,),
+        ).fetchone()
+        if row is None:
+            return jsonify({"ok": False, "error": "No flower/fruit event found"}), 400
+        conn.execute("UPDATE events SET ended_on = ? WHERE id = ?", (ended, row["id"]))
+        conn.commit()
     return jsonify({"ok": True})
 
 

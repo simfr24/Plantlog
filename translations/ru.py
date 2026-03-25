@@ -152,9 +152,6 @@ translations = {
     "Bad credentials": "Неверные учетные данные",
     "You must be logged in to access this page.": "Вы должны войти, чтобы получить доступ к этой странице.",
     "Size must be > 0.": "Размер должен быть больше 0.",
-    "Information found on Boutique Végétale and processed with AI!": "Информация найдена на Boutique Végétale и обработана ИИ!",
-    "Information provided by Mistral Large AI model!": "Информация предоставлена моделью Mistral Large ИИ!",
-    "AI suggestions applied successfully!": "Предложения ИИ успешно применены!",
 
     # ────────── admin ──────────
     "Logins today": "Входов сегодня",
@@ -204,10 +201,8 @@ translations = {
     "Help transition Measurement detailed": "Измерение не изменяет состояние растения.",
     "Help transition Custom Event detailed": "Пользовательские события не меняют состояние.",
     "Help transition Death detailed": "Растение переходит в состояние 'Мёртвое'.",
-}
 
-# ────────── settings page ──────────
-translations.update({
+    # ────────── settings page ──────────
     "Settings": "Настройки",
     "settings_api_key": "Ваш API-ключ",
     "settings_api_active": "Активен",
@@ -241,4 +236,52 @@ translations.update({
     "graveyard_title": "Кладбище",
     "graveyard_empty": "Мёртвых растений пока нет.",
     "dead_plants_footer": "мёртвых растений на кладбище",
-})
+
+    # ────────── variety / batch field ──────────
+    "Variety / Batch": "Разновидность / Партия",
+    "e.g. variety": "напр. Партия А, Ящик у окна…",
+
+    # ────────── print label ──────────
+    "Print Label": "Напечатать этикетку",
+    "Classic": "Классика",
+    "Circular": "Круглый",
+    "Print": "Печать",
+    "print_timeout": "Превышено время ожидания принтера.",
+    "print_success": "Напечатано успешно!",
+    "print_failed": "Ошибка печати",
+    "print_sending": "Отправка на принтер…",
+    "print_waiting": "Ожидание label_client…",
+    "print_network_error": "Ошибка сети.",
+
+    # ────────── settings: mcp ──────────
+    "settings_mcp_desc": "Запустите <code>mcp_server.py</code> локально — Claude Desktop запустит его автоматически. Он обращается к API этого сервера с помощью вашего ключа.",
+    "settings_install_deps": "1. Установить зависимости",
+    "settings_mcp_step_download": "2. Скачать скрипт MCP-сервера",
+    "settings_mcp_step_config": "3. Настройка Claude Desktop",
+    "settings_mcp_config_paths": "Linux: <code>~/.config/Claude/claude_desktop_config.json</code><br>Mac: <code>~/Library/Application Support/Claude/claude_desktop_config.json</code>",
+
+    # ────────── settings: printer ──────────
+    "settings_printer_warning": "<code>label_client.py</code> написан для Bluetooth термопринтера <strong>YHK-835E</strong>. Если вы используете другую модель, Bluetooth-соединение и ESC/POS-команды в скрипте могут потребовать корректировки.",
+    "settings_printer_desc": "Запустите <code>label_client.py</code> на машине, физически подключённой к принтеру. Он опрашивает этот сервер на наличие заданий печати и автоматически отправляет их на принтер.",
+    "settings_printer_step_download": "2. Скачать",
+    "settings_printer_step_run": "3. Запустить",
+    "settings_printer_run_desc": "При первом запуске будет запрошен URL сервера, API-ключ и MAC-адрес принтера, после чего сохранится файл конфигурации.",
+    "settings_printer_env_desc": "Или задайте переменные окружения напрямую:",
+    "settings_printer_config_location": "Расположение файла конфигурации",
+    "settings_printer_config_paths": "Linux / Mac: <code>~/.config/plantlog/label_client.json</code><br>Windows: <code>%APPDATA%\\plantlog\\label_client.json</code>",
+    "settings_printer_systemd": "Запуск как фоновый сервис (Linux systemd)",
+    "settings_printer_systemd_save": "Сохраните как <code>~/.config/systemd/user/plantlog-printer.service</code>, затем: <code>systemctl --user enable --now plantlog-printer</code>",
+
+    # ────────── misc ui ──────────
+    "quick_log_done": "Готово!",
+    "search_placeholder": "Поиск по растениям, расположению, разновидности…",
+    "Log watering": "Записать полив",
+    "Log fertilization": "Записать подкормку",
+    "Admin": "Администратор",
+    "End date": "Дата окончания",
+    "optional_end_date_hint": "Если указана, отмечает конец фазы и возвращает растение в состояние роста.",
+    "Ended flowering on": "Цветение завершилось",
+    "Ended fruiting on": "Плодоношение завершилось",
+    "End of flowering": "Конец цветения",
+    "End of fruiting": "Конец плодоношения",
+}

@@ -61,16 +61,16 @@
     <div class="modal-dialog modal-dialog-centered">
       <div class="modal-content">
         <div class="modal-header">
-          <h5 class="modal-title" id="printLabelModalLabel"><i class="fas fa-print me-2"></i>Print Label</h5>
-          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          <h5 class="modal-title" id="printLabelModalLabel"><i class="fas fa-print me-2"></i>{{ t['Print Label'] }}</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{{ t['Close'] }}"></button>
         </div>
         <div class="modal-body text-center">
           <div class="mb-3">
             <div class="btn-group" role="group" id="styleSwitcher">
               <input type="radio" class="btn-check" name="labelStyle" id="styleClassic" value="classic" checked>
-              <label class="btn btn-outline-secondary btn-sm" for="styleClassic">Classic</label>
+              <label class="btn btn-outline-secondary btn-sm" for="styleClassic">{{ t['Classic'] }}</label>
               <input type="radio" class="btn-check" name="labelStyle" id="styleCircular" value="circular">
-              <label class="btn btn-outline-secondary btn-sm" for="styleCircular">Circular</label>
+              <label class="btn btn-outline-secondary btn-sm" for="styleCircular">{{ t['Circular'] }}</label>
             </div>
           </div>
           <img id="labelPreview" src="/label_preview/{{ plant.id }}?style=classic" alt="Label preview"
@@ -78,9 +78,9 @@
           <p id="printStatus" class="mt-2 small text-muted"></p>
         </div>
         <div class="modal-footer">
-          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{ t['Cancel'] }}</button>
           <button type="button" class="btn btn-primary" id="printBtn">
-            <i class="fas fa-print me-1"></i> Print
+            <i class="fas fa-print me-1"></i> {{ t['Print'] }}
           </button>
         </div>
       </div>
@@ -106,7 +106,7 @@
 
     function pollJob(jobId, attempts) {
       if (attempts <= 0) {
-        document.getElementById('printStatus').textContent = 'Timed out waiting for printer.';
+        document.getElementById('printStatus').textContent = '{{ t["print_timeout"] }}';
         document.getElementById('printBtn').disabled = false;
         return;
       }
@@ -114,7 +114,7 @@
         .then(function(r) { return r.json(); })
         .then(function(data) {
           if (data.status === 'done') {
-            document.getElementById('printStatus').innerHTML = '<span class="text-success"><i class="fas fa-check-circle me-1"></i>Printed successfully!</span>';
+            document.getElementById('printStatus').innerHTML = '<span class="text-success"><i class="fas fa-check-circle me-1"></i>{{ t["print_success"] }}</span>';
             document.getElementById('printBtn').disabled = false;
           } else if (data.status === 'error') {
             document.getElementById('printStatus').innerHTML = '<span class="text-danger"><i class="fas fa-exclamation-circle me-1"></i>' + (data.error_msg || 'Print failed') + '</span>';
@@ -146,7 +146,7 @@
         }
       })
       .catch(function() {
-        document.getElementById('printStatus').textContent = 'Network error.';
+        document.getElementById('printStatus').textContent = '{{ t["print_network_error"] }}';
         btn.disabled = false;
       });
     });
@@ -166,16 +166,16 @@
     <div class="modal-dialog modal-dialog-centered">
       <div class="modal-content">
         <div class="modal-header">
-          <h5 class="modal-title" id="printLabelModalLabel"><i class="fas fa-print me-2"></i>Print Label</h5>
-          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          <h5 class="modal-title" id="printLabelModalLabel"><i class="fas fa-print me-2"></i>{{ t['Print Label'] }}</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{{ t['Close'] }}"></button>
         </div>
         <div class="modal-body text-center">
           <div class="mb-3">
             <div class="btn-group" role="group">
               <input type="radio" class="btn-check" name="labelStyle" id="styleClassic" value="classic" checked>
-              <label class="btn btn-outline-secondary btn-sm" for="styleClassic">Classic</label>
+              <label class="btn btn-outline-secondary btn-sm" for="styleClassic">{{ t['Classic'] }}</label>
               <input type="radio" class="btn-check" name="labelStyle" id="styleCircular" value="circular">
-              <label class="btn btn-outline-secondary btn-sm" for="styleCircular">Circular</label>
+              <label class="btn btn-outline-secondary btn-sm" for="styleCircular">{{ t['Circular'] }}</label>
             </div>
           </div>
           <img id="labelPreview" src="/label_preview/{{ plant.id }}?style=classic" alt="Label preview"
@@ -183,9 +183,9 @@
           <p id="printStatus" class="mt-2 small text-muted"></p>
         </div>
         <div class="modal-footer">
-          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{ t['Cancel'] }}</button>
           <button type="button" class="btn btn-primary" id="printBtn">
-            <i class="fas fa-print me-1"></i> Print
+            <i class="fas fa-print me-1"></i> {{ t['Print'] }}
           </button>
         </div>
       </div>
@@ -211,7 +211,7 @@
 
     function pollJob(jobId, attempts) {
       if (attempts <= 0) {
-        document.getElementById('printStatus').textContent = 'Timed out waiting for printer.';
+        document.getElementById('printStatus').textContent = '{{ t["print_timeout"] }}';
         document.getElementById('printBtn').disabled = false;
         return;
       }
@@ -225,7 +225,7 @@
           } else if (data.status === 'error') {
             document.getElementById('printStatus').innerHTML =
               '<span class="text-danger"><i class="fas fa-exclamation-circle me-1"></i>' +
-              (data.error_msg || 'Print failed') + '</span>';
+              (data.error_msg || '{{ t["print_failed"] }}') + '</span>';
             document.getElementById('printBtn').disabled = false;
           } else {
             setTimeout(function() { pollJob(jobId, attempts - 1); }, 2000);
@@ -238,7 +238,7 @@
       const btn = this;
       btn.disabled = true;
       document.getElementById('printStatus').innerHTML =
-        '<span class="text-muted"><i class="fas fa-spinner fa-spin me-1"></i>Sending to printer…</span>';
+        '<span class="text-muted"><i class="fas fa-spinner fa-spin me-1"></i>{{ t["print_sending"] }}</span>';
       fetch(`/print_label/${plantId}`, {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
@@ -248,7 +248,7 @@
       .then(function(data) {
         if (data.ok) {
           document.getElementById('printStatus').innerHTML =
-            '<span class="text-muted"><i class="fas fa-spinner fa-spin me-1"></i>Waiting for label_client…</span>';
+            '<span class="text-muted"><i class="fas fa-spinner fa-spin me-1"></i>{{ t["print_waiting"] }}</span>';
           pollJob(data.job_id, 30);
         } else {
           document.getElementById('printStatus').innerHTML =
@@ -257,7 +257,7 @@
         }
       })
       .catch(function() {
-        document.getElementById('printStatus').textContent = 'Network error.';
+        document.getElementById('printStatus').textContent = '{{ t["print_network_error"] }}';
         btn.disabled = false;
       });
     });
@@ -272,6 +272,35 @@
   </script>
 
   <script>
+  // End-phase (end of flowering / fruiting)
+  document.addEventListener('click', function(e) {
+    const btn = e.target.closest('.end-phase-btn');
+    if (!btn) return;
+    const plantId = btn.dataset.plantId;
+    btn.disabled = true;
+    const orig = btn.innerHTML;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+    fetch(`/end_phase/${plantId}`, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({})
+    })
+    .then(r => r.json())
+    .then(data => {
+      if (data.ok) {
+        btn.innerHTML = '<i class="fas fa-check"></i>';
+        btn.classList.add('btn-success');
+        btn.classList.remove('btn-outline-warning');
+        setTimeout(() => location.reload(), 600);
+      } else {
+        btn.innerHTML = orig;
+        btn.disabled = false;
+        alert(data.error || 'Error');
+      }
+    })
+    .catch(() => { btn.innerHTML = orig; btn.disabled = false; });
+  });
+
   // Quick-log (water / fertilize) from plant detail page
   document.addEventListener('click', function(e) {
     const btn = e.target.closest('.quick-log-btn');
@@ -289,7 +318,7 @@
     .then(r => r.json())
     .then(data => {
       if (data.ok) {
-        btn.innerHTML = '<i class="fas fa-check"></i> Done!';
+        btn.innerHTML = '<i class="fas fa-check"></i> {{ t["quick_log_done"] }}';
         btn.classList.add('btn-success');
         btn.classList.remove('btn-outline-primary', 'btn-outline-warning');
         setTimeout(() => location.reload(), 800);

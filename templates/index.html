@@ -42,7 +42,7 @@
 {% if not public_view %}
 <div class="mb-3">
   <input type="search" id="plantSearch" class="form-control"
-         placeholder="Search plants, location, variety…" autocomplete="off">
+         placeholder="{{ t['search_placeholder'] }}" autocomplete="off">
 </div>
 {% endif %}
 
@@ -108,6 +108,35 @@ document.addEventListener('click', function(e) {
       btn.innerHTML = orig;
       btn.disabled = false;
       alert(data.errors || data.error || 'Error');
+    }
+  })
+  .catch(() => { btn.innerHTML = orig; btn.disabled = false; });
+});
+
+// End-phase (end of flowering / fruiting)
+document.addEventListener('click', function(e) {
+  const btn = e.target.closest('.end-phase-btn');
+  if (!btn) return;
+  const plantId = btn.dataset.plantId;
+  btn.disabled = true;
+  const orig = btn.innerHTML;
+  btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+  fetch(`/end_phase/${plantId}`, {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({})
+  })
+  .then(r => r.json())
+  .then(data => {
+    if (data.ok) {
+      btn.innerHTML = '<i class="fas fa-check"></i>';
+      btn.classList.add('btn-success');
+      btn.classList.remove('btn-outline-warning');
+      setTimeout(() => location.reload(), 600);
+    } else {
+      btn.innerHTML = orig;
+      btn.disabled = false;
+      alert(data.error || 'Error');
     }
   })
   .catch(() => { btn.innerHTML = orig; btn.disabled = false; });

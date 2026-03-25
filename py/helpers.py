@@ -196,9 +196,10 @@ def _events_for_plant(conn, plant_id: int) -> List[Dict[str, Any]]:
         """
         SELECT e.id, et.code AS action, e.happened_on AS start,
                e.range_min, e.range_min_u, e.range_max, e.range_max_u,
-               e.dur_val,  e.dur_unit, 
+               e.dur_val,  e.dur_unit,
                e.measure_val, e.measure_unit,
-               e.custom_label, e.custom_note
+               e.custom_label, e.custom_note,
+               e.ended_on
         FROM events      e
         JOIN event_types et ON et.id = e.event_type_id
         WHERE e.plant_id = ?
@@ -223,8 +224,27 @@ def _events_for_plant(conn, plant_id: int) -> List[Dict[str, Any]]:
         elif a["action"] == "custom":
             ev["custom_label"] = a["custom_label"]
             ev["custom_note"] = a["custom_note"]
+        if a["action"] in ("flower", "fruit") and a["ended_on"]:
+            ev["ended_on"] = a["ended_on"]
         hist.append(ev)
     return hist
+
+
+def _resolve_state(state: Optional[Dict], history: List[Dict], conn) -> Optional[Dict]:
+    """If the most recent flower/fruit event has ended_on <= today, return Growing state instead."""
+    if state is None or state.get("label") not in ("Flowering", "Fruiting"):
+        return state
+    # Find the last flower/fruit event
+    for ev in reversed(history):
+        if ev["action"] in ("flower", "fruit"):
+            ended = ev.get("ended_on")
+            if ended and ended <= datetime.today().strftime("%Y-%m-%d"):
+                growing = conn.execute(
+                    "SELECT code, label, color_class, icon_class FROM state_types WHERE code = 'growing'"
+                ).fetchone()
+                return dict(growing) if growing else state
+            break
+    return state
 
 
 def load_one(plant_id: int) -> Optional[Dict[str, Any]]:
@@ -243,6 +263,7 @@ def load_one(plant_id: int) -> Optional[Dict[str, Any]]:
             """, (p["current_state_id"],)).fetchone()
             if state_row:
                 state = dict(state_row)
+        state = _resolve_state(state, history, conn)
 
     return {
         "user_id": p["user_id"],
@@ -287,11 +308,14 @@ def load_data(user_id: int) -> List[Dict[str, Any]]:
                 "batch_id": p["batch_id"] if "batch_id" in p.keys() else None,
                 "history": (hist := _events_for_plant(conn, p["id"])),
                 "current": hist[-1] if hist else None,
-                "state": None if p["state_label"] is None else {
-                    "label":       p["state_label"],
-                    "icon_class":  p["state_icon"],
-                    "color_class": p["state_color"],
-                },
+                "state": _resolve_state(
+                    None if p["state_label"] is None else {
+                        "label":       p["state_label"],
+                        "icon_class":  p["state_icon"],
+                        "color_class": p["state_color"],
+                    },
+                    hist, conn
+                ),
                 "state_rank": p["state_rank"] if p["state_rank"] is not None else 999
             }
             for p in plants
@@ -353,7 +377,12 @@ def _insert_event(cur, plant_id: int, ev: Dict[str, Any]) -> None:
             " VALUES (?,?,?,?,?)",
             base_vals + (ev["custom_label"], ev["custom_note"]),
         )
-    else:  # sprout
+    elif ev["action"] in ("flower", "fruit") and ev.get("ended_on"):
+        cur.execute(
+            f"INSERT INTO events ({','.join(base_cols)}, ended_on) VALUES (?,?,?,?)",
+            base_vals + (ev["ended_on"],),
+        )
+    else:
         cur.execute(f"INSERT INTO events ({','.join(base_cols)}) VALUES (?,?,?)", base_vals)
 
     # reflect new state (if any)
@@ -449,6 +478,11 @@ def update_action(event_id: int, ev: Dict[str, Any]) -> None:  # ✓ kept name
                 base + (ev["custom_label"], ev["custom_note"], event_id),
             )
 
+        elif ev["action"] in ("flower", "fruit"):
+            cur.execute(
+                "UPDATE events SET event_type_id = ?, happened_on = ?, ended_on = ? WHERE id = ?",
+                base + (ev.get("ended_on") or None, event_id),
+            )
         else:
             cur.execute(
                 "UPDATE events SET event_type_id = ?, happened_on = ? WHERE id = ?",
@@ -470,7 +504,8 @@ def get_action_by_id(event_id: int) -> Optional[Dict[str, Any]]:  # ✓ kept nam
                    e.dur_val,  e.dur_unit,
                    e.measure_val, e.measure_unit,
                    p.common, p.latin,
-                   e.custom_label, e.custom_note
+                   e.custom_label, e.custom_note,
+                   e.ended_on
             FROM events      e
             JOIN event_types et ON et.id = e.event_type_id
             JOIN plants      p  ON p.id  = e.plant_id
@@ -498,6 +533,8 @@ def get_action_by_id(event_id: int) -> Optional[Dict[str, Any]]:  # ✓ kept nam
         elif a["action"] == "custom":
             act["custom_label"] = a["custom_label"]
             act["custom_note"] = a["custom_note"]
+        if a["action"] in ("flower", "fruit") and a["ended_on"]:
+            act["ended_on"] = a["ended_on"]
         return act
 
 
@@ -663,6 +700,7 @@ def get_empty_form():
         "location": "",
         "event_size_val": 0,
         "event_size_unit": "cm",
+        "event_ended_on": "",
         "notes": "",
     }
 
@@ -689,6 +727,7 @@ def get_form_data(request):
         "event_size_unit": request.form.get("event_size_unit", "cm"),
         "event_custom_label": request.form.get("event_custom_label", "").strip(),
         "event_custom_note": request.form.get("event_custom_note", "").strip(),
+        "event_ended_on": request.form.get("event_ended_on", "").strip(),
     }
 
 
@@ -801,6 +840,11 @@ def validate_form(form, translations, context="add"):
 
 
 
+    elif status in ("flower", "fruit"):
+        ended = form.get("event_ended_on", "").strip() or None
+        event = {"action": status, "start": date}
+        if ended:
+            event["ended_on"] = ended
     else:
         # All other events just need a date
         event = {
@@ -842,6 +886,8 @@ def form_keys_for(action_dict):
             "event_custom_label": action_dict.get("custom_label", ""),
             "event_custom_note": action_dict.get("custom_note", ""),
         })
+    if action in ("flower", "fruit"):
+        extras["event_ended_on"] = action_dict.get("ended_on", "")
 
     return "event_date", extras
 

@@ -93,6 +93,7 @@ CREATE TABLE IF NOT EXISTS events (
   measure_unit    TEXT,
   custom_label    TEXT,
   custom_note     TEXT,
+  ended_on        TEXT,
   FOREIGN KEY(plant_id)      REFERENCES plants(id) ON DELETE CASCADE,
   FOREIGN KEY(event_type_id) REFERENCES event_types(id)
 );
@@ -187,6 +188,10 @@ def _migrate(conn):
         conn.execute("ALTER TABLE users ADD COLUMN api_key_hash TEXT")
     if "api_key" not in user_cols:
         conn.execute("ALTER TABLE users ADD COLUMN api_key TEXT")
+
+    event_cols = {row[1] for row in conn.execute("PRAGMA table_info(events)").fetchall()}
+    if "ended_on" not in event_cols:
+        conn.execute("ALTER TABLE events ADD COLUMN ended_on TEXT")
 
     # print_jobs table (for existing DBs that pre-date the SCHEMA addition)
     conn.execute("""

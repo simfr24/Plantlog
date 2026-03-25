@@ -152,9 +152,6 @@ translations = {
     "Bad credentials": "Bad credentials",
     "You must be logged in to access this page.": "You must be logged in to access this page.",
     "Size must be > 0.": "Size must be > 0.",
-    "Information found on Boutique Végétale and processed with AI!": "Information found on Boutique Végétale and processed with AI!",
-    "Information provided by Mistral Large AI model!": "Information provided by Mistral Large AI model!",
-    "AI suggestions applied successfully!": "AI suggestions applied successfully!",
 
     # ────────── admin ──────────
     "Logins today": "Logins today",
@@ -204,10 +201,8 @@ translations = {
     "Help transition Measurement detailed": "A measurement doesn’t change the plant’s state.",
     "Help transition Custom Event detailed": "Custom events do not change the state.",
     "Help transition Death detailed": "The plant transitions to the 'Dead' state.",
-}
 
-# ────────── settings page ──────────
-translations.update({
+    # ────────── settings page ──────────
     "Settings": "Settings",
     "settings_api_key": "Your API key",
     "settings_api_active": "Active",
@@ -241,4 +236,52 @@ translations.update({
     "graveyard_title": "Graveyard",
     "graveyard_empty": "No dead plants yet.",
     "dead_plants_footer": "dead plants in the graveyard",
-})
+
+    # ────────── variety / batch field ──────────
+    "Variety / Batch": "Variety / Batch",
+    "e.g. variety": "e.g. Batch A, Window box…",
+
+    # ────────── print label ──────────
+    "Print Label": "Print Label",
+    "Classic": "Classic",
+    "Circular": "Circular",
+    "Print": "Print",
+    "print_timeout": "Timed out waiting for printer.",
+    "print_success": "Printed successfully!",
+    "print_failed": "Print failed",
+    "print_sending": "Sending to printer…",
+    "print_waiting": "Waiting for label_client…",
+    "print_network_error": "Network error.",
+
+    # ────────── settings: mcp ──────────
+    "settings_mcp_desc": "Run <code>mcp_server.py</code> locally — Claude Desktop will launch it automatically. It calls this server's API using your key.",
+    "settings_install_deps": "1. Install dependencies",
+    "settings_mcp_step_download": "2. Download the MCP server script",
+    "settings_mcp_step_config": "3. Claude Desktop config",
+    "settings_mcp_config_paths": "Linux: <code>~/.config/Claude/claude_desktop_config.json</code><br>Mac: <code>~/Library/Application Support/Claude/claude_desktop_config.json</code>",
+
+    # ────────── settings: printer ──────────
+    "settings_printer_warning": "<code>label_client.py</code> is written for the <strong>YHK-835E</strong> Bluetooth thermal printer. If you use a different model, the Bluetooth handshake and ESC/POS commands in the script may need to be adjusted.",
+    "settings_printer_desc": "Run <code>label_client.py</code> on the machine physically connected to your printer. It polls this server for print jobs and sends them to the printer automatically.",
+    "settings_printer_step_download": "2. Download",
+    "settings_printer_step_run": "3. Run it",
+    "settings_printer_run_desc": "On first run it will ask for your server URL, API key, and printer MAC, then save a config file.",
+    "settings_printer_env_desc": "Or set env vars directly:",
+    "settings_printer_config_location": "Config file location",
+    "settings_printer_config_paths": "Linux / Mac: <code>~/.config/plantlog/label_client.json</code><br>Windows: <code>%APPDATA%\\plantlog\\label_client.json</code>",
+    "settings_printer_systemd": "Run as a background service (Linux systemd)",
+    "settings_printer_systemd_save": "Save as <code>~/.config/systemd/user/plantlog-printer.service</code> then: <code>systemctl --user enable --now plantlog-printer</code>",
+
+    # ────────── misc ui ──────────
+    "quick_log_done": "Done!",
+    "search_placeholder": "Search plants, location, variety…",
+    "Log watering": "Log watering",
+    "Log fertilization": "Log fertilization",
+    "Admin": "Admin",
+    "End date": "End date",
+    "optional_end_date_hint": "If set, marks when this phase ended and returns the plant to Growing.",
+    "Ended flowering on": "Ended flowering on",
+    "Ended fruiting on": "Ended fruiting on",
+    "End of flowering": "End of flowering",
+    "End of fruiting": "End of fruiting",
+}

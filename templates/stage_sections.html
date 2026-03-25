@@ -95,6 +95,17 @@
   </div>
 </div>
 
+<!-- Flower/Fruit optional end date -->
+<div id="extra-flower-fruit" class="stage-extra" {% if form.status not in ['flower','fruit'] %}style="display:none"{% endif %}>
+  <div class="row g-3">
+    <div class="col-sm-6">
+      <label class="form-label">{{ t['End date'] }} <span class="text-muted fw-normal">({{ t['optional'] }})</span></label>
+      <input type="date" class="form-control" name="event_ended_on" value="{{ form.event_ended_on }}">
+      <div class="form-text">{{ t['optional_end_date_hint'] }}</div>
+    </div>
+  </div>
+</div>
+
 <!-- Custom action-specific label -->
 <div id="extra-custom-action" class="stage-extra" {% if form.status != 'custom_action' %}style="display:none"{% endif %}>
   <div class="mb-3">
@@ -122,6 +133,8 @@
         document.getElementById('extra-measure').style.display = '';
       } else if (val === 'custom') {
         document.getElementById('extra-custom-action').style.display = '';
+      } else if (val === 'flower' || val === 'fruit') {
+        document.getElementById('extra-flower-fruit').style.display = '';
       }
     });
   });

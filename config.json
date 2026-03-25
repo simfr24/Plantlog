@@ -1,14 +1,5 @@
 {
-  "mistral_small": {
-    "api_key": "T7F7YuljC4eNPHOSaI9uuTvPFh5UFlU3",
-    "enabled": true
-  },
-  "mistral_large": {
-    "api_key": "T7F7YuljC4eNPHOSaI9uuTvPFh5UFlU3",
-    "enabled": true
-  },
   "features": {
-    "ai_completion": true,
     "public_profiles": true
   },
   "mcp": {
