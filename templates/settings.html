@@ -109,7 +109,7 @@
   "mcpServers": {
     "plantlog": {
       "type": "streamable-http",
-      "url": "{{ request.host_url.rstrip('/') }}/mcp?api_key={{ new_key or revealed_key }}"
+      "url": "<span class="host-url"></span>/mcp?api_key={{ new_key or revealed_key }}"
     }
   }
 }</pre>
@@ -119,7 +119,7 @@
   "mcpServers": {
     "plantlog": {
       "type": "streamable-http",
-      "url": "{{ request.host_url.rstrip('/') }}/mcp?api_key=&lt;your-key&gt;"
+      "url": "<span class="host-url"></span>/mcp?api_key=&lt;your-key&gt;"
     }
   }
 }</pre>
@@ -169,7 +169,7 @@
           <pre class="bg-light rounded p-2 small">python3 label_client.py</pre>
 
           <p class="small text-muted mb-1">{{ t['settings_printer_env_desc'] }}</p>
-          <pre class="bg-light rounded p-2 small">PLANTLOG_URL=<strong>{{ request.host_url.rstrip('/') }}</strong> \
+          <pre class="bg-light rounded p-2 small">PLANTLOG_URL=<strong><span class="host-url"></span></strong> \
 PLANTLOG_API_KEY=&lt;your-key&gt; \
 PRINTER_MAC=&lt;your-printer-mac&gt; \
 python3 label_client.py</pre>
@@ -177,7 +177,7 @@ python3 label_client.py</pre>
           <h6 class="fw-semibold mt-3 mb-1">{{ t['settings_printer_config_location'] }}</h6>
           <p class="small text-muted mb-0">{{ t['settings_printer_config_paths'] | safe }}</p>
           <pre class="bg-light rounded p-2 small mt-1">{
-  "url": "{{ request.host_url.rstrip('/') }}",
+  "url": "<span class="host-url"></span>",
   "api_key": "&lt;your-key&gt;",
   "printer_mac": "&lt;your-printer-mac&gt;",
   "printer_port": 2,
@@ -190,7 +190,7 @@ Description=Plantlog label client
 
 [Service]
 ExecStart=python3 /path/to/Plantlog/scripts/label_client.py
-Environment=PLANTLOG_URL={{ request.host_url.rstrip('/') }}
+Environment=PLANTLOG_URL=<span class="host-url"></span>
 Environment=PLANTLOG_API_KEY=&lt;your-key&gt;
 Environment=PRINTER_MAC=&lt;your-printer-mac&gt;
 Restart=always
@@ -208,6 +208,8 @@ WantedBy=default.target</pre>
 </div>
 
 <script>
+document.querySelectorAll('.host-url').forEach(el => { el.textContent = window.location.origin; });
+
 const copyBtn = document.getElementById('copyKeyBtn');
 if (copyBtn) {
   copyBtn.addEventListener('click', function() {
@@ -235,7 +237,7 @@ if (dlConfigBtn) {
     }
     document.getElementById('printerMacInput').classList.remove('is-invalid');
     const cfg = {
-      url:           "{{ request.host_url.rstrip('/') }}",
+      url:           window.location.origin,
       api_key:       keyField.value,
       printer_mac:   mac,
       printer_port:  2,
