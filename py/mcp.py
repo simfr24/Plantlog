@@ -44,7 +44,8 @@ def _auth():
     key = (request.headers.get("X-API-Key")
            or request.headers.get("Authorization", "").removeprefix("Bearer ")
            or request.args.get("api_key", ""))
-    return get_user_by_api_key(key) if key else None
+    row = get_user_by_api_key(key) if key else None
+    return dict(row) if row else None
 
 # ── tool schemas ──────────────────────────────────────────────────────────────
 
