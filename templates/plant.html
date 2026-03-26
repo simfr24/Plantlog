@@ -55,8 +55,7 @@
   </div>
 </div>
 
-  {% if app_config.get('printer', {}).get('enabled') %}
-  <!-- Print Label Modal (once, shared by mobile + desktop action buttons) -->
+  <!-- Print Label Modal -->
   <div class="modal fade" id="printLabelModal" tabindex="-1" aria-labelledby="printLabelModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
       <div class="modal-content">
@@ -64,123 +63,29 @@
           <h5 class="modal-title" id="printLabelModalLabel"><i class="fas fa-print me-2"></i>{{ t['Print Label'] }}</h5>
           <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{{ t['Close'] }}"></button>
         </div>
-        <div class="modal-body text-center">
-          <div class="mb-3">
-            <div class="btn-group" role="group" id="styleSwitcher">
-              <input type="radio" class="btn-check" name="labelStyle" id="styleClassic" value="classic" checked>
-              <label class="btn btn-outline-secondary btn-sm" for="styleClassic">{{ t['Classic'] }}</label>
-              <input type="radio" class="btn-check" name="labelStyle" id="styleCircular" value="circular">
-              <label class="btn btn-outline-secondary btn-sm" for="styleCircular">{{ t['Circular'] }}</label>
-            </div>
-          </div>
-          <img id="labelPreview" src="/label_preview/{{ plant.id }}?style=classic" alt="Label preview"
-               class="img-fluid border rounded" style="max-height:220px;">
-          <p id="printStatus" class="mt-2 small text-muted"></p>
-        </div>
-        <div class="modal-footer">
-          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{ t['Cancel'] }}</button>
-          <button type="button" class="btn btn-primary" id="printBtn">
-            <i class="fas fa-print me-1"></i> {{ t['Print'] }}
-          </button>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <script>
-  (function() {
-    const plantId = {{ plant.id }};
-
-    function currentStyle() {
-      return document.querySelector('input[name="labelStyle"]:checked').value;
-    }
-
-    function updatePreview() {
-      const img = document.getElementById('labelPreview');
-      img.src = `/label_preview/${plantId}?style=${currentStyle()}&_=${Date.now()}`;
-    }
-
-    document.querySelectorAll('input[name="labelStyle"]').forEach(function(r) {
-      r.addEventListener('change', updatePreview);
-    });
-
-    function pollJob(jobId, attempts) {
-      if (attempts <= 0) {
-        document.getElementById('printStatus').textContent = '{{ t["print_timeout"] }}';
-        document.getElementById('printBtn').disabled = false;
-        return;
-      }
-      fetch(`/print_job_status/${jobId}`)
-        .then(function(r) { return r.json(); })
-        .then(function(data) {
-          if (data.status === 'done') {
-            document.getElementById('printStatus').innerHTML = '<span class="text-success"><i class="fas fa-check-circle me-1"></i>{{ t["print_success"] }}</span>';
-            document.getElementById('printBtn').disabled = false;
-          } else if (data.status === 'error') {
-            document.getElementById('printStatus').innerHTML = '<span class="text-danger"><i class="fas fa-exclamation-circle me-1"></i>' + (data.error_msg || 'Print failed') + '</span>';
-            document.getElementById('printBtn').disabled = false;
-          } else {
-            setTimeout(function() { pollJob(jobId, attempts - 1); }, 2000);
-          }
-        })
-        .catch(function() { setTimeout(function() { pollJob(jobId, attempts - 1); }, 2000); });
-    }
-
-    document.getElementById('printBtn').addEventListener('click', function() {
-      const btn = this;
-      btn.disabled = true;
-      document.getElementById('printStatus').innerHTML = '<span class="text-muted"><i class="fas fa-spinner fa-spin me-1"></i>Sending to printer…</span>';
-      fetch(`/print_label/${plantId}`, {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({style: currentStyle()})
-      })
-      .then(function(r) { return r.json(); })
-      .then(function(data) {
-        if (data.ok) {
-          document.getElementById('printStatus').innerHTML = '<span class="text-muted"><i class="fas fa-spinner fa-spin me-1"></i>Waiting for label_client…</span>';
-          pollJob(data.job_id, 30);
-        } else {
-          document.getElementById('printStatus').innerHTML = '<span class="text-danger">' + (data.error || 'Error') + '</span>';
-          btn.disabled = false;
-        }
-      })
-      .catch(function() {
-        document.getElementById('printStatus').textContent = '{{ t["print_network_error"] }}';
-        btn.disabled = false;
-      });
-    });
-
-    document.getElementById('printLabelModal').addEventListener('hidden.bs.modal', function() {
-      document.getElementById('printStatus').textContent = '';
-      document.getElementById('printBtn').disabled = false;
-      document.getElementById('styleClassic').checked = true;
-      updatePreview();
-    });
-  })();
-  </script>
-  {% endif %}
-
-  <!-- Print Label Modal (once, shared by mobile + desktop action buttons) -->
-  <div class="modal fade" id="printLabelModal" tabindex="-1" aria-labelledby="printLabelModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-      <div class="modal-content">
-        <div class="modal-header">
-          <h5 class="modal-title" id="printLabelModalLabel"><i class="fas fa-print me-2"></i>{{ t['Print Label'] }}</h5>
-          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{{ t['Close'] }}"></button>
-        </div>
-        <div class="modal-body text-center">
-          <div class="mb-3">
+        <div class="modal-body">
+          <div class="mb-2 text-center">
             <div class="btn-group" role="group">
-              <input type="radio" class="btn-check" name="labelStyle" id="styleClassic" value="classic" checked>
+              <input type="radio" class="btn-check" name="labelStyle" id="styleClassic"  value="classic"  checked>
               <label class="btn btn-outline-secondary btn-sm" for="styleClassic">{{ t['Classic'] }}</label>
               <input type="radio" class="btn-check" name="labelStyle" id="styleCircular" value="circular">
               <label class="btn btn-outline-secondary btn-sm" for="styleCircular">{{ t['Circular'] }}</label>
+              <input type="radio" class="btn-check" name="labelStyle" id="styleMinimal"  value="minimal">
+              <label class="btn btn-outline-secondary btn-sm" for="styleMinimal">{{ t['Minimal'] }}</label>
+              <input type="radio" class="btn-check" name="labelStyle" id="styleDetailed" value="detailed">
+              <label class="btn btn-outline-secondary btn-sm" for="styleDetailed">{{ t['Detailed'] }}</label>
             </div>
           </div>
-          <img id="labelPreview" src="/label_preview/{{ plant.id }}?style=classic" alt="Label preview"
-               class="img-fluid border rounded" style="max-height:220px;">
-          <p id="printStatus" class="mt-2 small text-muted"></p>
+          <div class="mb-2">
+            <textarea id="labelExtraNotes" class="form-control form-control-sm"
+                      rows="2" placeholder="{{ t['label_extra_notes_placeholder'] }}"
+                      style="resize:none;"></textarea>
+          </div>
+          <div class="text-center">
+            <img id="labelPreview" src="/label_preview/{{ plant.id }}?style=classic" alt="Label preview"
+                 class="img-fluid border rounded" style="max-height:240px;">
+          </div>
+          <p id="printStatus" class="mt-2 mb-0 small text-muted text-center"></p>
         </div>
         <div class="modal-footer">
           <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{ t['Cancel'] }}</button>
@@ -200,13 +105,25 @@
       return document.querySelector('input[name="labelStyle"]:checked').value;
     }
 
+    function extraNotes() {
+      return document.getElementById('labelExtraNotes').value.trim();
+    }
+
     function updatePreview() {
+      const extra = extraNotes();
+      const qs = extra ? `&extra=${encodeURIComponent(extra)}` : '';
       document.getElementById('labelPreview').src =
-        `/label_preview/${plantId}?style=${currentStyle()}&_=${Date.now()}`;
+        `/label_preview/${plantId}?style=${currentStyle()}${qs}&_=${Date.now()}`;
     }
 
     document.querySelectorAll('input[name="labelStyle"]').forEach(function(r) {
       r.addEventListener('change', updatePreview);
+    });
+
+    let _previewTimer = null;
+    document.getElementById('labelExtraNotes').addEventListener('input', function() {
+      clearTimeout(_previewTimer);
+      _previewTimer = setTimeout(updatePreview, 500);
     });
 
     function pollJob(jobId, attempts) {
@@ -220,7 +137,7 @@
         .then(function(data) {
           if (data.status === 'done') {
             document.getElementById('printStatus').innerHTML =
-              '<span class="text-success"><i class="fas fa-check-circle me-1"></i>Printed successfully!</span>';
+              '<span class="text-success"><i class="fas fa-check-circle me-1"></i>{{ t["print_success"] }}</span>';
             document.getElementById('printBtn').disabled = false;
           } else if (data.status === 'error') {
             document.getElementById('printStatus').innerHTML =
@@ -242,7 +159,7 @@
       fetch(`/print_label/${plantId}`, {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({style: currentStyle()})
+        body: JSON.stringify({style: currentStyle(), extra_notes: extraNotes() || null})
       })
       .then(function(r) { return r.json(); })
       .then(function(data) {
@@ -266,6 +183,7 @@
       document.getElementById('printStatus').textContent = '';
       document.getElementById('printBtn').disabled = false;
       document.getElementById('styleClassic').checked = true;
+      document.getElementById('labelExtraNotes').value = '';
       updatePreview();
     });
   })();

@@ -86,6 +86,7 @@ from py.processing import sort_key, get_unique_locations
 from py.mcp import blueprint as mcp_blueprint
 from py.label_printer import (
     create_label_classic, create_label_circular,
+    create_label_minimal, create_label_detailed,
     label_to_png_bytes, label_to_printer_bytes,
 )
 
@@ -606,21 +607,32 @@ def favicon():
 # Label / Printer Routes
 ###############################################################################
 
-def _make_label_image(plant, style):
-    common   = plant.get("common", "")
-    latin    = plant.get("latin",  "")
-    variety  = plant.get("variety") or None
-    history = plant.get("history") or []
-    earliest = history[0]["start"] if history else None
-    if earliest:
-        # stored as YYYY-MM-DD, display as DD-MM-YYYY
-        parts = earliest.split("-")
-        date_str = f"{parts[2]}-{parts[1]}-{parts[0]}" if len(parts) == 3 else earliest
-    else:
-        date_str = date.today().strftime("%d-%m-%Y")
+def _format_date(iso_date):
+    """Convert YYYY-MM-DD to DD-MM-YYYY, or return today if None."""
+    if iso_date:
+        parts = iso_date.split("-")
+        if len(parts) == 3:
+            return f"{parts[2]}-{parts[1]}-{parts[0]}"
+    return date.today().strftime("%d-%m-%Y")
+
+
+def _make_label_image(plant, style, extra_notes=None):
+    common      = plant.get("common", "")
+    latin       = plant.get("latin",  "")
+    variety     = plant.get("variety") or None
+    nickname    = plant.get("nickname") or None
+    location    = plant.get("location") or None
+    notes       = plant.get("notes") or None
+    history     = plant.get("history") or []
+    date_str    = _format_date(history[0]["start"] if history else None)
+
     if style == "circular":
-        return create_label_circular(common, latin, date_str, variety)
-    return create_label_classic(common, latin, date_str, variety)
+        return create_label_circular(common, latin, date_str, variety, nickname, extra_notes)
+    if style == "minimal":
+        return create_label_minimal(common, latin, date_str, variety, nickname, extra_notes)
+    if style == "detailed":
+        return create_label_detailed(common, latin, date_str, variety, nickname, location, notes, extra_notes)
+    return create_label_classic(common, latin, date_str, variety, nickname, extra_notes)
 
 
 @app.route("/label_preview/<int:idx>")
@@ -629,8 +641,9 @@ def label_preview(idx):
     plant = load_one(idx) or abort(404)
     if plant.get("user_id") != g.user["id"]:
         abort(403)
-    style = request.args.get("style", "classic")
-    img = _make_label_image(plant, style)
+    style       = request.args.get("style", "classic")
+    extra_notes = request.args.get("extra") or None
+    img = _make_label_image(plant, style, extra_notes)
     return Response(label_to_png_bytes(img), mimetype="image/png")
 
 
@@ -641,12 +654,13 @@ def print_label_route(idx):
     plant = load_one(idx) or abort(404)
     if plant.get("user_id") != g.user["id"]:
         abort(403)
-    data  = request.get_json(silent=True) or {}
-    style = data.get("style", "classic")
+    data        = request.get_json(silent=True) or {}
+    style       = data.get("style", "classic")
+    extra_notes = data.get("extra_notes") or None
     with get_conn() as conn:
         cur = conn.execute(
-            "INSERT INTO print_jobs (user_id, plant_id, style) VALUES (?,?,?)",
-            (g.user["id"], idx, style),
+            "INSERT INTO print_jobs (user_id, plant_id, style, extra_notes) VALUES (?,?,?,?)",
+            (g.user["id"], idx, style, extra_notes),
         )
         job_id = cur.lastrowid
         conn.commit()
@@ -1060,7 +1074,8 @@ def api_print_job_bytes(job_id):
     """Render the label and return raw ESC/POS bytes for the printer."""
     with get_conn() as conn:
         row = conn.execute(
-            """SELECT j.style, p.common, p.latin, p.variety,
+            """SELECT j.style, j.extra_notes,
+                      p.common, p.latin, p.variety, p.nickname, p.location, p.notes,
                       (SELECT MIN(e.happened_on) FROM events e WHERE e.plant_id = p.id) AS earliest_date
                FROM print_jobs j
                JOIN plants p ON p.id = j.plant_id
@@ -1069,17 +1084,22 @@ def api_print_job_bytes(job_id):
         ).fetchone()
     if not row:
         abort(404)
-    earliest = row["earliest_date"]
-    if earliest:
-        parts = earliest.split("-")
-        date_str = f"{parts[2]}-{parts[1]}-{parts[0]}" if len(parts) == 3 else earliest
+    date_str    = _format_date(row["earliest_date"])
+    variety     = row["variety"]  or None
+    nickname    = row["nickname"] or None
+    location    = row["location"] or None
+    notes       = row["notes"]    or None
+    extra_notes = row["extra_notes"] or None
+    style       = row["style"]
+
+    if style == "circular":
+        img = create_label_circular(row["common"], row["latin"], date_str, variety, nickname, extra_notes)
+    elif style == "minimal":
+        img = create_label_minimal(row["common"], row["latin"], date_str, variety, nickname, extra_notes)
+    elif style == "detailed":
+        img = create_label_detailed(row["common"], row["latin"], date_str, variety, nickname, location, notes, extra_notes)
     else:
-        date_str = date.today().strftime("%d-%m-%Y")
-    variety = row["variety"] or None
-    if row["style"] == "circular":
-        img = create_label_circular(row["common"], row["latin"], date_str, variety)
-    else:
-        img = create_label_classic(row["common"], row["latin"], date_str, variety)
+        img = create_label_classic(row["common"], row["latin"], date_str, variety, nickname, extra_notes)
     return Response(label_to_printer_bytes(img), mimetype="application/octet-stream")
 
 

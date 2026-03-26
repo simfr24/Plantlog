@@ -70,6 +70,7 @@ CREATE TABLE IF NOT EXISTS print_jobs (
   user_id     INTEGER NOT NULL,
   plant_id    INTEGER NOT NULL,
   style       TEXT    NOT NULL DEFAULT 'classic',
+  extra_notes TEXT,
   status      TEXT    NOT NULL DEFAULT 'pending',  -- pending | done | error
   error_msg   TEXT,
   created_at  TEXT    NOT NULL DEFAULT (datetime('now')),
@@ -196,18 +197,22 @@ def _migrate(conn):
     # print_jobs table (for existing DBs that pre-date the SCHEMA addition)
     conn.execute("""
         CREATE TABLE IF NOT EXISTS print_jobs (
-          id         INTEGER PRIMARY KEY AUTOINCREMENT,
-          user_id    INTEGER NOT NULL,
-          plant_id   INTEGER NOT NULL,
-          style      TEXT    NOT NULL DEFAULT 'classic',
-          status     TEXT    NOT NULL DEFAULT 'pending',
-          error_msg  TEXT,
-          created_at TEXT    NOT NULL DEFAULT (datetime('now')),
-          updated_at TEXT    NOT NULL DEFAULT (datetime('now')),
+          id          INTEGER PRIMARY KEY AUTOINCREMENT,
+          user_id     INTEGER NOT NULL,
+          plant_id    INTEGER NOT NULL,
+          style       TEXT    NOT NULL DEFAULT 'classic',
+          extra_notes TEXT,
+          status      TEXT    NOT NULL DEFAULT 'pending',
+          error_msg   TEXT,
+          created_at  TEXT    NOT NULL DEFAULT (datetime('now')),
+          updated_at  TEXT    NOT NULL DEFAULT (datetime('now')),
           FOREIGN KEY(user_id)  REFERENCES users(id)  ON DELETE CASCADE,
           FOREIGN KEY(plant_id) REFERENCES plants(id) ON DELETE CASCADE
         )
     """)
+    pj_cols = {row[1] for row in conn.execute("PRAGMA table_info(print_jobs)").fetchall()}
+    if "extra_notes" not in pj_cols:
+        conn.execute("ALTER TABLE print_jobs ADD COLUMN extra_notes TEXT")
 
     conn.commit()
 
