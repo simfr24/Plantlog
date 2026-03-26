@@ -225,17 +225,24 @@ def main():
                         printer.print_bytes(data)
                         mark_done(base_url, headers, jid)
                         log.info("Job #%s — done", jid)
+                    except KeyboardInterrupt:
+                        raise
                     except Exception as exc:
                         log.error("Job #%s — FAILED: %s", jid, exc)
                         mark_error(base_url, headers, jid, str(exc))
+            except KeyboardInterrupt:
+                raise
             except requests.exceptions.ConnectionError:
                 log.warning("Cannot reach server — will retry")
             except Exception as exc:
                 log.error("Unexpected error: %s", exc)
 
             time.sleep(interval)
+    except KeyboardInterrupt:
+        log.info("Interrupted — shutting down")
     finally:
         printer.close()
+        log.info("Printer connection closed")
 
 
 if __name__ == "__main__":

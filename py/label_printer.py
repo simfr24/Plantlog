@@ -5,6 +5,7 @@ Label generation and Bluetooth printing for the YHK-835E thermal printer.
 import io
 import re
 import struct
+from pathlib import Path
 
 import PIL.Image
 import PIL.ImageDraw
@@ -13,6 +14,7 @@ import PIL.ImageOps
 
 
 PRINTER_WIDTH = 384
+_ICON_DIR = Path(__file__).parent / "icons"
 
 
 # ---------------------------------------------------------------------------
@@ -152,61 +154,67 @@ def _render_md(d, segments, fonts, x, y, max_w, gap=4):
 
 
 # ---------------------------------------------------------------------------
-# Icon drawing (font-independent, pure PIL)
+# Icon drawing — PNG if available in py/icons/, drawn fallback otherwise
 # ---------------------------------------------------------------------------
 
-def _icon_pin(d, x, y, size=15):
-    """Location pin: circle head + pointed tail. Returns width consumed."""
+def _load_png_icon(name, size):
+    """
+    Load py/icons/<name>.png, resize to size×size, return as 1-bit PIL image.
+    Supports transparent PNGs (dark icon on transparent background works best).
+    Returns None if the file doesn't exist or fails to load.
+    """
+    path = _ICON_DIR / f"{name}.png"
+    if not path.exists():
+        return None
+    try:
+        src = PIL.Image.open(path).convert("RGBA")
+        src = src.resize((size, size), PIL.Image.LANCZOS)
+        bg = PIL.Image.new("L", (size, size), 255)
+        bg.paste(src.convert("L"), mask=src.split()[3])
+        return bg.point(lambda p: 0 if p < 128 else 255).convert("1")
+    except Exception:
+        return None
+
+
+def _icon_pin(img, d, x, y, size=15):
+    """Location pin icon. Returns width consumed."""
+    icon = _load_png_icon("pin", size)
+    if icon:
+        img.paste(icon, (x, y))
+        return size + 6
+    # Drawn fallback: circle head + pointed tail
     r = max(3, size * 2 // 5)
     cx = x + r
     d.ellipse([x, y, x + r * 2, y + r * 2], fill=0)
-    d.ellipse([cx - 2, y + r - 2, cx + 2, y + r + 2], fill=1)  # inner white dot
-    d.polygon([(x + 1, y + r * 2 - 2),
-               (x + r * 2 - 1, y + r * 2 - 2),
-               (cx, y + size)], fill=0)
+    d.ellipse([cx - 2, y + r - 2, cx + 2, y + r + 2], fill=1)
+    d.polygon([(x + 1, y + r * 2 - 2), (x + r * 2 - 1, y + r * 2 - 2), (cx, y + size)], fill=0)
     return r * 2 + 6
 
 
-def _icon_diamond(d, x, y, size=11):
+def _icon_diamond(img, d, x, y, size=11):
     """Filled diamond bullet. Returns width consumed."""
+    icon = _load_png_icon("diamond", size)
+    if icon:
+        img.paste(icon, (x, y))
+        return size + 6
+    # Drawn fallback
     cx, cy = x + size // 2, y + size // 2
     r = max(2, size // 2 - 1)
     d.polygon([(cx, cy - r), (cx + r, cy), (cx, cy + r), (cx - r, cy)], fill=0)
     return size + 6
 
 
-def _icon_pen(d, x, y, size=14):
-    """Pen / quill icon. Returns width consumed."""
-    # shaft (diagonal)
-    d.line([(x + 1, y + size - 2), (x + size - 2, y + 1)], fill=0, width=2)
-    # nib (small triangle at bottom-left)
-    d.polygon([(x, y + size - 1),
-               (x + 5, y + size - 6),
-               (x + 5, y + size - 1)], fill=0)
-    return size + 5
-
-
-def _icon_row(d, icon_fn, icon_size, text_y, font_h, x, text_parts,
-              fonts, max_w, gap=4):
-    """
-    Draw [icon] [text block] where text_parts is a list of (text, style) or a plain string.
-    Icon is vertically centered against the first text line.
-    Returns (y_after, height_consumed).
-    """
-    icon_w = icon_fn(d, x, text_y + max(0, (font_h - icon_size) // 2), icon_size)
-    tx = x + icon_w
-
-    if isinstance(text_parts, str):
-        # plain text
-        wrapped = _wrap(text_parts, fonts["regular"], max_w - icon_w)
-        d.multiline_text((tx, text_y), wrapped, font=fonts["regular"], fill=0)
-        h = _ml_h(d, wrapped, fonts["regular"])
-    else:
-        # markdown segments
-        h = _render_md(d, text_parts, fonts,
-                       tx, text_y, max_w - icon_w, gap) - text_y
-
-    return text_y + h, h
+def _icon_pen(img, d, x, y, size=14):
+    """Pencil icon. Returns width consumed."""
+    icon = _load_png_icon("pen", size)
+    if icon:
+        img.paste(icon, (x, y))
+        return size + 6
+    # Drawn fallback: thick diagonal body (width=4) so it reads as a pencil, not a blade
+    d.line([(x + 3, y + size - 2), (x + size - 2, y + 3)], fill=0, width=4)
+    d.rectangle([x + size - 3, y, x + size + 2, y + 5], fill=0)   # eraser cap
+    d.polygon([(x, y + size + 1), (x + 6, y + size - 4), (x + 2, y + size - 5)], fill=0)
+    return size + 6
 
 
 # ---------------------------------------------------------------------------
@@ -238,8 +246,8 @@ def create_label_classic(common_name, latin_name, date_str,
     margin, pad_t, pad_b = 20, 32, 28
 
     name_font  = _get_font("bold",    40)
+    sub_font   = _get_font("italic",  22)   # common name when nickname is the hero
     latin_font = _get_font("italic",  22)
-    nick_font  = _get_font("italic",  17)
     var_font   = _get_font("regular", 17)
     date_font  = _get_font("regular", 18)
     note_r     = _get_font("regular", 16)
@@ -247,24 +255,28 @@ def create_label_classic(common_name, latin_name, date_str,
     note_i     = _get_font("italic",  16)
     md_fonts   = {"regular": note_r, "bold": note_b, "italic": note_i, "bullet": note_r}
 
+    # Nickname becomes the hero; common name drops to a subtitle
+    hero = nickname if nickname else common_name
+    sub  = common_name if nickname else None
+
     tmp = PIL.Image.new("1", (1, 1))
     td  = PIL.ImageDraw.Draw(tmp)
 
     inner_w    = W - margin * 2 - 24
-    name_lines = _wrap(common_name, name_font, inner_w)
-    name_w     = _ml_w(td, name_lines, name_font)
-    name_h     = _ml_h(td, name_lines, name_font)
+    hero_lines = _wrap(hero, name_font, inner_w)
+    hero_w     = _ml_w(td, hero_lines, name_font)
+    hero_h     = _ml_h(td, hero_lines, name_font)
     latin_h    = _text_h(td, latin_name, latin_font)
     date_w     = _text_w(td, date_str, date_font)
     date_h     = _text_h(td, date_str, date_font)
 
-    nick_h = _text_h(td, nickname, nick_font) + 5 if nickname else 0
-    var_h  = _text_h(td, variety,  var_font)  + 6 if variety  else 0
+    sub_h = (_text_h(td, sub, sub_font) + 5) if sub else 0
+    var_h = (_text_h(td, variety, var_font) + 6) if variety else 0
 
     md_segs = _parse_md(extra_notes.strip()) if extra_notes else []
     note_h  = (_md_height(td, md_segs, md_fonts, inner_w) + 16) if md_segs else 0
 
-    total_h = pad_t + name_h + 10 + latin_h + nick_h + var_h + 20 + date_h + note_h + pad_b
+    total_h = pad_t + hero_h + 10 + sub_h + latin_h + var_h + 20 + date_h + note_h + pad_b
     img = PIL.Image.new("1", (W, total_h), 1)
     d   = PIL.ImageDraw.Draw(img)
 
@@ -274,15 +286,15 @@ def create_label_classic(common_name, latin_name, date_str,
     _square_notches(d, bx0 + 6, by0 + 6, bx1 - 6, by1 - 6)
 
     y = pad_t
-    d.multiline_text(((W - name_w) // 2, y), name_lines, font=name_font, fill=0, align="center")
-    y += name_h + 10
+    d.multiline_text(((W - hero_w) // 2, y), hero_lines, font=name_font, fill=0, align="center")
+    y += hero_h + 10
+
+    if sub:
+        d.text((W // 2, y), sub, font=sub_font, fill=0, anchor="ma")
+        y += sub_h
 
     d.text((W // 2, y), latin_name, font=latin_font, fill=0, anchor="ma")
     y += latin_h + 5
-
-    if nickname:
-        d.text((W // 2, y), f'"{nickname}"', font=nick_font, fill=0, anchor="ma")
-        y += nick_h
 
     if variety:
         d.text((W // 2, y), variety, font=var_font, fill=0, anchor="ma")
@@ -307,7 +319,7 @@ def create_label_classic(common_name, latin_name, date_str,
 
 def create_label_circular(common_name, latin_name, date_str,
                           variety=None, nickname=None, extra_notes=None):
-    """Circular label. Nickname inside, extra notes (MD) below the circle."""
+    """Circular label. Nickname is the hero name; extra notes (MD) appear below the circle."""
     diameter  = int(PRINTER_WIDTH * 0.66)
     note_r    = _get_font("regular", 14)
     note_b    = _get_font("bold",    14)
@@ -330,30 +342,34 @@ def create_label_circular(common_name, latin_name, date_str,
     d.ellipse([cx - r + 6, cy - r + 6, cx + r - 6, cy + r - 6], outline=0, width=1)
 
     name_font  = _get_font("bold",    28)
+    sub_font   = _get_font("italic",  15)
     latin_font = _get_font("italic",  15)
-    nick_font  = _get_font("italic",  13)
     var_font   = _get_font("regular", 13)
     date_font  = _get_font("regular", 14)
 
+    hero = nickname if nickname else common_name
+    sub  = common_name if nickname else None
+
     max_text_w = int(r * 1.4)
-    name_lines = _wrap(common_name, name_font, max_text_w)
-    name_h     = _ml_h(d, name_lines, name_font)
+    hero_lines = _wrap(hero, name_font, max_text_w)
+    hero_h     = _ml_h(d, hero_lines, name_font)
     latin_h    = _text_h(d, latin_name, latin_font)
     date_h     = _text_h(d, date_str, date_font)
-    nick_h     = _text_h(d, nickname, nick_font) + 4 if nickname else 0
-    var_h      = _text_h(d, variety,  var_font)  + 4 if variety  else 0
+    sub_h      = (_text_h(d, sub, sub_font) + 4) if sub else 0
+    var_h      = (_text_h(d, variety, var_font) + 4) if variety else 0
 
-    inner_h = name_h + 8 + latin_h + nick_h + var_h + 6 + date_h
+    inner_h = hero_h + 6 + sub_h + latin_h + var_h + 6 + date_h
     y = cy - inner_h // 2
 
-    d.multiline_text((cx, y), name_lines, font=name_font, fill=0, anchor="ma", align="center")
-    y += name_h + 8
+    d.multiline_text((cx, y), hero_lines, font=name_font, fill=0, anchor="ma", align="center")
+    y += hero_h + 6
+
+    if sub:
+        d.text((cx, y), sub, font=sub_font, fill=0, anchor="ma")
+        y += sub_h
+
     d.text((cx, y), latin_name, font=latin_font, fill=0, anchor="ma")
     y += latin_h + 4
-
-    if nickname:
-        d.text((cx, y), f'"{nickname}"', font=nick_font, fill=0, anchor="ma")
-        y += nick_h
 
     if variety:
         d.text((cx, y), variety, font=var_font, fill=0, anchor="ma")
@@ -370,13 +386,13 @@ def create_label_circular(common_name, latin_name, date_str,
 
 def create_label_minimal(common_name, latin_name, date_str,
                          variety=None, nickname=None, extra_notes=None):
-    """Clean borderless label: large name, thin rule, latin/nickname, date, notes (MD)."""
+    """Clean borderless label. Nickname is the hero name if present."""
     W   = PRINTER_WIDTH
     pad = 28
 
     name_font  = _get_font("bold",    46)
+    sub_font   = _get_font("italic",  22)
     latin_font = _get_font("italic",  21)
-    nick_font  = _get_font("italic",  17)
     var_font   = _get_font("regular", 17)
     date_font  = _get_font("regular", 17)
     note_r     = _get_font("regular", 16)
@@ -384,40 +400,43 @@ def create_label_minimal(common_name, latin_name, date_str,
     note_i     = _get_font("italic",  16)
     md_fonts   = {"regular": note_r, "bold": note_b, "italic": note_i, "bullet": note_r}
 
+    hero = nickname if nickname else common_name
+    sub  = common_name if nickname else None
+
     tmp = PIL.Image.new("1", (1, 1))
     td  = PIL.ImageDraw.Draw(tmp)
 
     inner_w    = W - 48
-    name_lines = _wrap(common_name, name_font, inner_w)
-    name_w     = _ml_w(td, name_lines, name_font)
-    name_h     = _ml_h(td, name_lines, name_font)
+    hero_lines = _wrap(hero, name_font, inner_w)
+    hero_w     = _ml_w(td, hero_lines, name_font)
+    hero_h     = _ml_h(td, hero_lines, name_font)
     latin_h    = _text_h(td, latin_name, latin_font)
     date_w     = _text_w(td, date_str, date_font)
     date_h     = _text_h(td, date_str, date_font)
-    nick_h     = _text_h(td, nickname, nick_font) + 4 if nickname else 0
-    var_h      = _text_h(td, variety,  var_font)  + 4 if variety  else 0
+    sub_h      = (_text_h(td, sub, sub_font) + 4) if sub else 0
+    var_h      = (_text_h(td, variety, var_font) + 4) if variety else 0
 
     md_segs = _parse_md(extra_notes.strip()) if extra_notes else []
     note_h  = (_md_height(td, md_segs, md_fonts, inner_w) + 12) if md_segs else 0
 
-    total_h = pad + name_h + 10 + latin_h + nick_h + var_h + 16 + date_h + note_h + pad
+    total_h = pad + hero_h + 10 + sub_h + latin_h + var_h + 16 + date_h + note_h + pad
     img = PIL.Image.new("1", (W, total_h), 1)
     d   = PIL.ImageDraw.Draw(img)
 
     y = pad
-    d.multiline_text(((W - name_w) // 2, y), name_lines, font=name_font, fill=0, align="center")
-    y += name_h + 6
+    d.multiline_text(((W - hero_w) // 2, y), hero_lines, font=name_font, fill=0, align="center")
+    y += hero_h + 6
 
     rule_w = W // 2
     d.line([((W - rule_w) // 2, y), ((W + rule_w) // 2, y)], fill=0, width=1)
     y += 10
 
+    if sub:
+        d.text((W // 2, y), sub, font=sub_font, fill=0, anchor="ma")
+        y += sub_h
+
     d.text((W // 2, y), latin_name, font=latin_font, fill=0, anchor="ma")
     y += latin_h + 4
-
-    if nickname:
-        d.text((W // 2, y), f'"{nickname}"', font=nick_font, fill=0, anchor="ma")
-        y += nick_h
 
     if variety:
         d.text((W // 2, y), variety, font=var_font, fill=0, anchor="ma")
@@ -448,8 +467,8 @@ def create_label_detailed(common_name, latin_name, date_str,
     ICON_S  = 16   # icon size (px), matched to info font
 
     name_font  = _get_font("bold",    34)
+    sub_font   = _get_font("italic",  18)
     latin_font = _get_font("italic",  18)
-    nick_font  = _get_font("italic",  16)
     var_font   = _get_font("regular", 16)
     info_r     = _get_font("regular", 15)
     note_r     = _get_font("regular", 15)
@@ -462,14 +481,17 @@ def create_label_detailed(common_name, latin_name, date_str,
     tmp = PIL.Image.new("1", (1, 1))
     td  = PIL.ImageDraw.Draw(tmp)
 
-    name_lines = _wrap(common_name, name_font, inner_w)
-    name_w     = _ml_w(td, name_lines, name_font)
-    name_h     = _ml_h(td, name_lines, name_font)
+    hero = nickname if nickname else common_name
+    sub  = common_name if nickname else None
+
+    hero_lines = _wrap(hero, name_font, inner_w)
+    hero_w     = _ml_w(td, hero_lines, name_font)
+    hero_h     = _ml_h(td, hero_lines, name_font)
     latin_h    = _text_h(td, latin_name, latin_font)
     date_w     = _text_w(td, date_str, date_font)
     date_h     = _text_h(td, date_str, date_font)
-    nick_h     = _text_h(td, nickname, nick_font) + 4 if nickname else 0
-    var_h      = _text_h(td, variety,  var_font)  + 4 if variety  else 0
+    sub_h      = (_text_h(td, sub, sub_font) + 4) if sub else 0
+    var_h      = (_text_h(td, variety, var_font) + 4) if variety else 0
 
     # Pre-calculate icon row widths
     icon_w_pin     = ICON_S + 6
@@ -490,7 +512,7 @@ def create_label_detailed(common_name, latin_name, date_str,
     has_info = loc_h or plant_note_h or extra_note_h
     info_gap = 20 if has_info else 0
 
-    total_h = (pad_t + name_h + 8 + latin_h + nick_h + var_h
+    total_h = (pad_t + hero_h + 8 + sub_h + latin_h + var_h
                + info_gap + loc_h + plant_note_h + extra_note_h
                + 20 + date_h + pad_b)
 
@@ -503,15 +525,15 @@ def create_label_detailed(common_name, latin_name, date_str,
     _diamond_corners(d, bx0, by0, bx1, by1, r=6)
 
     y = pad_t
-    d.multiline_text(((W - name_w) // 2, y), name_lines, font=name_font, fill=0, align="center")
-    y += name_h + 8
+    d.multiline_text(((W - hero_w) // 2, y), hero_lines, font=name_font, fill=0, align="center")
+    y += hero_h + 8
+
+    if sub:
+        d.text((W // 2, y), sub, font=sub_font, fill=0, anchor="ma")
+        y += sub_h
 
     d.text((W // 2, y), latin_name, font=latin_font, fill=0, anchor="ma")
     y += latin_h + 4
-
-    if nickname:
-        d.text((W // 2, y), f'"{nickname}"', font=nick_font, fill=0, anchor="ma")
-        y += nick_h
 
     if variety:
         d.text((W // 2, y), variety, font=var_font, fill=0, anchor="ma")
@@ -526,20 +548,20 @@ def create_label_detailed(common_name, latin_name, date_str,
         if location:
             loc_wrapped = _wrap(location, info_r, inner_w - icon_w_pin)
             fh = _text_h(d, "A", info_r)
-            _icon_pin(d, tx, y + max(0, (fh - ICON_S) // 2), ICON_S)
+            _icon_pin(img, d, tx, y + max(0, (fh - ICON_S) // 2), ICON_S)
             d.multiline_text((tx + icon_w_pin, y), loc_wrapped, font=info_r, fill=0)
             y += _ml_h(d, loc_wrapped, info_r) + 6
 
         if plant_segs:
             fh = _text_h(d, "A", info_r)
-            _icon_diamond(d, tx, y + max(0, (fh - ICON_S) // 2), ICON_S)
+            _icon_diamond(img, d, tx, y + max(0, (fh - ICON_S) // 2), ICON_S)
             _render_md(d, plant_segs, info_fonts, tx + icon_w_diamond, y,
                        inner_w - icon_w_diamond)
             y += plant_note_h
 
         if extra_segs:
             fh = _text_h(d, "A", note_r)
-            _icon_pen(d, tx, y + max(0, (fh - ICON_S) // 2), ICON_S)
+            _icon_pen(img, d, tx, y + max(0, (fh - ICON_S) // 2), ICON_S)
             _render_md(d, extra_segs, md_fonts, tx + icon_w_pen, y,
                        inner_w - icon_w_pen)
             y += extra_note_h
