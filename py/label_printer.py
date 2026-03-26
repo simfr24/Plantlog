@@ -5,10 +5,12 @@ Extracted from plant-label-simple.py for use by the Flask web app.
 """
 
 import io
+import struct
 
 import PIL.Image
 import PIL.ImageDraw
 import PIL.ImageFont
+import PIL.ImageOps
 
 
 PRINTER_WIDTH = 384
@@ -175,6 +177,25 @@ def create_label_circular(common_name, latin_name, date_str, variety=None):
 # ---------------------------------------------------------------------------
 # Rendering to bytes / PNG
 # ---------------------------------------------------------------------------
+
+def label_to_printer_bytes(img: PIL.Image.Image) -> bytes:
+    """Return raw ESC/POS bytes ready to send to the YHK-835E printer."""
+    if img.width < PRINTER_WIDTH:
+        padded = PIL.Image.new("1", (PRINTER_WIDTH, img.height), 1)
+        padded.paste(img)
+        img = padded
+    if img.size[0] % 8:
+        img2 = PIL.Image.new("1", (img.size[0] + 8 - img.size[0] % 8, img.size[1]), "white")
+        img2.paste(img, (0, 0))
+        img = img2
+    img = PIL.ImageOps.invert(img.convert("L")).convert("1")
+    return (
+        b"\x1d\x76\x30\x00"
+        + struct.pack("2B", img.size[0] // 8 % 256, img.size[0] // 8 // 256)
+        + struct.pack("2B", img.size[1] % 256, img.size[1] // 256)
+        + img.tobytes()
+    )
+
 
 def label_to_png_bytes(img: PIL.Image.Image) -> bytes:
     """Return PNG bytes from a label PIL image, suitable for HTTP response."""

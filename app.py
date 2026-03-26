@@ -86,7 +86,7 @@ from py.processing import sort_key, get_unique_locations
 from py.mcp import blueprint as mcp_blueprint
 from py.label_printer import (
     create_label_classic, create_label_circular,
-    label_to_png_bytes,
+    label_to_png_bytes, label_to_printer_bytes,
 )
 
 ###############################################################################
@@ -1036,8 +1036,7 @@ def api_print_queue_pending():
     with get_conn() as conn:
         rows = conn.execute(
             """SELECT j.id, j.style, j.created_at,
-                      p.common, p.latin, p.variety,
-                      (SELECT MIN(e.happened_on) FROM events e WHERE e.plant_id = p.id) AS earliest_date
+                      p.common
                FROM print_jobs j
                JOIN plants p ON p.id = j.plant_id
                WHERE j.user_id = ? AND j.status = 'pending'
@@ -1046,18 +1045,42 @@ def api_print_queue_pending():
         ).fetchall()
     return jsonify([
         {
-            "job_id":    r["id"],
-            "style":     r["style"],
+            "job_id":     r["id"],
+            "style":      r["style"],
             "created_at": r["created_at"],
-            "plant": {
-                "common":       r["common"],
-                "latin":        r["latin"],
-                "variety":      r["variety"],
-                "earliest_date": r["earliest_date"],
-            },
+            "plant": {"common": r["common"]},
         }
         for r in rows
     ])
+
+
+@app.route("/api/print_queue/<int:job_id>/bytes", methods=["GET"])
+@_api_auth_required
+def api_print_job_bytes(job_id):
+    """Render the label and return raw ESC/POS bytes for the printer."""
+    with get_conn() as conn:
+        row = conn.execute(
+            """SELECT j.style, p.common, p.latin, p.variety,
+                      (SELECT MIN(e.happened_on) FROM events e WHERE e.plant_id = p.id) AS earliest_date
+               FROM print_jobs j
+               JOIN plants p ON p.id = j.plant_id
+               WHERE j.id = ? AND j.user_id = ?""",
+            (job_id, g.api_user["id"]),
+        ).fetchone()
+    if not row:
+        abort(404)
+    earliest = row["earliest_date"]
+    if earliest:
+        parts = earliest.split("-")
+        date_str = f"{parts[2]}-{parts[1]}-{parts[0]}" if len(parts) == 3 else earliest
+    else:
+        date_str = date.today().strftime("%d-%m-%Y")
+    variety = row["variety"] or None
+    if row["style"] == "circular":
+        img = create_label_circular(row["common"], row["latin"], date_str, variety)
+    else:
+        img = create_label_classic(row["common"], row["latin"], date_str, variety)
+    return Response(label_to_printer_bytes(img), mimetype="application/octet-stream")
 
 
 @app.route("/api/print_queue/<int:job_id>/done", methods=["POST"])
