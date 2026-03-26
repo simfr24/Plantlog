@@ -610,7 +610,14 @@ def _make_label_image(plant, style):
     common   = plant.get("common", "")
     latin    = plant.get("latin",  "")
     variety  = plant.get("variety") or None
-    date_str = date.today().strftime("%d-%m-%Y")
+    history = plant.get("history") or []
+    earliest = history[0]["start"] if history else None
+    if earliest:
+        # stored as YYYY-MM-DD, display as DD-MM-YYYY
+        parts = earliest.split("-")
+        date_str = f"{parts[2]}-{parts[1]}-{parts[0]}" if len(parts) == 3 else earliest
+    else:
+        date_str = date.today().strftime("%d-%m-%Y")
     if style == "circular":
         return create_label_circular(common, latin, date_str, variety)
     return create_label_classic(common, latin, date_str, variety)
@@ -1029,7 +1036,8 @@ def api_print_queue_pending():
     with get_conn() as conn:
         rows = conn.execute(
             """SELECT j.id, j.style, j.created_at,
-                      p.common, p.latin, p.variety
+                      p.common, p.latin, p.variety,
+                      (SELECT MIN(e.happened_on) FROM events e WHERE e.plant_id = p.id) AS earliest_date
                FROM print_jobs j
                JOIN plants p ON p.id = j.plant_id
                WHERE j.user_id = ? AND j.status = 'pending'
@@ -1042,9 +1050,10 @@ def api_print_queue_pending():
             "style":     r["style"],
             "created_at": r["created_at"],
             "plant": {
-                "common":  r["common"],
-                "latin":   r["latin"],
-                "variety": r["variety"],
+                "common":       r["common"],
+                "latin":        r["latin"],
+                "variety":      r["variety"],
+                "earliest_date": r["earliest_date"],
             },
         }
         for r in rows

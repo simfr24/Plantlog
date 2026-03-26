@@ -228,7 +228,12 @@ def _make_circular(common, latin, date_str, variety=None):
 def make_label(job):
     plant    = job["plant"]
     style    = job.get("style", "classic")
-    date_str = date.today().strftime("%d-%m-%Y")
+    earliest = plant.get("earliest_date")
+    if earliest:
+        parts = earliest.split("-")
+        date_str = f"{parts[2]}-{parts[1]}-{parts[0]}" if len(parts) == 3 else earliest
+    else:
+        date_str = date.today().strftime("%d-%m-%Y")
     return (_make_circular if style == "circular" else _make_classic)(
         plant["common"], plant["latin"], date_str, plant.get("variety") or None
     )
