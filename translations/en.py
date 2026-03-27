@@ -278,6 +278,9 @@ translations = {
     # ────────── misc ui ──────────
     "quick_log_done": "Done!",
     "search_placeholder": "Search plants, location, variety…",
+    "All": "All",
+    "List view": "List view",
+    "Garden view": "Garden view",
     "Log watering": "Log watering",
     "Log fertilization": "Log fertilization",
     "Admin": "Admin",

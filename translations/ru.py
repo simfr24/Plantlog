@@ -278,6 +278,9 @@ translations = {
     # ────────── misc ui ──────────
     "quick_log_done": "Готово!",
     "search_placeholder": "Поиск по растениям, расположению, разновидности…",
+    "All": "Все",
+    "List view": "Список",
+    "Garden view": "Вид сада",
     "Log watering": "Записать полив",
     "Log fertilization": "Записать подкормку",
     "Admin": "Администратор",

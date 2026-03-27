@@ -296,6 +296,12 @@ def build_dashboard_context(user_obj, lang):
 @login_required
 def index():
     ctx = build_dashboard_context(g.user, g.lang)
+    return render_template("new_home.html", **ctx)
+
+@app.route("/list")
+@login_required
+def list_view():
+    ctx = build_dashboard_context(g.user, g.lang)
     return render_template("index.html", **ctx)
 
 @app.route("/graveyard")

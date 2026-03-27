@@ -81,10 +81,10 @@ def anytime_soon_badge(days_left, progress, t):
         "bg-danger"
     )
     return Markup(
-        f'<span class="badge bg-warning text-dark ms-2 position-relative">'
+        f'<span class="badge bg-warning text-dark ms-2 position-relative" style="padding-bottom: 8px;">'
         f'{t["Anytime soon"]} <small>({format_age(days_left, t)})</small>'
         f'<div class="progress position-absolute bottom-0 start-0" '
-        f'style="height: 4px; width: 100%; border-radius: 0 0 0.2rem 0.2rem;">'
+        f'style="height: 4px; width: 100%; border-radius: 0 0 0.2rem 0.2rem; background: rgba(0,0,0,0.15);">'
         f'<div class="progress-bar {gradient}" style="width: {progress}%"></div>'
         f'</div></span>'
     )

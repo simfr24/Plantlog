@@ -1,0 +1,593 @@
+{% extends "base.html" %}
+{% block title %}
+  {% if public_view %}
+    Plantlog – {{ owner.username }}
+  {% else %}
+    Plantlog – {{ t['Plant Tracker'] }}
+  {% endif %}
+{% endblock %}
+
+{% block content %}
+
+{# Human-readable labels for event types #}
+{% set human_names = {
+  'sow':       'Sowing started on',
+  'soak':      'Soaking since',
+  'strat':     'Stratification started on',
+  'sprout':    'Germinated on',
+  'flower':    'Flowering since',
+  'fruit':     'Fruiting since',
+  'dead':      'Died on',
+  'measure':   'Measurement taken on',
+  'plant':     'Planted on',
+  'fertilize': 'Fertilized on',
+  'water':     'Watered on',
+  'custom':    '{event} on',
+} %}
+
+{# Muted hex colors per state (lowercase label → hex) #}
+{% set state_colors = {
+  'sown':         '#5f9e72',
+  'soaking':      '#5b82a8',
+  'stratifying':  '#6b8fa8',
+  'growing':      '#4a8f68',
+  'flowering':    '#a87e3a',
+  'fruiting':     '#a85040',
+  'dead':         '#8a9098',
+} %}
+
+<style>
+  /* ── Garden Grid layout ─────────────────────────────────────────── */
+  .garden-header {
+    display: flex;
+    align-items: baseline;
+    gap: 1rem;
+    margin-bottom: 1.25rem;
+    flex-wrap: wrap;
+  }
+  .garden-header h1 { margin: 0; }
+
+  .garden-summary {
+    display: flex;
+    gap: 1.25rem;
+    flex-wrap: wrap;
+    align-items: center;
+    padding: 0.6rem 1rem;
+    background: #fff;
+    border: 1px solid #e4e8ed;
+    border-radius: 8px;
+    font-size: 0.82rem;
+    color: #5a6473;
+    margin-bottom: 1.25rem;
+  }
+  .summary-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    display: inline-block;
+    flex-shrink: 0;
+  }
+  .summary-item {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    white-space: nowrap;
+  }
+
+  /* ── Search + filter row ─────────────────────────────────────────── */
+  .garden-controls {
+    display: flex;
+    gap: 0.65rem;
+    align-items: center;
+    flex-wrap: wrap;
+    margin-bottom: 1.1rem;
+  }
+  .garden-controls input[type="search"] {
+    flex: 0 0 300px;
+    font-size: 0.85rem;
+    padding: 0.35rem 0.7rem;
+    border: 1px solid #d0d5dd;
+    border-radius: 6px;
+    background: #fff;
+    outline: none;
+    color: #2d3748;
+  }
+  .garden-controls input[type="search"]:focus {
+    border-color: #6b9eb0;
+    box-shadow: 0 0 0 2px rgba(107,158,176,0.18);
+  }
+  .state-pills {
+    display: flex;
+    gap: 0.4rem;
+    flex-wrap: wrap;
+  }
+  .pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    border: 1px solid #d0d5dd;
+    background: #fff;
+    border-radius: 999px;
+    padding: 0.25rem 0.75rem;
+    font-size: 0.78rem;
+    color: #4a5568;
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s, border-color 0.15s;
+    user-select: none;
+  }
+  .pill:hover { background: #f0f4f8; }
+  .pill.active {
+    background: #3d7a68;
+    color: #fff;
+    border-color: #3d7a68;
+  }
+  .pill .pill-count {
+    opacity: 0.72;
+    font-size: 0.73rem;
+  }
+
+  /* ── Plant grid ──────────────────────────────────────────────────── */
+  .garden-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: 0.9rem;
+  }
+
+  /* ── Clickable tile body ─────────────────────────────────────────── */
+  .tile-body-link {
+    display: block;
+    text-decoration: none;
+    color: inherit;
+  }
+  .tile-body-link:hover {
+    color: inherit;
+  }
+  .tile-body-link:hover .tile-body {
+    background: #f8fbff;
+  }
+
+  /* ── Plant tile ──────────────────────────────────────────────────── */
+  .plant-tile {
+    background: #fff;
+    border: 1px solid #e4e8ed;
+    border-radius: 9px;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    transition: box-shadow 0.18s, transform 0.18s;
+  }
+  .plant-tile:hover {
+    box-shadow: 0 4px 18px rgba(0,0,0,0.09);
+    transform: translateY(-1px);
+  }
+
+  .tile-bar {
+    height: 3px;
+    flex-shrink: 0;
+  }
+
+  .tile-body {
+    padding: 0.85rem 1rem 0.65rem;
+    flex: 1;
+  }
+
+  .tile-name {
+    font-weight: 600;
+    font-size: 0.97rem;
+    color: #1e2d3d;
+    line-height: 1.25;
+    margin-bottom: 0.15rem;
+  }
+  .tile-name .nickname {
+    color: #5b82a8;
+  }
+
+  .tile-latin {
+    font-style: italic;
+    color: #8898aa;
+    font-size: 0.8rem;
+    margin-bottom: 0.55rem;
+    line-height: 1.3;
+  }
+
+  .tile-status {
+    font-size: 0.79rem;
+    color: #4a5568;
+    margin-bottom: 0.35rem;
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.25rem;
+  }
+  .tile-status .state-label {
+    opacity: 0.75;
+  }
+
+  .tile-location {
+    font-size: 0.76rem;
+    color: #aab4c0;
+  }
+  .tile-location i { margin-right: 0.2rem; }
+
+  /* ── Tile footer (actions) ───────────────────────────────────────── */
+  .tile-footer {
+    padding: 0.5rem 0.75rem;
+    background: #f8fafc;
+    border-top: 1px solid #edf0f4;
+    display: flex;
+    gap: 0.35rem;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+
+  .tile-action {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    font-size: 0.76rem;
+    padding: 0.22rem 0.55rem;
+    border-radius: 5px;
+    border: 1px solid #d0d5dd;
+    background: #fff;
+    color: #4a5568;
+    text-decoration: none;
+    cursor: pointer;
+    transition: background 0.13s, color 0.13s;
+    line-height: 1;
+  }
+  .tile-action:hover {
+    background: #edf2f7;
+    color: #2d3748;
+    text-decoration: none;
+  }
+  .tile-action.primary {
+    border-color: #5b82a8;
+    color: #5b82a8;
+    margin-left: auto;
+  }
+  .tile-action.primary:hover {
+    background: #5b82a8;
+    color: #fff;
+  }
+
+  /* ── Badge overrides for muted palette ──────────────────────────── */
+  .tile-status .badge.bg-warning  { background-color: #a87e3a !important; color: #fff !important; }
+  .tile-status .badge.bg-info     { background-color: #5b8fa8 !important; }
+  .tile-status .badge.bg-success  { background-color: #4a8a68 !important; }
+  .tile-status .badge.bg-danger   { background-color: #a84040 !important; }
+  .tile-status .badge.bg-secondary { background-color: #7a8a98 !important; }
+
+  /* ── Empty / graveyard link ──────────────────────────────────────── */
+  .graveyard-link {
+    text-align: center;
+    margin-top: 2rem;
+    font-size: 0.82rem;
+    color: #aab4c0;
+  }
+  .graveyard-link a {
+    color: #aab4c0;
+    text-decoration: none;
+  }
+  .graveyard-link a:hover { color: #8898aa; }
+
+  /* ── View switcher ───────────────────────────────────────────────── */
+  .view-switcher {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+  }
+  .view-switcher a {
+    font-size: 0.8rem;
+    color: #8898aa;
+    text-decoration: none;
+    border: 1px solid #d0d5dd;
+    border-radius: 5px;
+    padding: 0.25rem 0.65rem;
+    transition: background 0.13s;
+  }
+  .view-switcher a:hover { background: #f0f4f8; color: #4a5568; }
+
+  @media (max-width: 480px) {
+    .garden-grid { grid-template-columns: 1fr; }
+    .garden-controls input[type="search"] { flex: 1 1 100%; }
+  }
+</style>
+
+{# ── Page header ─────────────────────────────────────────────────────── #}
+<div class="garden-header">
+  <h1>
+    {% if public_view %}
+      {{ t["{name}'s plants"].format(name=owner.username) }}
+    {% else %}
+      {{ t['My plants'] }}
+    {% endif %}
+  </h1>
+  <div class="view-switcher">
+    <a href="{{ url_for('list_view', lang=lang) }}">
+      <i class="fas fa-list me-1"></i>{{ t['List view'] }}
+    </a>
+  </div>
+</div>
+
+{% if plants %}
+
+{# ── Summary bar ──────────────────────────────────────────────────────── #}
+{% set alive_states = (left_col + right_col) | rejectattr('2') | list %}
+{% if alive_states %}
+<div class="garden-summary">
+  {% for state, state_plants, is_dead_state in alive_states %}
+    {% set col = state_colors.get(state|lower, '#8898aa') %}
+    <div class="summary-item">
+      <span class="summary-dot" style="background:{{ col }}"></span>
+      <span>{{ state_plants|length }}&thinsp;{{ t[state] if state in t else state }}</span>
+    </div>
+  {% endfor %}
+</div>
+{% endif %}
+
+{# ── Controls: search + state filter pills ───────────────────────────── #}
+<div class="garden-controls">
+  {% if not public_view %}
+  <input type="search" id="gardenSearch" placeholder="{{ t['search_placeholder'] }}" autocomplete="off">
+  {% endif %}
+  <div class="state-pills" id="statePills">
+    <button class="pill active" data-state="all">
+      {{ t['All'] }}
+      <span class="pill-count">{{ plants | rejectattr('state', 'none') | selectattr('state.label', 'ne', 'Dead') | list | length }}</span>
+    </button>
+    {% for state, state_plants, is_dead_state in alive_states %}
+      {% set col = state_colors.get(state|lower, '#8898aa') %}
+      <button class="pill" data-state="{{ state|lower }}"
+              style="--pill-active-bg: {{ col }}">
+        {{ t[state] if state in t else state }}
+        <span class="pill-count">{{ state_plants|length }}</span>
+      </button>
+    {% endfor %}
+  </div>
+</div>
+
+{# ── Garden grid ──────────────────────────────────────────────────────── #}
+<div class="garden-grid" id="gardenGrid">
+
+{% for state, state_plants, is_dead_state in left_col + right_col %}
+{% if not is_dead_state %}
+{% for batch_id, batch_plants in group_by_batch(state_plants) %}
+{% for p in batch_plants %}
+{% set idx = p.id %}
+{% set current_event = p.current %}
+{% set action = current_event.action %}
+{% set last_non_custom = (p.history | rejectattr('action', 'equalto', 'custom') | list)[-1] if p.history | rejectattr('action', 'equalto', 'custom') | list else None %}
+{% set now_date = today %}
+{% set bar_color = state_colors.get(state|lower, '#8898aa') %}
+
+{# ── Badge HTML computation (same logic as state_card.html) ── #}
+{% set badge_html = '' %}
+{% if last_non_custom %}
+  {% set badge_action = last_non_custom.action %}
+  {% set badge_start = last_non_custom.start %}
+  {% if badge_action == 'sow' and 'range' in last_non_custom %}
+    {% set min_val, current_unit, max_val, max_unit = last_non_custom.range %}
+    {% set min_days = duration_to_days(min_val, current_unit) %}
+    {% set max_days = duration_to_days(max_val, max_unit) %}
+    {% set min_date = badge_start | dateadd(days=min_days) %}
+    {% set max_date = badge_start | dateadd(days=max_days) %}
+    {% if now_date > max_date %}
+      {% set badge_html = overdue_badge(t) %}
+    {% elif now_date >= min_date %}
+      {% set days_passed = (now_date - min_date).days %}
+      {% set total_window = (max_date - min_date).days %}
+      {% set days_left = (max_date - now_date).days %}
+      {% set progress = (days_passed / total_window * 100)|round|int %}
+      {% set badge_html = anytime_soon_badge(days_left, progress, t) %}
+    {% else %}
+      {% set days_left = (min_date - now_date).days %}
+      {% set badge_html = countdown_badge(days_left, t) %}
+    {% endif %}
+  {% elif badge_action in ['soak', 'strat'] %}
+    {% set val, unit = last_non_custom.duration %}
+    {% set duration_days = duration_to_days(val, unit) %}
+    {% set end_date = badge_start | dateadd(days=duration_days) %}
+    {% if now_date >= end_date %}
+      {% set badge_html = done_badge(t) %}
+    {% else %}
+      {% set days_left = (end_date - now_date).days %}
+      {% set badge_html = countdown_badge(days_left, t) %}
+    {% endif %}
+  {% elif badge_action == 'sprout' %}
+    {% set sprouted_date = badge_start|todate %}
+    {% set age_days = (now_date - sprouted_date).days %}
+    {% set measurements = p.history|selectattr('action', 'equalto', 'measure')|list %}
+    {% set last_measurement = measurements|sort(attribute='start')|last if measurements else None %}
+    {% if last_measurement %}
+      {% set size_value = last_measurement.size[0]|float %}
+      {% set size_display = size_value|int if size_value == size_value|int else size_value %}
+      {% set size_unit = last_measurement.size[1] %}
+      {% set days_since = (now_date - last_measurement.start|todate).days %}
+      {% set badge_html = '<span class="badge bg-success ms-1">' ~ size_display ~ size_unit ~ ' <small>(' ~ days_since ~ ' ' ~ (t['days ago'] if 'days ago' in t else 'days ago') ~ ')</small></span>' %}
+    {% else %}
+      {% set badge_html = age_badge(t['Age'] if 'Age' in t else 'Age', age_days, t) %}
+    {% endif %}
+  {% elif badge_action == 'measure' %}
+    {% set size_value = last_non_custom.size[0]|float %}
+    {% set size_display = size_value|int if size_value == size_value|int else size_value %}
+    {% set size_unit = last_non_custom.size[1] %}
+    {% set sprout_event = p.history|selectattr('action', 'equalto', 'sprout')|list|first %}
+    {% set planted_event = p.history|selectattr('action', 'equalto', 'plant')|list|first %}
+    {% set base_event = sprout_event if sprout_event else planted_event %}
+    {% if base_event %}
+      {% set age_days = (now_date - base_event.start|todate).days %}
+      {% set badge_html = size_badge(size_display, size_unit, t['Age'] if 'Age' in t else 'Age', age_days, t) %}
+    {% else %}
+      {% set badge_html = '<span class="badge bg-success ms-1">' ~ size_display ~ size_unit ~ '</span>' %}
+    {% endif %}
+  {% else %}
+    {% set sprout_event = p.history | selectattr('action', 'equalto', 'sprout') | list | first %}
+    {% set plant_event  = p.history | selectattr('action', 'equalto', 'plant')  | list | first %}
+    {% set age_base = sprout_event if sprout_event else plant_event %}
+    {% if age_base %}
+      {% set age_days = (now_date - age_base.start|todate).days %}
+      {% set badge_html = age_badge(t['Age'] if 'Age' in t else 'Age', age_days, t) %}
+    {% endif %}
+  {% endif %}
+{% endif %}
+
+{# ── Tile ── #}
+<div class="plant-tile"
+     data-state="{{ state|lower }}"
+     data-search="{{ p.common|lower }} {{ p.latin|lower }} {{ (p.variety ~ ' ')|lower if p.variety else '' }}{{ (p.nickname ~ ' ')|lower if p.nickname else '' }}{{ (p.location ~ ' ')|lower if p.location else '' }}">
+
+  <div class="tile-bar" style="background: {{ bar_color }}"></div>
+
+  {% if not public_view %}
+  <a href="{{ url_for('view_plant', idx=idx, lang=lang) }}" class="tile-body-link">
+  {% else %}
+  <a href="{{ url_for('public_view_plant', idx=idx, lang=lang) }}" class="tile-body-link">
+  {% endif %}
+  <div class="tile-body">
+    <div class="tile-name">
+      {% if p.nickname %}<span class="nickname">{{ p.nickname }}</span> · {% endif %}
+      {{ p.common }}
+      {% if p.count and p.count > 1 %}&thinsp;<span class="badge bg-secondary" style="font-size:0.7rem">×{{ p.count }}</span>{% endif %}
+    </div>
+    <div class="tile-latin">
+      {{ p.latin }}{% if p.variety %} — {{ p.variety }}{% endif %}
+    </div>
+    <div class="tile-status">
+      <span class="state-label">{{ t[state] if state in t else state }}</span>
+      {% if badge_html %}{{ badge_html|safe }}{% endif %}
+    </div>
+    {% if p.location %}
+    <div class="tile-location"><i class="fas fa-location-dot"></i>{{ p.location }}</div>
+    {% endif %}
+  </div>
+  </a>
+
+  <div class="tile-footer">
+    {% if not public_view %}
+      <button class="tile-action quick-log-btn" data-plant-id="{{ idx }}" data-event="water"
+              title="{{ t['Log watering'] }}">
+        <i class="fas fa-droplet"></i>
+      </button>
+      <button class="tile-action quick-log-btn" data-plant-id="{{ idx }}" data-event="fertilize"
+              title="{{ t['Log fertilization'] }}">
+        <i class="fas fa-bottle-water"></i>
+      </button>
+      {% set p_state = p.state.label if p.state else '' %}
+      {% if p_state in ['Flowering', 'Fruiting'] %}
+      <button class="tile-action end-phase-btn" data-plant-id="{{ idx }}"
+              title="{{ t['End of flowering'] if p_state == 'Flowering' else t['End of fruiting'] }}">
+        <i class="fas fa-flag-checkered"></i>
+      </button>
+      {% endif %}
+      <a href="{{ url_for('add_stage', idx=idx, lang=lang) }}" class="tile-action"
+         title="{{ t['Add stage'] }}">
+        <i class="fas fa-plus"></i>
+      </a>
+    {% endif %}
+  </div>
+
+</div>
+{% endfor %}{# batch_plants #}
+{% endfor %}{# group_by_batch #}
+{% endif %}{# not is_dead_state #}
+{% endfor %}{# states #}
+
+</div>{# .garden-grid #}
+
+{% else %}
+  <p class="text-muted">{{ t['No plants yet'] }}</p>
+{% endif %}
+
+{% if dead_count %}
+<div class="graveyard-link">
+  <a href="{{ url_for('graveyard', lang=lang) }}">
+    <i class="fas fa-skull me-1"></i>{{ dead_count }} {{ t['dead_plants_footer'] }}
+  </a>
+</div>
+{% endif %}
+
+<script>
+// ── State filter pills ────────────────────────────────────────────────
+const pills = document.querySelectorAll('.pill');
+pills.forEach(pill => {
+  pill.addEventListener('click', function() {
+    pills.forEach(p => p.classList.remove('active'));
+    this.classList.add('active');
+    const state = this.dataset.state;
+    document.querySelectorAll('.plant-tile').forEach(tile => {
+      tile.style.display = (state === 'all' || tile.dataset.state === state) ? '' : 'none';
+    });
+  });
+});
+
+// ── Search ────────────────────────────────────────────────────────────
+const searchInput = document.getElementById('gardenSearch');
+if (searchInput) {
+  searchInput.addEventListener('input', function() {
+    const q = this.value.toLowerCase().trim();
+    // Reset state filter to "all" when searching
+    pills.forEach(p => p.classList.remove('active'));
+    document.querySelector('[data-state="all"]').classList.add('active');
+    document.querySelectorAll('.plant-tile').forEach(tile => {
+      tile.style.display = (!q || tile.dataset.search.includes(q)) ? '' : 'none';
+    });
+  });
+}
+
+// ── Quick-log (water / fertilize) ────────────────────────────────────
+document.addEventListener('click', function(e) {
+  const btn = e.target.closest('.quick-log-btn');
+  if (!btn) return;
+  const plantId = btn.dataset.plantId;
+  const event   = btn.dataset.event;
+  btn.disabled  = true;
+  const orig    = btn.innerHTML;
+  btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+  fetch(`/quick_log/${plantId}`, {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({event})
+  })
+  .then(r => r.json())
+  .then(data => {
+    if (data.ok) {
+      btn.innerHTML = '<i class="fas fa-check"></i>';
+      setTimeout(() => location.reload(), 600);
+    } else {
+      btn.innerHTML = orig;
+      btn.disabled = false;
+      alert(data.errors || data.error || 'Error');
+    }
+  })
+  .catch(() => { btn.innerHTML = orig; btn.disabled = false; });
+});
+
+// ── End-phase (flowering / fruiting) ─────────────────────────────────
+document.addEventListener('click', function(e) {
+  const btn = e.target.closest('.end-phase-btn');
+  if (!btn) return;
+  const plantId = btn.dataset.plantId;
+  btn.disabled  = true;
+  const orig    = btn.innerHTML;
+  btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+  fetch(`/end_phase/${plantId}`, {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({})
+  })
+  .then(r => r.json())
+  .then(data => {
+    if (data.ok) {
+      btn.innerHTML = '<i class="fas fa-check"></i>';
+      setTimeout(() => location.reload(), 600);
+    } else {
+      btn.innerHTML = orig;
+      btn.disabled = false;
+      alert(data.error || 'Error');
+    }
+  })
+  .catch(() => { btn.innerHTML = orig; btn.disabled = false; });
+});
+</script>
+
+{% endblock %}

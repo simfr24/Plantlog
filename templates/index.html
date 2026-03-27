@@ -9,14 +9,21 @@
 
 {% block content %}
 
-<h1 class="mb-4">
-  {% if public_view %}
-    <i class="fas fa-user me-2 text-secondary"></i>
-    {{ t["{name}'s plants"].format(name=owner.username) }}
-  {% else %}
-    {{ t['My plants'] }}
+<div class="d-flex align-items-baseline gap-3 mb-4">
+  <h1 class="mb-0">
+    {% if public_view %}
+      <i class="fas fa-user me-2 text-secondary"></i>
+      {{ t["{name}'s plants"].format(name=owner.username) }}
+    {% else %}
+      {{ t['My plants'] }}
+    {% endif %}
+  </h1>
+  {% if not public_view %}
+  <a href="{{ url_for('index', lang=lang) }}" class="text-muted text-decoration-none small border rounded px-2 py-1 ms-auto">
+    <i class="fas fa-grip me-1"></i>{{ t['Garden view'] }}
+  </a>
   {% endif %}
-</h1>
+</div>
 
 
 
