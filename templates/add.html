@@ -192,7 +192,9 @@
 
     <div class="form-section">
       <div class="form-section-label">{{ t['Current stage'] }}</div>
-      {% include "stage_sections.html" %}
+      {% with event_specs = starting_event_specs %}
+        {% include "stage_sections.html" %}
+      {% endwith %}
     </div>
 
     <div class="submit-row">

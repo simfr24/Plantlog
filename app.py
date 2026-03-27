@@ -427,6 +427,9 @@ def add_plant():
         form = get_empty_form()
         errors = []
 
+    _starting_codes = {'sow', 'soak', 'strat', 'plant'}
+    starting_event_specs = [s for s in get_event_specs() if s['code'] in _starting_codes]
+
     return render_template(
         "add.html",
         lang=lang,
@@ -435,6 +438,7 @@ def add_plant():
         errors=errors,
         locations=get_unique_locations(plants),
         today=date.today(),
+        starting_event_specs=starting_event_specs,
     )
 
 
