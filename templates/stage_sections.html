@@ -4,12 +4,91 @@
   Requires: event_specs, form, today, t
 #}
 
+{# Group event codes into tabs #}
+{% set tab_groups = [
+  ('prep',   'stage_tab_prep',   'fa-seedling',  ['soak','strat','sow','plant']),
+  ('growth', 'stage_tab_growth', 'fa-leaf',      ['sprout','flower','fruit','dead']),
+  ('care',   'stage_tab_care',   'fa-droplet',   ['water','fertilize','measure','custom']),
+] %}
+
+{# Build a map of code → spec for quick lookup #}
+{% set spec_map = {} %}
+{% for s in event_specs %}
+  {% if spec_map.update({s.code: s}) %}{% endif %}
+{% endfor %}
+
+{# Determine which tab contains the currently-selected status #}
+{% set active_tab = namespace(val='prep') %}
+{% for tab_id, tab_key, tab_icon, codes in tab_groups %}
+  {% if form.status in codes %}
+    {% set active_tab.val = tab_id %}
+  {% endif %}
+{% endfor %}
+
+{# Color palette per bs_color → hex values (muted but readable) #}
+{% set color_map = {
+  'success':   {'bg': '#eef7f2', 'border': '#4a8a68', 'text': '#2a5c48', 'icon': '#4a8a68'},
+  'primary':   {'bg': '#eef3fb', 'border': '#4a72b0', 'text': '#2d4f85', 'icon': '#4a72b0'},
+  'info':      {'bg': '#e8f6fb', 'border': '#2e9dbf', 'text': '#1a6e8a', 'icon': '#2e9dbf'},
+  'warning':   {'bg': '#fdf6e8', 'border': '#c08a18', 'text': '#7a5610', 'icon': '#c08a18'},
+  'danger':    {'bg': '#fdf0f0', 'border': '#c04040', 'text': '#8a2020', 'icon': '#c04040'},
+  'secondary': {'bg': '#f3f4f6', 'border': '#7a8a98', 'text': '#4a5568', 'icon': '#7a8a98'},
+  'dark':      {'bg': '#f0f1f2', 'border': '#3a3f46', 'text': '#1a1d22', 'icon': '#3a3f46'},
+} %}
+
+{# Generate per-button checked-state rules — avoids CSS variable cascade issues #}
 <style>
-  /* ── Stage picker ──────────────────────────────────────────────── */
+  {% for s in event_specs %}
+  {% set col = color_map.get(s.bs_color, color_map['secondary']) %}
+  #btn-{{ s.code }}:checked + .stage-lbl {
+    background: {{ col.bg }};
+    border-color: {{ col.border }};
+    color: {{ col.text }};
+    font-weight: 600;
+  }
+  {% endfor %}
+</style>
+
+<style>
+  /* ── Tab strip ─────────────────────────────────────────────────── */
+  .stage-tabs {
+    display: flex;
+    gap: 0;
+    border-bottom: 2px solid #e4e8ed;
+    margin-bottom: 1.1rem;
+  }
+  .stage-tab-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.55rem 1.1rem;
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: #8898aa;
+    background: none;
+    border: none;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -2px;
+    cursor: pointer;
+    transition: color 0.15s, border-color 0.15s;
+    user-select: none;
+  }
+  .stage-tab-btn:hover { color: #3d7a68; }
+  .stage-tab-btn.tab-active {
+    color: #3d7a68;
+    border-bottom-color: #3d7a68;
+  }
+  .stage-tab-btn i { font-size: 0.78rem; opacity: 0.8; }
+
+  /* ── Tab panels ────────────────────────────────────────────────── */
+  .stage-tab-panel { display: none; }
+  .stage-tab-panel.tab-open { display: block; }
+
+  /* ── Stage picker grid ─────────────────────────────────────────── */
   .stage-picker {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(128px, 1fr));
-    gap: 0.45rem;
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: 0.55rem;
     margin-bottom: 1rem;
   }
   .stage-item { position: relative; }
@@ -23,28 +102,24 @@
   .stage-lbl {
     display: flex;
     align-items: center;
-    gap: 0.4rem;
-    padding: 0.5rem 0.75rem;
-    border: 1px solid #d0d5dd;
-    border-radius: 7px;
+    gap: 0.55rem;
+    padding: 0.65rem 0.9rem;
+    border: 1.5px solid #d0d5dd;
+    border-radius: 8px;
     background: #fff;
     color: #4a5568;
-    font-size: 0.82rem;
+    font-size: 0.86rem;
     cursor: pointer;
     transition: border-color 0.13s, background 0.13s, color 0.13s;
     user-select: none;
     white-space: nowrap;
     overflow: hidden;
   }
-  .stage-lbl i { opacity: 0.6; flex-shrink: 0; }
-  .stage-lbl:hover { background: #f5f8fa; border-color: #aab4c0; }
-  .stage-radio:checked + .stage-lbl {
-    background: #eef5f1;
-    border-color: #4a8a68;
-    color: #2a5c48;
-    font-weight: 600;
+  .stage-lbl i {
+    font-size: 1rem;
+    flex-shrink: 0;
   }
-  .stage-radio:checked + .stage-lbl i { opacity: 1; }
+  .stage-lbl:hover { background: #f5f8fa; border-color: #aab4c0; }
 
   /* ── Extra fields ──────────────────────────────────────────────── */
   .stage-extra {
@@ -65,19 +140,45 @@
   .stage-extra .form-text { font-size: 0.76rem; color: #a0aec0; margin-top: 0.2rem; }
 </style>
 
-<div class="stage-picker">
-  {% for s in event_specs %}
-  <div class="stage-item">
-    <input type="radio" class="stage-radio"
-           name="status" id="btn-{{ s.code }}" value="{{ s.code }}"
-           {% if form.status == s.code %}checked{% endif %}>
-    <label class="stage-lbl" for="btn-{{ s.code }}">
-      <i class="fas {{ s.icon }}"></i>
-      {{ t[s.label] if s.label in t else s.label }}
-    </label>
-  </div>
+{# ── Tab navigation ──────────────────────────────────────────────────── #}
+<div class="stage-tabs" id="stageTabs">
+  {% for tab_id, tab_key, tab_icon, codes in tab_groups %}
+  {# Only show the tab if at least one of its codes exists in event_specs #}
+  {% set has_items = namespace(val=false) %}
+  {% for code in codes %}{% if code in spec_map %}{% set has_items.val = true %}{% endif %}{% endfor %}
+  {% if has_items.val %}
+  <button type="button" class="stage-tab-btn{% if active_tab.val == tab_id %} tab-active{% endif %}"
+          data-tab="{{ tab_id }}">
+    <i class="fas {{ tab_icon }}"></i>
+    {{ t[tab_key] if tab_key in t else tab_key }}
+  </button>
+  {% endif %}
   {% endfor %}
 </div>
+
+{# ── Tab panels ──────────────────────────────────────────────────────── #}
+{% for tab_id, tab_key, tab_icon, codes in tab_groups %}
+<div class="stage-tab-panel{% if active_tab.val == tab_id %} tab-open{% endif %}"
+     id="tab-panel-{{ tab_id }}">
+  <div class="stage-picker">
+    {% for code in codes %}
+    {% if code in spec_map %}
+    {% set s = spec_map[code] %}
+    {% set col = color_map.get(s.bs_color, color_map['secondary']) %}
+    <div class="stage-item">
+      <input type="radio" class="stage-radio"
+             name="status" id="btn-{{ s.code }}" value="{{ s.code }}"
+             {% if form.status == s.code %}checked{% endif %}>
+      <label class="stage-lbl" for="btn-{{ s.code }}">
+        <i class="fas {{ s.icon }}" style="color: {{ col.icon }}"></i>
+        {{ t[s.label] if s.label in t else s.label }}
+      </label>
+    </div>
+    {% endif %}
+    {% endfor %}
+  </div>
+</div>
+{% endfor %}
 
 <!-- Shared: event date (always visible) -->
 <div id="shared-event-date">
@@ -202,6 +303,7 @@
 
 <script>
   (function () {
+    // ── Extra-fields logic ───────────────────────────────────────────
     var extraMap = {
       'sow':    'extra-sow',
       'soak':   'extra-duration',
@@ -229,5 +331,36 @@
 
     var checked = document.querySelector('input[name="status"]:checked');
     if (checked) applyExtras(checked.value);
+
+    // ── Tab switching ────────────────────────────────────────────────
+    document.querySelectorAll('.stage-tab-btn').forEach(function(btn) {
+      btn.addEventListener('click', function() {
+        var tabId = this.dataset.tab;
+        // Update button active states
+        document.querySelectorAll('.stage-tab-btn').forEach(function(b) {
+          b.classList.toggle('tab-active', b.dataset.tab === tabId);
+        });
+        // Show matching panel
+        document.querySelectorAll('.stage-tab-panel').forEach(function(p) {
+          p.classList.toggle('tab-open', p.id === 'tab-panel-' + tabId);
+        });
+      });
+    });
+
+    // When a radio is selected, switch to its tab automatically
+    document.querySelectorAll('input[name="status"]').forEach(function(r) {
+      r.addEventListener('change', function() {
+        var panel = this.closest('.stage-tab-panel');
+        if (panel) {
+          var tabId = panel.id.replace('tab-panel-', '');
+          document.querySelectorAll('.stage-tab-btn').forEach(function(b) {
+            b.classList.toggle('tab-active', b.dataset.tab === tabId);
+          });
+          document.querySelectorAll('.stage-tab-panel').forEach(function(p) {
+            p.classList.toggle('tab-open', p.id === panel.id);
+          });
+        }
+      });
+    });
   })();
 </script>
