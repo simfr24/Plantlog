@@ -1,68 +1,206 @@
 {% extends "base.html" %}
-{% block title %}{{ t['Add plant'] }} - Plantlog{% endblock %}
+{% block title %}{{ t['Add plant'] }} – Plantlog{% endblock %}
+
 {% block content %}
-  <div class="container py-4">
-    <div class="d-flex align-items-center mb-4">
-      <img src="{{ url_for('static', filename='logo.png') }}" alt="Plantlog" style="height:50px;" class="me-3">
-      <h1 class="mb-0 display-6 text-success">{{ t['Add plant'] }}</h1>
-    </div>
-    {% if errors %}<div class="alert alert-danger"><ul class="mb-0">{% for error in errors %}<li>{{ error }}</li>{% endfor %}</ul></div>{% endif %}
-    
-<div class="card shadow-sm">
-      <div class="card-body">
-        <form method="post">
-          <div class="row g-3">
-            <div class="col-md-6">
-              <label class="form-label fw-semibold">{{ t['Common name'] }}</label>
-              <div class="input-group">
-                <input class="form-control" name="common" id="common" value="{{ form.common }}" placeholder="{{ t['e.g. Tomato'] }}">
-              </div>
-            </div>
-            <div class="col-md-6">
-              <label class="form-label fw-semibold">{{ t['Latin name'] }}</label>
-              <div class="input-group">
-                <input class="form-control" name="latin" id="latin" value="{{ form.latin }}" placeholder="{{ t['e.g. Latin name'] }}">
-              </div>
-            </div>
-            <div class="col-md-6">
-              <label class="form-label fw-semibold">{{ t['Location'] }}</label>
-              <input class="form-control" name="location" id="location" list="locations" value="{{ form.location }}" placeholder="{{ t['e.g. Greenhouse'] }}">
-              <datalist id="locations">{% for location in locations %}<option value="{{ location }}">{% endfor %}</datalist>
-            </div>
-            <div class="col-md-6">
-              <label class="form-label fw-semibold">{{ t['Variety / Batch'] }} <span class="text-muted fw-normal">({{ t['optional'] }})</span></label>
-              <input class="form-control" name="variety" id="variety" value="{{ form.variety }}" placeholder="{{ t['e.g. variety'] }}">
-            </div>
-            <div class="col-md-6">
-              <label class="form-label fw-semibold">{{ t['plant_nickname'] }} <span class="text-muted fw-normal">({{ t['optional'] }})</span></label>
-              <input class="form-control" name="nickname" value="{{ form.nickname }}" placeholder="{{ t['plant_nickname_placeholder'] }}">
-            </div>
-            <div class="col-md-6">
-              <label class="form-label fw-semibold">{{ t['plant_count'] }}</label>
-              <input class="form-control" type="number" name="count" value="{{ form.count }}" min="1">
-              <div class="form-text">{{ t['plant_count_hint'] }}</div>
-            </div>
-            <div class="col-md-12">
-              <label class="form-label fw-semibold">{{ t['Notes'] }}</label>
-              <textarea class="form-control" name="notes" id="notes" placeholder="{{ t['e.g. Notes'] }}">{{ form.notes }}</textarea>
-            </div>
-          </div>
-          <hr class="my-4">
-          <h5 class="fw-semibold text-secondary mb-3">{{ t['Current stage'] }}</h5>
-          {% include "stage_sections.html" %}
-          <button class="btn btn-success mt-3 px-4"><i class="fas fa-save me-1"></i> {{ t['Save'] }}</button>
-        </form>
+<style>
+  /* ── Shared form page layout ───────────────────────────────────── */
+  .form-wrap {
+    max-width: 660px;
+    margin: 0 auto;
+  }
+  .form-page-header {
+    display: flex;
+    align-items: baseline;
+    gap: 1rem;
+    margin-bottom: 2rem;
+  }
+  .form-page-header h1 {
+    font-size: 1.45rem;
+    font-weight: 600;
+    color: #1e2d3d;
+    margin: 0;
+  }
+  .form-back {
+    font-size: 0.8rem;
+    color: #8898aa;
+    text-decoration: none;
+    border: 1px solid #d0d5dd;
+    border-radius: 5px;
+    padding: 0.22rem 0.6rem;
+    margin-left: auto;
+    transition: background 0.13s;
+    white-space: nowrap;
+  }
+  .form-back:hover { background: #f0f4f8; color: #4a5568; }
+
+  .form-section { margin-bottom: 2rem; }
+  .form-section-label {
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+    color: #b0bbc8;
+    margin-bottom: 0.85rem;
+    padding-bottom: 0.4rem;
+    border-bottom: 1px solid #edf0f4;
+  }
+
+  .field-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.9rem;
+  }
+  .field-grid .span2 { grid-column: 1 / -1; }
+
+  .field-lbl {
+    display: block;
+    font-size: 0.81rem;
+    font-weight: 600;
+    color: #3d4d5c;
+    margin-bottom: 0.28rem;
+  }
+  .field-lbl .opt {
+    font-weight: 400;
+    color: #b0bbc8;
+    font-size: 0.76rem;
+  }
+  .form-control, .form-select {
+    font-size: 0.87rem;
+    border-color: #d0d5dd;
+    border-radius: 6px;
+    color: #2d3748;
+    background: #fff;
+  }
+  .form-control:focus, .form-select:focus {
+    border-color: #6b9eb0;
+    box-shadow: 0 0 0 3px rgba(107,158,176,0.14);
+  }
+  textarea.form-control { resize: vertical; min-height: 76px; }
+  .field-hint { font-size: 0.75rem; color: #b0bbc8; margin-top: 0.22rem; }
+
+  .error-box {
+    background: #fff5f5;
+    border: 1px solid #f0c0c0;
+    border-radius: 7px;
+    padding: 0.7rem 1rem;
+    margin-bottom: 1.5rem;
+    font-size: 0.84rem;
+    color: #9b2c2c;
+  }
+  .error-box ul { margin: 0; padding-left: 1.2rem; }
+
+  .submit-row {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding-top: 0.5rem;
+  }
+  .btn-primary-action {
+    background: #3d7a68;
+    color: #fff;
+    border: none;
+    border-radius: 7px;
+    padding: 0.5rem 1.4rem;
+    font-size: 0.88rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+  .btn-primary-action:hover { background: #2d6050; }
+
+  @media (max-width: 520px) {
+    .field-grid { grid-template-columns: 1fr; }
+    .field-grid .span2 { grid-column: 1; }
+  }
+</style>
+
+<div class="form-wrap">
+
+  <div class="form-page-header">
+    <h1><i class="fas fa-seedling me-2" style="color:#4a8a68; font-size:1.1rem"></i>{{ t['Add plant'] }}</h1>
+    <a href="{{ url_for('index', lang=lang) }}" class="form-back">
+      <i class="fas fa-arrow-left me-1"></i>{{ t['Back to dashboard'] }}
+    </a>
+  </div>
+
+  {% if errors %}
+  <div class="error-box">
+    <ul>{% for e in errors %}<li>{{ e }}</li>{% endfor %}</ul>
+  </div>
+  {% endif %}
+
+  <form method="post">
+
+    <div class="form-section">
+      <div class="form-section-label">{{ t['Common name'] }} &amp; {{ t['Latin name'] }}</div>
+      <div class="field-grid">
+        <div>
+          <label class="field-lbl" for="common">{{ t['Common name'] }}</label>
+          <input class="form-control" name="common" id="common"
+                 value="{{ form.common }}" placeholder="{{ t['e.g. Tomato'] }}">
+        </div>
+        <div>
+          <label class="field-lbl" for="latin">{{ t['Latin name'] }}</label>
+          <input class="form-control" name="latin" id="latin"
+                 value="{{ form.latin }}" placeholder="{{ t['e.g. Latin name'] }}">
+        </div>
       </div>
     </div>
-  </div>
-  
-  <script>
-    // Existing stage switching logic
-    document.addEventListener('change', function() {
-      const sel = document.querySelector('input[name="status"]:checked').value;
-      document.querySelectorAll('.stage-section').forEach(s => s.style.display = s.id === 'stage-' + sel ? 'block' : 'none');
-    });
-    document.addEventListener('DOMContentLoaded', () => document.dispatchEvent(new Event('change')));
-    
-  </script>
+
+    <div class="form-section">
+      <div class="form-section-label">{{ t['Location'] }} &amp; {{ t['Variety / Batch'] }}</div>
+      <div class="field-grid">
+        <div>
+          <label class="field-lbl" for="location">{{ t['Location'] }}</label>
+          <input class="form-control" name="location" id="location"
+                 list="locations" value="{{ form.location }}"
+                 placeholder="{{ t['e.g. Greenhouse'] }}">
+          <datalist id="locations">
+            {% for loc in locations %}<option value="{{ loc }}">{% endfor %}
+          </datalist>
+        </div>
+        <div>
+          <label class="field-lbl" for="variety">
+            {{ t['Variety / Batch'] }} <span class="opt">({{ t['optional'] }})</span>
+          </label>
+          <input class="form-control" name="variety" id="variety"
+                 value="{{ form.variety }}" placeholder="{{ t['e.g. variety'] }}">
+        </div>
+        <div>
+          <label class="field-lbl" for="nickname">
+            {{ t['plant_nickname'] }} <span class="opt">({{ t['optional'] }})</span>
+          </label>
+          <input class="form-control" name="nickname" id="nickname"
+                 value="{{ form.nickname }}"
+                 placeholder="{{ t['plant_nickname_placeholder'] }}">
+        </div>
+        <div>
+          <label class="field-lbl" for="count">{{ t['plant_count'] }}</label>
+          <input class="form-control" type="number" name="count" id="count"
+                 value="{{ form.count }}" min="1">
+          <div class="field-hint">{{ t['plant_count_hint'] }}</div>
+        </div>
+        <div class="span2">
+          <label class="field-lbl" for="notes">
+            {{ t['Notes'] }} <span class="opt">({{ t['optional'] }})</span>
+          </label>
+          <textarea class="form-control" name="notes" id="notes"
+                    placeholder="{{ t['e.g. Notes'] }}">{{ form.notes }}</textarea>
+        </div>
+      </div>
+    </div>
+
+    <div class="form-section">
+      <div class="form-section-label">{{ t['Current stage'] }}</div>
+      {% include "stage_sections.html" %}
+    </div>
+
+    <div class="submit-row">
+      <button type="submit" class="btn-primary-action">
+        <i class="fas fa-seedling me-1"></i>{{ t['Save'] }}
+      </button>
+    </div>
+
+  </form>
+</div>
 {% endblock %}

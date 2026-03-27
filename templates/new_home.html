@@ -257,6 +257,60 @@
   .tile-status .badge.bg-danger   { background-color: #a84040 !important; }
   .tile-status .badge.bg-secondary { background-color: #7a8a98 !important; }
 
+  /* ── Species group tile ─────────────────────────────────────────── */
+  .plant-tile-group {
+    box-shadow: 4px 4px 0 0 #d4dce8, 8px 8px 0 0 #e2e8f0;
+    cursor: pointer;
+  }
+  .plant-tile-group:hover {
+    box-shadow: 4px 4px 0 0 #b8c5d6, 8px 8px 0 0 #c8d5e2,
+                0 6px 18px rgba(0,0,0,0.09);
+  }
+  .group-count {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: #3d7a68;
+    color: #fff;
+    border-radius: 999px;
+    font-size: 0.7rem;
+    font-weight: 700;
+    padding: 0.05em 0.5em;
+    margin-left: 0.35rem;
+    vertical-align: middle;
+  }
+
+  /* ── Species modal ───────────────────────────────────────────────── */
+  .modal-plant-row {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.8rem 1.1rem;
+    border-bottom: 1px solid #edf0f4;
+  }
+  .modal-plant-row:last-child { border-bottom: none; }
+  .modal-plant-info { flex: 1; min-width: 0; }
+  .modal-plant-name {
+    font-weight: 600;
+    font-size: 0.88rem;
+    color: #1e2d3d;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .modal-plant-name .nickname { color: #5b82a8; }
+  .modal-plant-meta {
+    font-size: 0.76rem;
+    color: #8898aa;
+    margin-top: 0.15rem;
+  }
+  .modal-plant-badge { flex-shrink: 0; font-size: 0.79rem; }
+  .modal-plant-actions {
+    display: flex;
+    gap: 0.3rem;
+    flex-shrink: 0;
+  }
+
   /* ── Empty / graveyard link ──────────────────────────────────────── */
   .graveyard-link {
     text-align: center;
@@ -351,16 +405,193 @@
 
 {% for state, state_plants, is_dead_state in left_col + right_col %}
 {% if not is_dead_state %}
-{% for batch_id, batch_plants in group_by_batch(state_plants) %}
-{% for p in batch_plants %}
+{% set bar_color = state_colors.get(state|lower, '#8898aa') %}
+
+{% for species_latin, species_plants in group_by_latin(state_plants) %}
+{% set grp_id = 'grp-' ~ state|lower ~ '-' ~ loop.index %}
+
+{# ══════════════════════════════════════════════════════════════════ #}
+{# ── SPECIES GROUP TILE (2+ plants) ── #}
+{# ══════════════════════════════════════════════════════════════════ #}
+{% if species_plants|length > 1 %}
+{% set first = species_plants[0] %}
+
+{# Build combined search string from all plants in group #}
+{% set grp_search = namespace(val='') %}
+{% for sp in species_plants %}
+  {% set grp_search.val = grp_search.val ~ sp.common|lower ~ ' ' ~ sp.latin|lower ~ ' ' %}
+  {% if sp.nickname %}{% set grp_search.val = grp_search.val ~ sp.nickname|lower ~ ' ' %}{% endif %}
+  {% if sp.location %}{% set grp_search.val = grp_search.val ~ sp.location|lower ~ ' ' %}{% endif %}
+{% endfor %}
+
+<div class="plant-tile plant-tile-group"
+     data-state="{{ state|lower }}"
+     data-search="{{ grp_search.val }}"
+     data-bs-toggle="modal"
+     data-bs-target="#{{ grp_id }}">
+
+  <div class="tile-bar" style="background: {{ bar_color }}"></div>
+
+  <div class="tile-body">
+    <div class="tile-name">
+      {{ first.common }}
+      <span class="group-count">×{{ species_plants|length }}</span>
+    </div>
+    <div class="tile-latin">{{ species_latin }}</div>
+    <div class="tile-status">
+      <span class="state-label">{{ t[state] if state in t else state }}</span>
+    </div>
+    {# Locations summary #}
+    {% set seen_locs = namespace(val=[]) %}
+    {% for sp in species_plants %}
+      {% if sp.location and sp.location not in seen_locs.val %}
+        {% set seen_locs.val = seen_locs.val + [sp.location] %}
+      {% endif %}
+    {% endfor %}
+    {% if seen_locs.val %}
+    <div class="tile-location">
+      <i class="fas fa-location-dot"></i>{{ seen_locs.val | join(', ') }}
+    </div>
+    {% endif %}
+  </div>
+
+  <div class="tile-footer">
+    <span style="font-size:0.74rem; color:#a0aec0">
+      <i class="fas fa-layer-group me-1"></i>{{ species_plants|length }} {{ t['Plants']|lower }}
+    </span>
+    <span class="tile-action primary ms-auto" style="pointer-events:none">
+      <i class="fas fa-chevron-right"></i>
+    </span>
+  </div>
+
+</div>
+
+{# ── Modal for this species group ── #}
+<div class="modal fade" id="{{ grp_id }}" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-scrollable">
+    <div class="modal-content">
+
+      <div class="modal-header" style="border-bottom: 1px solid #edf0f4; padding: 0.9rem 1.1rem">
+        <div>
+          <h5 class="modal-title mb-0" style="font-size:1rem; font-weight:600; color:#1e2d3d">
+            {{ first.common }}
+            <small class="text-muted fst-italic fw-normal">({{ species_latin }})</small>
+          </h5>
+          <div style="font-size:0.78rem; color:#a0aec0; margin-top:0.1rem">
+            {{ t[state] if state in t else state }} · {{ species_plants|length }} {{ t['Plants']|lower }}
+          </div>
+        </div>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+
+      <div class="modal-body p-0">
+        {% for p in species_plants %}
+        {% set idx = p.id %}
+        {# Badge computation for this plant #}
+        {% set last_non_custom = (p.history | rejectattr('action', 'equalto', 'custom') | list)[-1] if p.history | rejectattr('action', 'equalto', 'custom') | list else None %}
+        {% set badge_html = '' %}
+        {% if last_non_custom %}
+          {% set ba = last_non_custom.action %}
+          {% set bs = last_non_custom.start %}
+          {% if ba == 'sow' and 'range' in last_non_custom %}
+            {% set min_val, cu, max_val, mu = last_non_custom.range %}
+            {% set min_date = bs | dateadd(days=duration_to_days(min_val, cu)) %}
+            {% set max_date = bs | dateadd(days=duration_to_days(max_val, mu)) %}
+            {% if today > max_date %}
+              {% set badge_html = overdue_badge(t) %}
+            {% elif today >= min_date %}
+              {% set dl = (max_date - today).days %}
+              {% set dp = (today - min_date).days %}
+              {% set tw = (max_date - min_date).days %}
+              {% set badge_html = anytime_soon_badge(dl, (dp / tw * 100)|round|int, t) %}
+            {% else %}
+              {% set badge_html = countdown_badge((min_date - today).days, t) %}
+            {% endif %}
+          {% elif ba in ['soak', 'strat'] %}
+            {% set val, unit = last_non_custom.duration %}
+            {% set end_date = bs | dateadd(days=duration_to_days(val, unit)) %}
+            {% if today >= end_date %}
+              {% set badge_html = done_badge(t) %}
+            {% else %}
+              {% set badge_html = countdown_badge((end_date - today).days, t) %}
+            {% endif %}
+          {% elif ba == 'sprout' %}
+            {% set age_days = (today - bs|todate).days %}
+            {% set measurements = p.history|selectattr('action', 'equalto', 'measure')|list %}
+            {% set lm = measurements|sort(attribute='start')|last if measurements else None %}
+            {% if lm %}
+              {% set sv = lm.size[0]|float %}
+              {% set badge_html = '<span class="badge bg-success">' ~ (sv|int if sv == sv|int else sv) ~ lm.size[1] ~ ' <small>(' ~ (today - lm.start|todate).days ~ ' ' ~ (t['days ago'] if 'days ago' in t else 'days ago') ~ ')</small></span>' %}
+            {% else %}
+              {% set badge_html = age_badge(t['Age'] if 'Age' in t else 'Age', age_days, t) %}
+            {% endif %}
+          {% elif ba == 'measure' %}
+            {% set sv = last_non_custom.size[0]|float %}
+            {% set sd = sv|int if sv == sv|int else sv %}
+            {% set su = last_non_custom.size[1] %}
+            {% set base = (p.history|selectattr('action','equalto','sprout')|list|first) or (p.history|selectattr('action','equalto','plant')|list|first) %}
+            {% if base %}
+              {% set badge_html = size_badge(sd, su, t['Age'] if 'Age' in t else 'Age', (today - base.start|todate).days, t) %}
+            {% else %}
+              {% set badge_html = '<span class="badge bg-success">' ~ sd ~ su ~ '</span>' %}
+            {% endif %}
+          {% else %}
+            {% set base = (p.history|selectattr('action','equalto','sprout')|list|first) or (p.history|selectattr('action','equalto','plant')|list|first) %}
+            {% if base %}
+              {% set badge_html = age_badge(t['Age'] if 'Age' in t else 'Age', (today - base.start|todate).days, t) %}
+            {% endif %}
+          {% endif %}
+        {% endif %}
+
+        <div class="modal-plant-row">
+          <div class="modal-plant-info">
+            <div class="modal-plant-name">
+              {% if p.nickname %}<span class="nickname">{{ p.nickname }}</span> · {% endif %}
+              {{ p.common }}{% if p.variety %} <span style="color:#a0aec0;font-weight:400">— {{ p.variety }}</span>{% endif %}
+            </div>
+            {% if p.location %}
+            <div class="modal-plant-meta">
+              <i class="fas fa-location-dot me-1"></i>{{ p.location }}
+            </div>
+            {% endif %}
+          </div>
+          <div class="modal-plant-badge">
+            {% if badge_html %}{{ badge_html|safe }}{% endif %}
+          </div>
+          <div class="modal-plant-actions">
+            {% if not public_view %}
+            <button class="tile-action quick-log-btn" data-plant-id="{{ idx }}" data-event="water"
+                    title="{{ t['Log watering'] }}"><i class="fas fa-droplet"></i></button>
+            <button class="tile-action quick-log-btn" data-plant-id="{{ idx }}" data-event="fertilize"
+                    title="{{ t['Log fertilization'] }}"><i class="fas fa-bottle-water"></i></button>
+            <a href="{{ url_for('add_stage', idx=idx, lang=lang) }}" class="tile-action"
+               title="{{ t['Add stage'] }}"><i class="fas fa-plus"></i></a>
+            <a href="{{ url_for('view_plant', idx=idx, lang=lang) }}" class="tile-action primary"
+               title="{{ t['Plant details'] }}"><i class="fas fa-leaf"></i></a>
+            {% else %}
+            <a href="{{ url_for('public_view_plant', idx=idx, lang=lang) }}" class="tile-action primary"
+               title="{{ t['Plant details'] }}"><i class="fas fa-leaf"></i></a>
+            {% endif %}
+          </div>
+        </div>
+        {% endfor %}{# species_plants in modal #}
+      </div>
+
+    </div>
+  </div>
+</div>
+
+{# ══════════════════════════════════════════════════════════════════ #}
+{# ── SINGLE PLANT TILE ── #}
+{# ══════════════════════════════════════════════════════════════════ #}
+{% else %}
+{% set p = species_plants[0] %}
 {% set idx = p.id %}
 {% set current_event = p.current %}
 {% set action = current_event.action %}
 {% set last_non_custom = (p.history | rejectattr('action', 'equalto', 'custom') | list)[-1] if p.history | rejectattr('action', 'equalto', 'custom') | list else None %}
 {% set now_date = today %}
-{% set bar_color = state_colors.get(state|lower, '#8898aa') %}
 
-{# ── Badge HTML computation (same logic as state_card.html) ── #}
 {% set badge_html = '' %}
 {% if last_non_custom %}
   {% set badge_action = last_non_custom.action %}
@@ -431,7 +662,6 @@
   {% endif %}
 {% endif %}
 
-{# ── Tile ── #}
 <div class="plant-tile"
      data-state="{{ state|lower }}"
      data-search="{{ p.common|lower }} {{ p.latin|lower }} {{ (p.variety ~ ' ')|lower if p.variety else '' }}{{ (p.nickname ~ ' ')|lower if p.nickname else '' }}{{ (p.location ~ ' ')|lower if p.location else '' }}">
@@ -487,8 +717,8 @@
   </div>
 
 </div>
-{% endfor %}{# batch_plants #}
-{% endfor %}{# group_by_batch #}
+{% endif %}{# species group / single #}
+{% endfor %}{# group_by_latin #}
 {% endif %}{# not is_dead_state #}
 {% endfor %}{# states #}
 

@@ -79,6 +79,7 @@ from py.helpers import (
     group_plants_by_state,
     build_state_cards,
     group_by_batch,
+    group_by_latin,
     explode_plant,
 
 )
@@ -290,6 +291,7 @@ def build_dashboard_context(user_obj, lang):
         right_col = right_col,
         dead_count = dead_count,
         group_by_batch = group_by_batch,
+        group_by_latin = group_by_latin,
     )
 
 @app.route("/")
@@ -530,6 +532,7 @@ def edit_stage(action_id):
     else:
         form = get_empty_form()
         form["status"] = ev["action"]
+        form["common"] = ev["common"]
         date_field, extras = form_keys_for(ev)
         form[date_field] = ev["start"]
         form.update(extras)

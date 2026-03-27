@@ -634,6 +634,28 @@ def group_by_batch(plants: List[Dict[str, Any]]) -> List[Tuple[Optional[int], Li
             batches[bid].append(p)
     return result
 
+
+def group_by_latin(plants: List[Dict[str, Any]]) -> List[Tuple[str, List[Dict[str, Any]]]]:
+    """
+    Group plants by latin name (case-insensitive).
+    Returns list of (latin_display, [plants]), preserving first-appearance order.
+    A single plant still gets its own group of length 1.
+    """
+    seen: dict = {}
+    result = []
+    for p in plants:
+        key = (p.get("latin") or "").strip().lower()
+        if not key:
+            # No latin name: treat each plant as its own group
+            result.append((p.get("common") or "", [p]))
+        elif key not in seen:
+            seen[key] = []
+            result.append((p.get("latin") or "", seen[key]))
+            seen[key].append(p)
+        else:
+            seen[key].append(p)
+    return result
+
 ###############################################################################
 # Ancillary helpers (translations, forms…) – unchanged from previous version
 ###############################################################################

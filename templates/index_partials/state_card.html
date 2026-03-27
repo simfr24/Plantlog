@@ -24,35 +24,49 @@
         <span class="badge bg-secondary ms-2">{{ state_plants|length }}</span>
       {% endif %}
     </div>
+
     {% if is_dead_state %}
     <div class="card-body p-0 collapse" id="group-{{ state|lower }}-collapse">
     {% else %}
     <div class="card-body p-0">
     {% endif %}
       <div class="accordion" id="plants-acc-{{ state|lower }}">
-        {% for batch_id, batch_plants in group_by_batch(state_plants) %}
-        {% if batch_id is not none and batch_plants|length > 1 %}
-        {# ── Batch group ── #}
-        <div class="accordion-item" id="batch-{{ batch_id }}">
+
+        {% for species_latin, species_plants in group_by_latin(state_plants) %}
+
+        {# ── Species group (2+ plants with the same latin name) ── #}
+        {% if species_plants|length > 1 %}
+        {% set first = species_plants[0] %}
+        <div class="accordion-item" id="species-{{ species_latin|lower|replace(' ','_') }}-{{ state|lower }}">
           <h2 class="accordion-header">
             <button class="accordion-button collapsed bg-light" type="button"
-                    data-bs-toggle="collapse" data-bs-target="#batch-collapse-{{ batch_id }}">
-              <i class="fas fa-layer-group me-2 text-muted"></i>
-              <span class="fw-semibold">{{ batch_plants[0].common }}</span>
-              {% if batch_plants[0].variety %}<small class="text-muted ms-1">— {{ batch_plants[0].variety }}</small>{% endif %}
-              <span class="badge bg-info text-dark ms-2">×{{ batch_plants|length }}</span>
+                    data-bs-toggle="collapse"
+                    data-bs-target="#species-collapse-{{ species_latin|lower|replace(' ','_') }}-{{ state|lower }}">
+              <i class="fas fa-layer-group me-2 text-muted" style="font-size:0.85rem"></i>
+              <span class="fw-semibold">{{ first.common }}</span>
+              <small class="text-muted fst-italic ms-1">({{ species_latin }})</small>
+              <span class="badge bg-secondary ms-2">{{ species_plants|length }}</span>
             </button>
           </h2>
-          <div id="batch-collapse-{{ batch_id }}" class="accordion-collapse collapse">
+          <div id="species-collapse-{{ species_latin|lower|replace(' ','_') }}-{{ state|lower }}"
+               class="accordion-collapse collapse">
             <div class="accordion-body p-0">
-              <div class="accordion" id="batch-inner-{{ batch_id }}">
-        {% for p in batch_plants %}
+              <div class="accordion" id="species-inner-{{ species_latin|lower|replace(' ','_') }}-{{ state|lower }}">
+
+        {% for p in species_plants %}
         {% set idx = p.id %}
-        {% set current_event = p.current %}{% set action = current_event.action %}
+        {% set current_event = p.current %}
+        {% set action = current_event.action %}
         {% set last_non_custom = (p.history | rejectattr('action', 'equalto', 'custom') | list)[-1] if p.history | rejectattr('action', 'equalto', 'custom') | list else None %}
-        {% set event_spec = event_map[action] %}{% set state_obj = p.state %}
-        {% set now_date = today %}{% set start_date = current_event.start %}
-        {% if action == 'custom' %}{% set label = current_event.custom_label or '?' %}{% set label_text = t['{event} on'].replace('{event}', label) if '{event} on' in t else label ~ ' on' %}{% set summary = label_text ~ ' ' ~ start_date %}{% else %}{% set summary = (human_names[action] in t and t[human_names[action]] or human_names[action]) ~ ' ' ~ start_date %}{% endif %}
+        {% set now_date = today %}
+        {% set start_date = current_event.start %}
+        {% if action == 'custom' %}
+          {% set label = current_event.custom_label or '?' %}
+          {% set label_text = t['{event} on'].replace('{event}', label) if '{event} on' in t else label ~ ' on' %}
+          {% set summary = label_text ~ ' ' ~ start_date %}
+        {% else %}
+          {% set summary = (human_names[action] in t and t[human_names[action]] or human_names[action]) ~ ' ' ~ start_date %}
+        {% endif %}
         {% if last_non_custom %}
           {% set badge_action = last_non_custom.action %}
           {% set badge_start = last_non_custom.start %}
@@ -127,28 +141,41 @@
         {% endif %}
           <div class="accordion-item">
             <h2 class="accordion-header">
-              <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapse-batch-{{ idx }}">
+              <button class="accordion-button collapsed" type="button"
+                      data-bs-toggle="collapse"
+                      data-bs-target="#collapse-species-{{ idx }}">
                 <div class="flex-grow-1">
                   <div class="fw-semibold">
-                    {% if p.nickname %}<span class="text-primary me-1">{{ p.nickname }}</span>{% else %}#{{ loop.index }}{% endif %}
-                    <small class="text-muted fst-italic">({{ p.latin }})</small>
+                    {% if p.nickname %}
+                      <span class="text-primary me-1">{{ p.nickname }}</span>
+                    {% else %}
+                      #{{ loop.index }}
+                    {% endif %}
+                    {% if p.location %}
+                      <small class="text-muted fw-normal ms-1">
+                        <i class="fas fa-location-dot"></i> {{ p.location }}
+                      </small>
+                    {% endif %}
                   </div>
                   <div class="small text-muted">{{ summary|safe }}</div>
-                  {% if p.location %}<div class="small text-muted"><i class="fas fa-location-dot me-1"></i>{{ p.location }}</div>{% endif %}
                 </div>
               </button>
             </h2>
-            <div id="collapse-batch-{{ idx }}" class="accordion-collapse collapse">
+            <div id="collapse-species-{{ idx }}" class="accordion-collapse collapse">
               <div class="accordion-body">
                 {% if p.notes %}
-                <div class="mb-3 text-muted md-notes"><i class="fas fa-sticky-note me-1"></i>{{ p.notes | mdrender }}</div>
+                <div class="mb-3 text-muted md-notes">
+                  <i class="fas fa-sticky-note me-1"></i>{{ p.notes | mdrender }}
+                </div>
                 {% endif %}
                 <ul class="timeline">
                   {% for h in p.history|reverse %}
                     {% if h.action not in ['water', 'fertilize', 'measure'] %}
                     {% set evspec = event_map[h.action] %}
                     <li class="timeline-item">
-                      <span class="timeline-icon {{ evspec.color_class }}"><i class="fas {{ evspec.icon }}"></i></span>
+                      <span class="timeline-icon {{ evspec.color_class }}">
+                        <i class="fas {{ evspec.icon }}"></i>
+                      </span>
                       <div>
                         {% if h.action == 'custom' %}
                           {% set label = h.custom_label or '?' %}
@@ -177,210 +204,8 @@
                         {% endif %}
                       </div>
                       {% if not public_view %}
-                      <a href="{{ url_for('edit_stage', action_id=h.id, lang=lang) }}" class="text-secondary ms-2 align-top" title="{{ t['Edit stage'] }}">
-                        <i class="fas fa-edit" style="font-size:0.9rem;"></i>
-                      </a>
-                      {% endif %}
-                    </li>
-                    {% endif %}
-                  {% endfor %}
-                </ul>
-                <div class="d-flex flex-wrap gap-2 mt-3">
-                  {% if not public_view %}
-                  <button class="btn btn-outline-primary btn-sm quick-log-btn" data-plant-id="{{ idx }}" data-event="water" title="{{ t['Log watering'] }}">
-                    <i class="fas fa-droplet me-1"></i> {{ t['Water'] }}
-                  </button>
-                  <button class="btn btn-outline-warning btn-sm quick-log-btn" data-plant-id="{{ idx }}" data-event="fertilize" title="{{ t['Log fertilization'] }}">
-                    <i class="fas fa-bottle-water me-1"></i> {{ t['Fertilize'] }}
-                  </button>
-                  {% set p_state = p.state.label if p.state else '' %}
-                  {% if p_state in ['Flowering', 'Fruiting'] %}
-                  <button class="btn btn-outline-warning btn-sm end-phase-btn" data-plant-id="{{ idx }}">
-                    <i class="fas fa-flag-checkered me-1"></i>
-                    {{ t['End of flowering'] if p_state == 'Flowering' else t['End of fruiting'] }}
-                  </button>
-                  {% endif %}
-                  <a href="{{ url_for('add_stage', idx=idx, lang=lang) }}" class="btn btn-outline-secondary btn-sm">
-                    <i class="fas fa-plus-circle me-1"></i> {{ t['Add stage'] }}
-                  </a>
-                  <a href="{{ url_for('view_plant', idx=idx, lang=lang) }}" class="btn btn-outline-success btn-sm">
-                    <i class="fas fa-leaf me-1"></i> {{ t['Plant details'] }}
-                  </a>
-                  {% else %}
-                  <a href="{{ url_for('public_view_plant', idx=idx, lang=lang) }}" class="btn btn-outline-success btn-sm">
-                    <i class="fas fa-leaf me-1"></i> {{ t['Plant details'] }}
-                  </a>
-                  {% endif %}
-                </div>
-              </div>
-            </div>
-          </div>
-        {% endfor %}
-              </div>
-            </div>
-          </div>
-        </div>
-        {% else %}
-        {# ── Single plant (normal flow) ── #}
-        {% set p = batch_plants[0] %}
-        {% for p in batch_plants %}
-          {% set idx = p.id %}
-          {% set current_event = p.current %}
-          {% set action = current_event.action %}
-          {% set last_non_custom = (p.history | rejectattr('action', 'equalto', 'custom') | list)[-1] if p.history | rejectattr('action', 'equalto', 'custom') | list else None %}
-          {% set event_spec = event_map[action] %}
-          {% set state_obj = p.state %}
-          {% set state_label = state_obj.label if state_obj else '?' %}
-          {% set state_icon = state_obj.icon_class if state_obj else 'fa-question' %}
-          {% set state_color = state_obj.color_class if state_obj else 'text-muted' %}
-          {% set now_date = today %}
-          {% set start_date = current_event.start %}
-          {% if action == 'custom' %}
-            {% set label = current_event.custom_label or '?' %}
-            {% set label_text = t['{event} on'].replace('{event}', label) if '{event} on' in t else label ~ ' on' %}
-            {% set summary = label_text ~ ' ' ~ start_date %}
-          {% else %}
-            {% set summary = (human_names[action] in t and t[human_names[action]] or human_names[action]) ~ ' ' ~ start_date %}
-          {% endif %}
-          {% if not is_dead_state and last_non_custom %}
-            {% set badge_action = last_non_custom.action %}
-            {% set badge_start = last_non_custom.start %}
-            {% if badge_action == 'sow' and 'range' in last_non_custom %}
-              {% set min_val, current_unit, max_val, max_unit = last_non_custom.range %}
-              {% set min_days = duration_to_days(min_val, current_unit) %}
-              {% set max_days = duration_to_days(max_val, max_unit) %}
-              {% set min_date = badge_start | dateadd(days=min_days) %}
-              {% set max_date = badge_start | dateadd(days=max_days) %}
-              {% if now_date > max_date %}
-                {% set summary = summary ~ overdue_badge(t) %}
-              {% elif now_date >= min_date %}
-                {% set days_passed = (now_date - min_date).days %}
-                {% set total_window = (max_date - min_date).days %}
-                {% set days_left = (max_date - now_date).days %}
-                {% set progress = (days_passed / total_window * 100)|round|int %}
-                {% set gradient_class = "bg-success" if progress < 33 else "bg-warning" if progress < 66 else "bg-danger" %}
-                {% set summary = summary ~ anytime_soon_badge(days_left, progress, t) %}
-              {% else %}
-                {% set days_left = (min_date - now_date).days %}
-                {% set summary = summary ~ countdown_badge(days_left, t) %}
-              {% endif %}
-            {% elif badge_action in ['soak', 'strat'] %}
-              {% set val, unit = last_non_custom.duration %}
-              {% set duration_days = duration_to_days(val, unit) %}
-              {% set end_date = badge_start | dateadd(days=duration_days) %}
-              {% if now_date >= end_date %}
-                {% set summary = summary ~ done_badge(t) %}
-              {% else %}
-                {% set days_left = (end_date - now_date).days %}
-                {% set summary = summary ~ countdown_badge(days_left, t) %}
-              {% endif %}
-            {% elif badge_action == 'sprout' %}
-              {% set sprouted_date = badge_start|todate %}
-              {% set age_days = (now_date - sprouted_date).days %}
-              {% set measurements = p.history|selectattr('action', 'equalto', 'measure')|list %}
-              {% set last_measurement = measurements|sort(attribute='start')|last if measurements else None %}
-              {% if last_measurement %}
-                {% set measure_date = last_measurement.start|todate %}
-                {% set days_since = (now_date - measure_date).days %}
-                {% set size_value = last_measurement.size[0]|float %}
-                {% set size_display = size_value|int if size_value == size_value|int else size_value %}
-                {% set size_unit = last_measurement.size[1] %}
-                {% set summary = summary ~ ' <span class="badge bg-success ms-2">' ~ 
-                                  size_display ~ size_unit ~ 
-                                  ' <small>(' ~ days_since ~ ' ' ~ (t['days ago'] if 'days ago' in t else 'days ago') ~ ')</small></span>' %}
-              {% else %}
-                {% set summary = summary ~ age_badge(t['Age'] if 'Age' in t else 'Age', age_days, t) %}
-              {% endif %}
-            {% elif badge_action == 'measure' %}
-              {% set measure_date = badge_start|todate %}
-              {% set days_since = (now_date - measure_date).days %}
-              {% set size_value = last_non_custom.size[0]|float %}
-              {% set size_display = size_value|int if size_value == size_value|int else size_value %}
-              {% set size_unit = last_non_custom.size[1] %}
-              {% set sprout_event = p.history|selectattr('action', 'equalto', 'sprout')|list|first %}
-              {% set planted_event = p.history|selectattr('action', 'equalto', 'plant')|list|first %}
-              {% set base_event = sprout_event if sprout_event else planted_event %}
-              {% if base_event %}
-                {% set base_date = base_event.start|todate %}
-                {% set age_days = (now_date - base_date).days %}
-                {% set summary = summary ~ size_badge(size_display, size_unit, t['Age'] if 'Age' in t else 'Age', age_days, t) %}
-              {% else %}
-                {% set summary = summary ~ ' <span class="badge bg-success ms-2">' ~ size_display ~ size_unit ~ '</span>' %}
-              {% endif %}
-            {% else %}
-              {% set sprout_event = p.history | selectattr('action', 'equalto', 'sprout') | list | first %}
-              {% set plant_event = p.history | selectattr('action', 'equalto', 'plant') | list | first %}
-              {% set age_base = sprout_event if sprout_event else plant_event %}
-              {% if age_base %}
-                {% set base_date = age_base.start | todate %}
-                {% set age_days = (now_date - base_date).days %}
-                {% set summary = summary ~ age_badge(t['Age'] if 'Age' in t else 'Age', age_days, t) %}
-              {% endif %}
-            {% endif %}
-          {% endif %}
-          <div class="accordion-item {{ 'bg-light' if is_dead_state else '' }}">
-            <h2 class="accordion-header" id="heading-{{ state|lower }}-{{ idx }}">
-              <button class="accordion-button collapsed {{ 'bg-light text-muted' if is_dead_state else '' }}" type="button" data-bs-toggle="collapse" data-bs-target="#collapse-{{ state|lower }}-{{ idx }}">
-                <div class="flex-grow-1">
-                  <div class="fw-semibold {{ 'text-muted' if is_dead_state else '' }}">
-                    {% if p.nickname %}<span class="text-primary me-1">{{ p.nickname }}</span>{% endif %}
-                    {{ p.common }}{% if p.variety %} <small class="text-muted fw-normal">— {{ p.variety }}</small>{% endif %}
-                    {% if p.count and p.count > 1 %}<span class="badge bg-secondary ms-1">×{{ p.count }}</span>{% endif %}
-                    <small class="text-muted fst-italic">({{ p.latin }})</small>
-                  </div>
-                  <div class="small text-muted">{{ summary|safe }}</div>
-                  {% if p.location %}
-                    <div class="small text-muted"><i class="fas fa-location-dot me-1"></i>{{ p.location }}</div>
-                  {% endif %}
-</div>
-              </button>
-            </h2>
-            <div id="collapse-{{ state|lower }}-{{ idx }}" class="accordion-collapse collapse" data-bs-parent="#plants-acc-{{ state|lower }}">
-              <div class="accordion-body">
-                {% if p.notes %}
-                <div class="mb-3 text-muted md-notes"><i class="fas fa-sticky-note me-1"></i>{{ p.notes | mdrender }}</div>
-                {% endif %}
-                <ul class="timeline">
-                  {% for h in p.history|reverse %}
-                    {% if h.action not in ['water', 'fertilize', 'measure'] %}
-                    {% set evspec = event_map[h.action] %}
-                    <li class="timeline-item {{ 'dead' if is_dead_state else '' }}">
-                      <span class="timeline-icon {{ evspec.color_class }}"><i class="fas {{ evspec.icon }}"></i></span>
-                      <div>
-                        {% if h.action == 'custom' %}
-                          {% set label = h.custom_label or '?' %}
-                          {% set label_text = t['{event} on'].replace('{event}', label) if '{event} on' in t else label ~ ' on' %}
-                          <strong>{{ label_text }}</strong> – {{ h.start }}
-                          {% if h.custom_note %}
-                            <div class="text-muted small">{{ h.custom_note }}</div>
-                          {% endif %}
-                        {% else %}
-                          <strong>{{ t[human_names[h.action]] if human_names[h.action] in t else human_names[h.action] }}</strong> – {{ h.start }}
-                        {% endif %}
-                        {% if h.action == 'sow' and 'range' in h %}
-                          <div class="text-muted small">
-                            {{ t['Expected sprout time'] }}: {{ h.range[0] }} {{ t[h.range[1]] }} – {{ h.range[2] }} {{ t[h.range[3]] }}
-                          </div>
-                        {% elif h.action in ['soak','strat'] %}
-                          <div class="text-muted small">{{ h.duration[0] }} {{ t[h.duration[1]] }}</div>
-                        {% elif h.action == 'sprout' %}
-                          {% set sow = p.history|selectattr('action','equalto','sow')|list|last %}
-                          {% if sow %}
-                            {% set sprouted_date = h.start|todate %}
-                            {% set sow_date = sow.start|todate %}
-                            {% set germ_days = (sprouted_date - sow_date).days %}
-                            <div class="text-muted small">
-                              {{ t['Sprouted in'] }} {{ germ_days }} {{ t['days'] }}
-                            </div>
-                          {% endif %}
-                        {% elif h.action in ['flower', 'fruit'] and h.ended_on %}
-                          <div class="text-muted small">
-                            {{ t['Ended flowering on'] if h.action == 'flower' else t['Ended fruiting on'] }} {{ h.ended_on }}
-                          </div>
-                        {% endif %}
-                      </div>
-                      {% if not public_view %}
-                      <a href="{{ url_for('edit_stage', action_id=h.id, lang=lang) }}" class="text-secondary ms-2 align-top" title="{{ t['Edit stage'] }}">
+                      <a href="{{ url_for('edit_stage', action_id=h.id, lang=lang) }}"
+                         class="text-secondary ms-2 align-top" title="{{ t['Edit stage'] }}">
                         <i class="fas fa-edit" style="font-size:0.9rem;"></i>
                       </a>
                       {% endif %}
@@ -391,23 +216,31 @@
                 <div class="d-flex flex-wrap gap-2 mt-3">
                   {% if not public_view %}
                   <button class="btn btn-outline-primary btn-sm quick-log-btn"
-                          data-plant-id="{{ idx }}" data-event="water"
-                          title="Log watering">
-                    <i class="fas fa-droplet me-1"></i> Water
+                          data-plant-id="{{ idx }}" data-event="water">
+                    <i class="fas fa-droplet me-1"></i> {{ t['Water'] }}
                   </button>
                   <button class="btn btn-outline-warning btn-sm quick-log-btn"
-                          data-plant-id="{{ idx }}" data-event="fertilize"
-                          title="Log fertilization">
-                    <i class="fas fa-bottle-water me-1"></i> Fertilize
+                          data-plant-id="{{ idx }}" data-event="fertilize">
+                    <i class="fas fa-bottle-water me-1"></i> {{ t['Fertilize'] }}
                   </button>
-                  <a href="{{ url_for('add_stage', idx=idx, lang=lang) }}" class="btn btn-outline-secondary btn-sm">
+                  {% set p_state = p.state.label if p.state else '' %}
+                  {% if p_state in ['Flowering', 'Fruiting'] %}
+                  <button class="btn btn-outline-warning btn-sm end-phase-btn" data-plant-id="{{ idx }}">
+                    <i class="fas fa-flag-checkered me-1"></i>
+                    {{ t['End of flowering'] if p_state == 'Flowering' else t['End of fruiting'] }}
+                  </button>
+                  {% endif %}
+                  <a href="{{ url_for('add_stage', idx=idx, lang=lang) }}"
+                     class="btn btn-outline-secondary btn-sm">
                     <i class="fas fa-plus-circle me-1"></i> {{ t['Add stage'] }}
                   </a>
-                  <a href="{{ url_for('view_plant', idx=idx, lang=lang) }}" class="btn btn-outline-success btn-sm">
+                  <a href="{{ url_for('view_plant', idx=idx, lang=lang) }}"
+                     class="btn btn-outline-success btn-sm">
                     <i class="fas fa-leaf me-1"></i> {{ t['Plant details'] }}
                   </a>
                   {% else %}
-                  <a href="{{ url_for('public_view_plant', idx=idx, lang=lang) }}" class="btn btn-outline-success btn-sm">
+                  <a href="{{ url_for('public_view_plant', idx=idx, lang=lang) }}"
+                     class="btn btn-outline-success btn-sm">
                     <i class="fas fa-leaf me-1"></i> {{ t['Plant details'] }}
                   </a>
                   {% endif %}
@@ -415,9 +248,226 @@
               </div>
             </div>
           </div>
-        {% endfor %}
-        {% endif %}{# end single/batch conditional #}
-        {% endfor %}{# end group_by_batch loop #}
+        {% endfor %}{# species_plants inner loop #}
+
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {# ── Single plant ── #}
+        {% else %}
+        {% set p = species_plants[0] %}
+        {% set idx = p.id %}
+        {% set current_event = p.current %}
+        {% set action = current_event.action %}
+        {% set last_non_custom = (p.history | rejectattr('action', 'equalto', 'custom') | list)[-1] if p.history | rejectattr('action', 'equalto', 'custom') | list else None %}
+        {% set state_obj = p.state %}
+        {% set now_date = today %}
+        {% set start_date = current_event.start %}
+        {% if action == 'custom' %}
+          {% set label = current_event.custom_label or '?' %}
+          {% set label_text = t['{event} on'].replace('{event}', label) if '{event} on' in t else label ~ ' on' %}
+          {% set summary = label_text ~ ' ' ~ start_date %}
+        {% else %}
+          {% set summary = (human_names[action] in t and t[human_names[action]] or human_names[action]) ~ ' ' ~ start_date %}
+        {% endif %}
+        {% if not is_dead_state and last_non_custom %}
+          {% set badge_action = last_non_custom.action %}
+          {% set badge_start = last_non_custom.start %}
+          {% if badge_action == 'sow' and 'range' in last_non_custom %}
+            {% set min_val, current_unit, max_val, max_unit = last_non_custom.range %}
+            {% set min_days = duration_to_days(min_val, current_unit) %}
+            {% set max_days = duration_to_days(max_val, max_unit) %}
+            {% set min_date = badge_start | dateadd(days=min_days) %}
+            {% set max_date = badge_start | dateadd(days=max_days) %}
+            {% if now_date > max_date %}
+              {% set summary = summary ~ overdue_badge(t) %}
+            {% elif now_date >= min_date %}
+              {% set days_passed = (now_date - min_date).days %}
+              {% set total_window = (max_date - min_date).days %}
+              {% set days_left = (max_date - now_date).days %}
+              {% set progress = (days_passed / total_window * 100)|round|int %}
+              {% set summary = summary ~ anytime_soon_badge(days_left, progress, t) %}
+            {% else %}
+              {% set days_left = (min_date - now_date).days %}
+              {% set summary = summary ~ countdown_badge(days_left, t) %}
+            {% endif %}
+          {% elif badge_action in ['soak', 'strat'] %}
+            {% set val, unit = last_non_custom.duration %}
+            {% set duration_days = duration_to_days(val, unit) %}
+            {% set end_date = badge_start | dateadd(days=duration_days) %}
+            {% if now_date >= end_date %}
+              {% set summary = summary ~ done_badge(t) %}
+            {% else %}
+              {% set days_left = (end_date - now_date).days %}
+              {% set summary = summary ~ countdown_badge(days_left, t) %}
+            {% endif %}
+          {% elif badge_action == 'sprout' %}
+            {% set sprouted_date = badge_start|todate %}
+            {% set age_days = (now_date - sprouted_date).days %}
+            {% set measurements = p.history|selectattr('action', 'equalto', 'measure')|list %}
+            {% set last_measurement = measurements|sort(attribute='start')|last if measurements else None %}
+            {% if last_measurement %}
+              {% set measure_date = last_measurement.start|todate %}
+              {% set days_since = (now_date - measure_date).days %}
+              {% set size_value = last_measurement.size[0]|float %}
+              {% set size_display = size_value|int if size_value == size_value|int else size_value %}
+              {% set size_unit = last_measurement.size[1] %}
+              {% set summary = summary ~ ' <span class="badge bg-success ms-2">' ~ size_display ~ size_unit ~ ' <small>(' ~ days_since ~ ' ' ~ (t['days ago'] if 'days ago' in t else 'days ago') ~ ')</small></span>' %}
+            {% else %}
+              {% set summary = summary ~ age_badge(t['Age'] if 'Age' in t else 'Age', age_days, t) %}
+            {% endif %}
+          {% elif badge_action == 'measure' %}
+            {% set measure_date = badge_start|todate %}
+            {% set days_since = (now_date - measure_date).days %}
+            {% set size_value = last_non_custom.size[0]|float %}
+            {% set size_display = size_value|int if size_value == size_value|int else size_value %}
+            {% set size_unit = last_non_custom.size[1] %}
+            {% set sprout_event = p.history|selectattr('action', 'equalto', 'sprout')|list|first %}
+            {% set planted_event = p.history|selectattr('action', 'equalto', 'plant')|list|first %}
+            {% set base_event = sprout_event if sprout_event else planted_event %}
+            {% if base_event %}
+              {% set base_date = base_event.start|todate %}
+              {% set age_days = (now_date - base_date).days %}
+              {% set summary = summary ~ size_badge(size_display, size_unit, t['Age'] if 'Age' in t else 'Age', age_days, t) %}
+            {% else %}
+              {% set summary = summary ~ ' <span class="badge bg-success ms-2">' ~ size_display ~ size_unit ~ '</span>' %}
+            {% endif %}
+          {% else %}
+            {% set sprout_event = p.history | selectattr('action', 'equalto', 'sprout') | list | first %}
+            {% set plant_event = p.history | selectattr('action', 'equalto', 'plant') | list | first %}
+            {% set age_base = sprout_event if sprout_event else plant_event %}
+            {% if age_base %}
+              {% set base_date = age_base.start | todate %}
+              {% set age_days = (now_date - base_date).days %}
+              {% set summary = summary ~ age_badge(t['Age'] if 'Age' in t else 'Age', age_days, t) %}
+            {% endif %}
+          {% endif %}
+        {% endif %}
+        <div class="accordion-item {{ 'bg-light' if is_dead_state else '' }}">
+          <h2 class="accordion-header" id="heading-{{ state|lower }}-{{ idx }}">
+            <button class="accordion-button collapsed {{ 'bg-light text-muted' if is_dead_state else '' }}"
+                    type="button" data-bs-toggle="collapse"
+                    data-bs-target="#collapse-{{ state|lower }}-{{ idx }}">
+              <div class="flex-grow-1">
+                <div class="fw-semibold {{ 'text-muted' if is_dead_state else '' }}">
+                  {% if p.nickname %}<span class="text-primary me-1">{{ p.nickname }}</span>{% endif %}
+                  {{ p.common }}{% if p.variety %} <small class="text-muted fw-normal">— {{ p.variety }}</small>{% endif %}
+                  {% if p.count and p.count > 1 %}<span class="badge bg-secondary ms-1">×{{ p.count }}</span>{% endif %}
+                  <small class="text-muted fst-italic">({{ p.latin }})</small>
+                </div>
+                <div class="small text-muted">{{ summary|safe }}</div>
+                {% if p.location %}
+                  <div class="small text-muted">
+                    <i class="fas fa-location-dot me-1"></i>{{ p.location }}
+                  </div>
+                {% endif %}
+              </div>
+            </button>
+          </h2>
+          <div id="collapse-{{ state|lower }}-{{ idx }}"
+               class="accordion-collapse collapse"
+               data-bs-parent="#plants-acc-{{ state|lower }}">
+            <div class="accordion-body">
+              {% if p.notes %}
+              <div class="mb-3 text-muted md-notes">
+                <i class="fas fa-sticky-note me-1"></i>{{ p.notes | mdrender }}
+              </div>
+              {% endif %}
+              <ul class="timeline">
+                {% for h in p.history|reverse %}
+                  {% if h.action not in ['water', 'fertilize', 'measure'] %}
+                  {% set evspec = event_map[h.action] %}
+                  <li class="timeline-item {{ 'dead' if is_dead_state else '' }}">
+                    <span class="timeline-icon {{ evspec.color_class }}">
+                      <i class="fas {{ evspec.icon }}"></i>
+                    </span>
+                    <div>
+                      {% if h.action == 'custom' %}
+                        {% set label = h.custom_label or '?' %}
+                        {% set label_text = t['{event} on'].replace('{event}', label) if '{event} on' in t else label ~ ' on' %}
+                        <strong>{{ label_text }}</strong> – {{ h.start }}
+                        {% if h.custom_note %}
+                          <div class="text-muted small">{{ h.custom_note }}</div>
+                        {% endif %}
+                      {% else %}
+                        <strong>{{ t[human_names[h.action]] if human_names[h.action] in t else human_names[h.action] }}</strong> – {{ h.start }}
+                      {% endif %}
+                      {% if h.action == 'sow' and 'range' in h %}
+                        <div class="text-muted small">
+                          {{ t['Expected sprout time'] }}: {{ h.range[0] }} {{ t[h.range[1]] }} – {{ h.range[2] }} {{ t[h.range[3]] }}
+                        </div>
+                      {% elif h.action in ['soak','strat'] %}
+                        <div class="text-muted small">{{ h.duration[0] }} {{ t[h.duration[1]] }}</div>
+                      {% elif h.action == 'sprout' %}
+                        {% set sow = p.history|selectattr('action','equalto','sow')|list|last %}
+                        {% if sow %}
+                          {% set sprouted_date = h.start|todate %}
+                          {% set sow_date = sow.start|todate %}
+                          {% set germ_days = (sprouted_date - sow_date).days %}
+                          <div class="text-muted small">
+                            {{ t['Sprouted in'] }} {{ germ_days }} {{ t['days'] }}
+                          </div>
+                        {% endif %}
+                      {% elif h.action in ['flower', 'fruit'] and h.ended_on %}
+                        <div class="text-muted small">
+                          {{ t['Ended flowering on'] if h.action == 'flower' else t['Ended fruiting on'] }} {{ h.ended_on }}
+                        </div>
+                      {% endif %}
+                    </div>
+                    {% if not public_view %}
+                    <a href="{{ url_for('edit_stage', action_id=h.id, lang=lang) }}"
+                       class="text-secondary ms-2 align-top" title="{{ t['Edit stage'] }}">
+                      <i class="fas fa-edit" style="font-size:0.9rem;"></i>
+                    </a>
+                    {% endif %}
+                  </li>
+                  {% endif %}
+                {% endfor %}
+              </ul>
+              <div class="d-flex flex-wrap gap-2 mt-3">
+                {% if not public_view %}
+                <button class="btn btn-outline-primary btn-sm quick-log-btn"
+                        data-plant-id="{{ idx }}" data-event="water"
+                        title="{{ t['Log watering'] }}">
+                  <i class="fas fa-droplet me-1"></i> {{ t['Water'] }}
+                </button>
+                <button class="btn btn-outline-warning btn-sm quick-log-btn"
+                        data-plant-id="{{ idx }}" data-event="fertilize"
+                        title="{{ t['Log fertilization'] }}">
+                  <i class="fas fa-bottle-water me-1"></i> {{ t['Fertilize'] }}
+                </button>
+                {% set p_state = p.state.label if p.state else '' %}
+                {% if p_state in ['Flowering', 'Fruiting'] %}
+                <button class="btn btn-outline-warning btn-sm end-phase-btn"
+                        data-plant-id="{{ idx }}">
+                  <i class="fas fa-flag-checkered me-1"></i>
+                  {{ t['End of flowering'] if p_state == 'Flowering' else t['End of fruiting'] }}
+                </button>
+                {% endif %}
+                <a href="{{ url_for('add_stage', idx=idx, lang=lang) }}"
+                   class="btn btn-outline-secondary btn-sm">
+                  <i class="fas fa-plus-circle me-1"></i> {{ t['Add stage'] }}
+                </a>
+                <a href="{{ url_for('view_plant', idx=idx, lang=lang) }}"
+                   class="btn btn-outline-success btn-sm">
+                  <i class="fas fa-leaf me-1"></i> {{ t['Plant details'] }}
+                </a>
+                {% else %}
+                <a href="{{ url_for('public_view_plant', idx=idx, lang=lang) }}"
+                   class="btn btn-outline-success btn-sm">
+                  <i class="fas fa-leaf me-1"></i> {{ t['Plant details'] }}
+                </a>
+                {% endif %}
+              </div>
+            </div>
+          </div>
+        </div>
+        {% endif %}{# end species group / single plant #}
+
+        {% endfor %}{# end group_by_latin loop #}
+
       </div>
     </div>
   </div>

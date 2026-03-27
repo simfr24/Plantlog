@@ -1,64 +1,172 @@
 {% extends "base.html" %}
-{% block title %}{{ t['Edit stage'] }} - {{ form.common }}{% endblock %}
+{% block title %}{{ t['Edit stage'] }} – {{ form.common }}{% endblock %}
+
 {% block content %}
 
-<!-- Modal -->
-<div class="modal fade" id="confirmDeleteStageModal" tabindex="-1" aria-labelledby="confirmDeleteStageModalLabel" aria-hidden="true">
-  <div class="modal-dialog">
+<!-- Delete confirmation modal -->
+<div class="modal fade" id="confirmDeleteStageModal" tabindex="-1"
+     aria-labelledby="confirmDeleteStageModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-sm">
     <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title" id="confirmDeleteStageModalLabel">{{ t['Confirm delete stage'] }}</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{{ t['Close'] }}"></button>
+      <div class="modal-header border-0 pb-0">
+        <h5 class="modal-title" id="confirmDeleteStageModalLabel">
+          {{ t['Confirm delete stage'] }}
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"
+                aria-label="{{ t['Close'] }}"></button>
       </div>
-      <div class="modal-body">
+      <div class="modal-body text-muted" style="font-size:0.9rem">
         {{ t['Are you sure you want to delete this stage?'] }}
       </div>
-      <div class="modal-footer">
-        <form method="post" action="{{ url_for('delete_stage', action_id=action_id, lang=lang) }}">
-          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{ t['Cancel'] }}</button>
-          <button type="submit" class="btn btn-danger">{{ t['Delete'] }}</button>
+      <div class="modal-footer border-0 pt-0">
+        <form method="post"
+              action="{{ url_for('delete_stage', action_id=action_id, lang=lang) }}">
+          <button type="button" class="btn btn-sm btn-outline-secondary"
+                  data-bs-dismiss="modal">{{ t['Cancel'] }}</button>
+          <button type="submit" class="btn btn-sm btn-danger">{{ t['Delete'] }}</button>
         </form>
       </div>
     </div>
   </div>
 </div>
 
-  <div class="container py-4">
-    <div class="d-flex align-items-center mb-4">
-      <img src="{{ url_for('static', filename='logo.png') }}" alt="Plantlog" style="height:50px;" class="me-3">
-      <h1 class="mb-0 display-6 text-primary">{{ t['Edit stage for'] }}: {{ form.common }}</h1>
-    </div>
-    {% if errors %}
-      <div class="alert alert-danger">
-        <ul class="mb-0">{% for error in errors %}<li>{{ error }}</li>{% endfor %}</ul>
-      </div>
-    {% endif %}
-    <div class="card shadow-sm">
-      <div class="card-body">
-        <form method="post" action="{{ url_for('edit_stage', action_id=action_id, lang=lang) }}">
-          <input type="hidden" name="action_id" value="{{ action_id }}">
-          {% include "stage_sections.html" %}
-          <div class="mt-3">
-            <button type="submit" class="btn btn-primary px-4">
-              <i class="fas fa-save me-1"></i> {{ t['Save changes'] }}
-            </button>
-          </div>
-        </form>
-        <button type="button" class="btn btn-danger px-4 mt-3" data-bs-toggle="modal" data-bs-target="#confirmDeleteStageModal">
-          <i class="fas fa-trash me-1"></i> {{ t['Delete stage'] }}
-        </button>
-      </div>
-    </div>
+<style>
+  .form-wrap {
+    max-width: 660px;
+    margin: 0 auto;
+  }
+  .form-page-header {
+    display: flex;
+    align-items: baseline;
+    gap: 1rem;
+    margin-bottom: 2rem;
+  }
+  .form-page-header h1 {
+    font-size: 1.45rem;
+    font-weight: 600;
+    color: #1e2d3d;
+    margin: 0;
+  }
+  .form-page-header .plant-name {
+    color: #4a8a68;
+  }
+  .form-back {
+    font-size: 0.8rem;
+    color: #8898aa;
+    text-decoration: none;
+    border: 1px solid #d0d5dd;
+    border-radius: 5px;
+    padding: 0.22rem 0.6rem;
+    margin-left: auto;
+    transition: background 0.13s;
+    white-space: nowrap;
+  }
+  .form-back:hover { background: #f0f4f8; color: #4a5568; }
+
+  .form-section { margin-bottom: 2rem; }
+  .form-section-label {
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+    color: #b0bbc8;
+    margin-bottom: 0.85rem;
+    padding-bottom: 0.4rem;
+    border-bottom: 1px solid #edf0f4;
+  }
+
+  .form-control, .form-select {
+    font-size: 0.87rem;
+    border-color: #d0d5dd;
+    border-radius: 6px;
+    color: #2d3748;
+  }
+  .form-control:focus, .form-select:focus {
+    border-color: #6b9eb0;
+    box-shadow: 0 0 0 3px rgba(107,158,176,0.14);
+  }
+
+  .error-box {
+    background: #fff5f5;
+    border: 1px solid #f0c0c0;
+    border-radius: 7px;
+    padding: 0.7rem 1rem;
+    margin-bottom: 1.5rem;
+    font-size: 0.84rem;
+    color: #9b2c2c;
+  }
+  .error-box ul { margin: 0; padding-left: 1.2rem; }
+
+  .submit-row {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding-top: 0.5rem;
+  }
+  .btn-primary-action {
+    background: #3d7a68;
+    color: #fff;
+    border: none;
+    border-radius: 7px;
+    padding: 0.5rem 1.4rem;
+    font-size: 0.88rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+  .btn-primary-action:hover { background: #2d6050; }
+
+  .btn-delete-action {
+    margin-left: auto;
+    font-size: 0.82rem;
+    color: #c0392b;
+    background: none;
+    border: 1px solid #f0c0c0;
+    border-radius: 6px;
+    padding: 0.4rem 0.9rem;
+    cursor: pointer;
+    transition: background 0.13s;
+  }
+  .btn-delete-action:hover { background: #fff5f5; }
+</style>
+
+<div class="form-wrap">
+
+  <div class="form-page-header">
+    <h1>
+      {{ t['Edit stage for'] }}
+      <span class="plant-name">{{ form.common }}</span>
+    </h1>
+    <a href="{{ url_for('index', lang=lang) }}" class="form-back">
+      <i class="fas fa-arrow-left me-1"></i>{{ t['Back to dashboard'] }}
+    </a>
   </div>
-  <script>
-    document.addEventListener('change', function() {
-      const sel = document.querySelector('input[name="status"]:checked').value;
-      document.querySelectorAll('.stage-section').forEach(s =>
-        s.style.display = s.id === 'stage-' + sel ? 'block' : 'none'
-      );
-    });
-    document.addEventListener('DOMContentLoaded', () =>
-      document.dispatchEvent(new Event('change'))
-    );
-  </script>
+
+  {% if errors %}
+  <div class="error-box">
+    <ul>{% for e in errors %}<li>{{ e }}</li>{% endfor %}</ul>
+  </div>
+  {% endif %}
+
+  <form method="post"
+        action="{{ url_for('edit_stage', action_id=action_id, lang=lang) }}">
+    <input type="hidden" name="action_id" value="{{ action_id }}">
+
+    <div class="form-section">
+      <div class="form-section-label">{{ t['Edit stage'] }}</div>
+      {% include "stage_sections.html" %}
+    </div>
+
+    <div class="submit-row">
+      <button type="submit" class="btn-primary-action">
+        <i class="fas fa-save me-1"></i>{{ t['Save changes'] }}
+      </button>
+      <button type="button" class="btn-delete-action"
+              data-bs-toggle="modal" data-bs-target="#confirmDeleteStageModal">
+        <i class="fas fa-trash me-1"></i>{{ t['Delete stage'] }}
+      </button>
+    </div>
+  </form>
+
+</div>
 {% endblock %}
