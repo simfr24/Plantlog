@@ -6,7 +6,7 @@
 
 {# Group event codes into tabs #}
 {% set tab_groups = [
-  ('prep',   'stage_tab_prep',   'fa-seedling',  ['soak','strat','sow','plant']),
+  ('prep',   'stage_tab_prep',   'fa-seedling',  ['acquire','soak','strat','sow','plant']),
   ('growth', 'stage_tab_growth', 'fa-leaf',      ['sprout','flower','fruit','dead']),
   ('care',   'stage_tab_care',   'fa-droplet',   ['water','fertilize','measure','custom']),
 ] %}
@@ -187,6 +187,22 @@
          value="{{ form.event_date or today }}">
 </div>
 
+<!-- Acquire: source -->
+<div id="extra-acquire" class="stage-extra"
+     {% if form.status != 'acquire' %}style="display:none"{% endif %}>
+  <div class="row g-3">
+    <div class="col-sm-6">
+      <label class="form-label">
+        {{ t['stash_source_label'] if 'stash_source_label' in t else 'Source' }}
+        <span style="font-weight:400; color:#a0aec0; font-size:0.78rem">({{ t['optional'] }})</span>
+      </label>
+      <input type="text" class="form-control"
+             name="event_source" value="{{ form.event_source }}"
+             placeholder="{{ t['stash_source_placeholder'] if 'stash_source_placeholder' in t else 'e.g. garden centre, gift, foraged' }}">
+    </div>
+  </div>
+</div>
+
 <!-- Sow: germination range -->
 <div id="extra-sow" class="stage-extra"
      {% if form.status != 'sow' %}style="display:none"{% endif %}>
@@ -305,6 +321,7 @@
   (function () {
     // ── Extra-fields logic ───────────────────────────────────────────
     var extraMap = {
+      'acquire':'extra-acquire',
       'sow':    'extra-sow',
       'soak':   'extra-duration',
       'strat':  'extra-duration',

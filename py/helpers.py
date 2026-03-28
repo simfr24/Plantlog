@@ -165,7 +165,10 @@ def build_state_cards(state_groups, include_dead=False):
     total_plants = sum(len(plants) for plants in state_groups.values())
     for i, (state, plants) in enumerate(state_groups.items()):
         is_dead_state = (state.lower() == "dead")
+        is_stash_state = (state.lower() == "stashed")
         if is_dead_state and not include_dead:
+            continue
+        if is_stash_state:
             continue
         state_cards.append((state, plants, is_dead_state))
     # Split for columns:
@@ -199,7 +202,7 @@ def _events_for_plant(conn, plant_id: int) -> List[Dict[str, Any]]:
                e.dur_val,  e.dur_unit,
                e.measure_val, e.measure_unit,
                e.custom_label, e.custom_note,
-               e.ended_on
+               e.ended_on, e.source
         FROM events      e
         JOIN event_types et ON et.id = e.event_type_id
         WHERE e.plant_id = ?
@@ -224,6 +227,8 @@ def _events_for_plant(conn, plant_id: int) -> List[Dict[str, Any]]:
         elif a["action"] == "custom":
             ev["custom_label"] = a["custom_label"]
             ev["custom_note"] = a["custom_note"]
+        elif a["action"] == "acquire":
+            ev["source"] = a["source"]
         if a["action"] in ("flower", "fruit") and a["ended_on"]:
             ev["ended_on"] = a["ended_on"]
         hist.append(ev)
@@ -376,6 +381,11 @@ def _insert_event(cur, plant_id: int, ev: Dict[str, Any]) -> None:
             f"INSERT INTO events ({','.join(base_cols)}, custom_label, custom_note)"
             " VALUES (?,?,?,?,?)",
             base_vals + (ev["custom_label"], ev["custom_note"]),
+        )
+    elif ev["action"] == "acquire":
+        cur.execute(
+            f"INSERT INTO events ({','.join(base_cols)}, source) VALUES (?,?,?,?)",
+            base_vals + (ev.get("source") or None,),
         )
     elif ev["action"] in ("flower", "fruit") and ev.get("ended_on"):
         cur.execute(
@@ -599,15 +609,15 @@ def explode_plant(plant_id: int, count: int, user_id: int) -> List[int]:
             # Copy all events to the new plant
             events = conn.execute(
                 "SELECT event_type_id, happened_on, range_min, range_min_u, range_max, range_max_u, "
-                "dur_val, dur_unit, measure_val, measure_unit, custom_label, custom_note "
+                "dur_val, dur_unit, measure_val, measure_unit, custom_label, custom_note, source "
                 "FROM events WHERE plant_id = ? ORDER BY happened_on, id",
                 (plant_id,),
             ).fetchall()
             for ev in events:
                 cur.execute(
                     "INSERT INTO events (plant_id, event_type_id, happened_on, range_min, range_min_u, "
-                    "range_max, range_max_u, dur_val, dur_unit, measure_val, measure_unit, custom_label, custom_note) "
-                    "VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)",
+                    "range_max, range_max_u, dur_val, dur_unit, measure_val, measure_unit, custom_label, custom_note, source) "
+                    "VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
                     (new_plant_id,) + tuple(ev),
                 )
         conn.commit()
@@ -723,6 +733,7 @@ def get_empty_form():
         "event_size_val": 0,
         "event_size_unit": "cm",
         "event_ended_on": "",
+        "event_source": "",
         "notes": "",
     }
 
@@ -750,6 +761,7 @@ def get_form_data(request):
         "event_custom_label": request.form.get("event_custom_label", "").strip(),
         "event_custom_note": request.form.get("event_custom_note", "").strip(),
         "event_ended_on": request.form.get("event_ended_on", "").strip(),
+        "event_source": request.form.get("event_source", "").strip(),
     }
 
 
@@ -862,6 +874,12 @@ def validate_form(form, translations, context="add"):
 
 
 
+    elif status == "acquire":
+        event = {
+            "action": "acquire",
+            "start": date,
+            "source": form.get("event_source", "").strip() or None,
+        }
     elif status in ("flower", "fruit"):
         ended = form.get("event_ended_on", "").strip() or None
         event = {"action": status, "start": date}

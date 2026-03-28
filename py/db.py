@@ -95,6 +95,7 @@ CREATE TABLE IF NOT EXISTS events (
   custom_label    TEXT,
   custom_note     TEXT,
   ended_on        TEXT,
+  source          TEXT,
   FOREIGN KEY(plant_id)      REFERENCES plants(id) ON DELETE CASCADE,
   FOREIGN KEY(event_type_id) REFERENCES event_types(id)
 );
@@ -141,6 +142,7 @@ def init_and_fill_db():
         conn.executescript(SCHEMA)
         # 2) upsert state_types
         state_types = [
+            ('stash',      'Stashed',     'text-secondary','fa-box',      1),
             ('seed',       'Sown',        'text-success','fa-seedling',  10),
             ('soaked',     'Soaking',     'text-primary','fa-tint',      5),
             ('strat',      'Stratifying', 'text-info',   'fa-snowflake', 5),
@@ -153,6 +155,7 @@ def init_and_fill_db():
 
         # 3) upsert event_types
         event_types = [
+            ('acquire',   'Acquire',      'text-secondary', 'fa-box',          'stash',     1),
             ('soak',      'Soak',         'text-primary',   'fa-tint',         'soaked',    4),
             ('strat',     'Strat',        'text-info',      'fa-snowflake',    'strat',     5),
             ('sow',       'Sow',          'text-success',   'fa-seedling',     'seed',      10),
@@ -193,6 +196,8 @@ def _migrate(conn):
     event_cols = {row[1] for row in conn.execute("PRAGMA table_info(events)").fetchall()}
     if "ended_on" not in event_cols:
         conn.execute("ALTER TABLE events ADD COLUMN ended_on TEXT")
+    if "source" not in event_cols:
+        conn.execute("ALTER TABLE events ADD COLUMN source TEXT")
 
     # print_jobs table (for existing DBs that pre-date the SCHEMA addition)
     conn.execute("""

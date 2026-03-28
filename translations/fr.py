@@ -241,6 +241,16 @@ translations = {
     "graveyard_empty": "Aucune plante morte pour l'instant.",
     "dead_plants_footer": "plantes mortes dans le cimetière",
 
+    # ────────── réserve de graines ──────────
+    "stash_title": "Réserve de graines",
+    "stash_empty": "Aucune graine en réserve pour l'instant.",
+    "stash_footer": "lots en réserve",
+    "stash_sow_btn": "Semer maintenant",
+    "stash_add_btn": "Ajouter à la réserve",
+    "stash_source_label": "Provenance",
+    "stash_source_placeholder": "ex. jardinerie, cadeau, cueillette",
+    "Acquire": "Acquérir",
+
     # ────────── variety / batch field ──────────
     "Variety / Batch": "Variété / Lot",
     "e.g. variety": "ex. : Lot A, Jardinière…",

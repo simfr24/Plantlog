@@ -73,7 +73,7 @@ TOOLS = [
                 "common":          {"type": "string", "description": "Common name."},
                 "latin":           {"type": "string", "description": "Latin name."},
                 "first_event":     {"type": "string", "default": "sow",
-                                    "description": "First event: sow, plant, soak, strat, sprout, flower, fruit, water, fertilize, measure, custom."},
+                                    "description": "First event: acquire (seed stash), sow, plant, soak, strat, sprout, flower, fruit, water, fertilize, measure, custom."},
                 "event_date":      {"type": "string", "description": "ISO date YYYY-MM-DD. Defaults to today."},
                 "location":        {"type": "string"},
                 "notes":           {"type": "string"},
@@ -82,6 +82,7 @@ TOOLS = [
                 "count":           {"type": "integer", "default": 1},
                 "sprout_min_days": {"type": "integer", "description": "Min days to germination (required for sow — look up the species, do not guess)."},
                 "sprout_max_days": {"type": "integer", "description": "Max days to germination (required for sow — look up the species, do not guess)."},
+                "source":          {"type": "string", "description": "Where the seeds/cuttings came from (acquire events only, e.g. 'garden centre', 'gift')."},
             },
             "required": ["common", "latin"],
         },
@@ -94,7 +95,7 @@ TOOLS = [
             "properties": {
                 "plant_id":        {"type": "integer"},
                 "event_type":      {"type": "string",
-                                    "description": "sow, plant, soak, strat, sprout, flower, fruit, water, fertilize, measure, custom, dead."},
+                                    "description": "acquire, sow, plant, soak, strat, sprout, flower, fruit, water, fertilize, measure, custom, dead."},
                 "event_date":      {"type": "string", "description": "ISO date YYYY-MM-DD. Defaults to today."},
                 "sprout_min_days": {"type": "integer", "description": "Min germination days (sow only — look up the species, do not guess)."},
                 "sprout_max_days": {"type": "integer", "description": "Max germination days (sow only — look up the species, do not guess)."},
@@ -104,6 +105,7 @@ TOOLS = [
                 "size_unit":       {"type": "string",  "description": "mm, cm, m."},
                 "custom_label":    {"type": "string",  "description": "Label (custom events)."},
                 "custom_note":     {"type": "string",  "description": "Note (custom events)."},
+                "source":          {"type": "string",  "description": "Where the seeds/cuttings came from (acquire events only)."},
             },
             "required": ["plant_id", "event_type"],
         },
@@ -202,6 +204,8 @@ def _event_detail(h: dict) -> dict:
     elif h["action"] == "custom":
         ev["label"] = h.get("custom_label")
         ev["note"]  = h.get("custom_note")
+    elif h["action"] == "acquire":
+        ev["source"] = h.get("source")
     return ev
 
 # ── tool implementations ──────────────────────────────────────────────────────
@@ -240,6 +244,7 @@ def _call_tool(name: str, args: dict, user: dict) -> str:
             "event_range_max_u": "days",
             "event_dur_val":     args.get("duration_val", 24),
             "event_dur_unit":    args.get("duration_unit", "hours"),
+            "event_source":      args.get("source", ""),
         })
         errors, event = validate_form(form, get_translations(lang), context="add")
         if errors:
@@ -266,6 +271,7 @@ def _call_tool(name: str, args: dict, user: dict) -> str:
             "event_size_unit":    args.get("size_unit", "cm"),
             "event_custom_label": args.get("custom_label", ""),
             "event_custom_note":  args.get("custom_note", ""),
+            "event_source":       args.get("source", ""),
         })
         errors, event = validate_form(form, get_translations(lang), context="add_stage")
         if errors:

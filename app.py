@@ -279,6 +279,7 @@ def build_dashboard_context(user_obj, lang):
     state_groups = group_plants_by_state(plants)
     left_col, right_col = build_state_cards(state_groups, include_dead=False)
     dead_count   = len(state_groups.get("Dead", []))
+    stash_count  = len(state_groups.get("Stashed", []))
     return dict(
         lang      = lang,
         t         = translations,
@@ -290,6 +291,7 @@ def build_dashboard_context(user_obj, lang):
         left_col  = left_col,
         right_col = right_col,
         dead_count = dead_count,
+        stash_count = stash_count,
         group_by_batch = group_by_batch,
         group_by_latin = group_by_latin,
     )
@@ -317,6 +319,18 @@ def graveyard():
         reverse=True,
     )
     return render_template("graveyard.html", dead=dead, t=t, lang=g.lang, today=date.today())
+
+@app.route("/stash")
+@login_required
+def stash():
+    t      = get_translations(g.lang)
+    plants = load_data(g.user["id"])
+    stashed = sorted(
+        [p for p in plants if p.get("state") and p["state"].get("label", "").lower() == "stashed"],
+        key=lambda p: (p.get("current") or {}).get("start", ""),
+        reverse=True,
+    )
+    return render_template("stash.html", stashed=stashed, t=t, lang=g.lang, today=date.today())
 
 @app.route("/explode/<int:idx>", methods=["POST"])
 @login_required
@@ -425,9 +439,12 @@ def add_plant():
         # fall‑through: show form with errors
     else:
         form = get_empty_form()
+        default_event = request.args.get("default_event")
+        if default_event:
+            form["status"] = default_event
         errors = []
 
-    _starting_codes = {'sow', 'soak', 'strat', 'plant'}
+    _starting_codes = {'acquire', 'sow', 'soak', 'strat', 'plant'}
     starting_event_specs = [s for s in get_event_specs() if s['code'] in _starting_codes]
 
     return render_template(
@@ -506,6 +523,9 @@ def add_stage(idx):
     else:
         form = get_empty_form()
         form.update({"common": plant["common"], "latin": plant["latin"]})
+        default_event = request.args.get("default_event")
+        if default_event:
+            form["status"] = default_event
         errors = {}
 
     return render_template(

@@ -241,6 +241,16 @@ translations = {
     "graveyard_empty": "Мёртвых растений пока нет.",
     "dead_plants_footer": "мёртвых растений на кладбище",
 
+    # ────────── хранилище семян ──────────
+    "stash_title": "Хранилище семян",
+    "stash_empty": "В хранилище пока нет семян.",
+    "stash_footer": "партий в хранилище",
+    "stash_sow_btn": "Посеять сейчас",
+    "stash_add_btn": "Добавить в хранилище",
+    "stash_source_label": "Источник",
+    "stash_source_placeholder": "напр. садовый центр, подарок, собрано",
+    "Acquire": "Добавить",
+
     # ────────── variety / batch field ──────────
     "Variety / Batch": "Разновидность / Партия",
     "e.g. variety": "напр. Партия А, Ящик у окна…",

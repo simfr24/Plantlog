@@ -241,6 +241,16 @@ translations = {
     "graveyard_empty": "No dead plants yet.",
     "dead_plants_footer": "dead plants in the graveyard",
 
+    # ────────── seed stash ──────────
+    "stash_title": "Seed Stash",
+    "stash_empty": "No seeds in the stash yet.",
+    "stash_footer": "lots in the stash",
+    "stash_sow_btn": "Sow now",
+    "stash_add_btn": "Add to stash",
+    "stash_source_label": "Source",
+    "stash_source_placeholder": "e.g. garden centre, gift, foraged",
+    "Acquire": "Acquire",
+
     # ────────── variety / batch field ──────────
     "Variety / Batch": "Variety / Batch",
     "e.g. variety": "e.g. Batch A, Window box…",

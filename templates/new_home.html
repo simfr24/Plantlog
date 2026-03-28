@@ -728,11 +728,18 @@
   <p class="text-muted">{{ t['No plants yet'] }}</p>
 {% endif %}
 
-{% if dead_count %}
-<div class="graveyard-link">
+{% if stash_count or dead_count %}
+<div class="graveyard-link" style="display:flex; justify-content:center; gap:1.5rem; flex-wrap:wrap;">
+  {% if stash_count %}
+  <a href="{{ url_for('stash', lang=lang) }}">
+    <i class="fas fa-box me-1"></i>{{ stash_count }} {{ t['stash_footer'] if 'stash_footer' in t else 'lots in the stash' }}
+  </a>
+  {% endif %}
+  {% if dead_count %}
   <a href="{{ url_for('graveyard', lang=lang) }}">
     <i class="fas fa-skull me-1"></i>{{ dead_count }} {{ t['dead_plants_footer'] }}
   </a>
+  {% endif %}
 </div>
 {% endif %}
 
