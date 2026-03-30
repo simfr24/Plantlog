@@ -11,6 +11,8 @@ import PIL.Image
 import PIL.ImageDraw
 import PIL.ImageFont
 import PIL.ImageOps
+import qrcode
+import qrcode.constants
 
 
 PRINTER_WIDTH = 384
@@ -571,6 +573,98 @@ def create_label_detailed(common_name, latin_name, date_str,
     d.line([(div_m, y), (W - div_m, y)], fill=0, width=1)
     y += 12
 
+    d.text(((W - date_w) // 2, y), date_str, font=date_font, fill=0)
+
+    return img
+
+
+# ---------------------------------------------------------------------------
+# QR code label
+# ---------------------------------------------------------------------------
+
+def _make_qr_image(url, target_size):
+    """Generate a QR code as a 1-bit PIL image sized close to target_size px."""
+    qr = qrcode.QRCode(
+        error_correction=qrcode.constants.ERROR_CORRECT_M,
+        box_size=max(2, target_size // 33),
+        border=2,
+    )
+    qr.add_data(url)
+    qr.make(fit=True)
+    img = qr.make_image(fill_color="black", back_color="white")
+    img = img.resize((target_size, target_size), PIL.Image.NEAREST)
+    return img.convert("1")
+
+
+def create_label_qr(common_name, latin_name, date_str, plant_url,
+                    variety=None, nickname=None, extra_notes=None):
+    """Label with the plant name and a QR code linking to the plant's page."""
+    W      = PRINTER_WIDTH
+    margin = 18
+    pad_t  = 26
+    pad_b  = 20
+
+    name_font  = _get_font("bold",    36)
+    sub_font   = _get_font("italic",  20)
+    latin_font = _get_font("italic",  20)
+    var_font   = _get_font("regular", 16)
+    date_font  = _get_font("regular", 15)
+
+    hero = nickname if nickname else common_name
+    sub  = common_name if nickname else None
+
+    inner_w = W - margin * 2
+
+    tmp = PIL.Image.new("1", (1, 1))
+    td  = PIL.ImageDraw.Draw(tmp)
+
+    hero_lines = _wrap(hero, name_font, inner_w)
+    hero_h     = _ml_h(td, hero_lines, name_font)
+    hero_w     = _ml_w(td, hero_lines, name_font)
+    sub_h      = (_text_h(td, sub, sub_font) + 6) if sub else 0
+    latin_h    = _text_h(td, latin_name, latin_font)
+    var_h      = (_text_h(td, variety, var_font) + 6) if variety else 0
+    date_h     = _text_h(td, date_str, date_font)
+
+    qr_size  = int(W * 0.56)
+    qr_size  = (qr_size // 4) * 4   # round to multiple of 4 for clean scaling
+
+    total_h = pad_t + hero_h + 8 + sub_h + latin_h + 4 + var_h + 18 + qr_size + 14 + date_h + pad_b
+
+    img = PIL.Image.new("1", (W, total_h), 1)
+    d   = PIL.ImageDraw.Draw(img)
+
+    # Border
+    bx0, by0, bx1, by1 = margin - 5, 5, W - margin + 5, total_h - 6
+    d.rectangle([bx0, by0, bx1, by1], outline=0, width=3)
+    d.rectangle([bx0 + 6, by0 + 6, bx1 - 6, by1 - 6], outline=0, width=1)
+    _square_notches(d, bx0 + 6, by0 + 6, bx1 - 6, by1 - 6)
+
+    y = pad_t
+    d.multiline_text(((W - hero_w) // 2, y), hero_lines, font=name_font, fill=0, align="center")
+    y += hero_h + 8
+
+    if sub:
+        d.text((W // 2, y), sub, font=sub_font, fill=0, anchor="ma")
+        y += sub_h
+
+    d.text((W // 2, y), latin_name, font=latin_font, fill=0, anchor="ma")
+    y += latin_h + 4
+
+    if variety:
+        d.text((W // 2, y), f"'{variety}'", font=var_font, fill=0, anchor="ma")
+        y += var_h
+
+    div_m = margin + 12
+    d.line([(div_m, y + 7), (W - div_m, y + 7)], fill=0, width=1)
+    d.line([(div_m, y + 9), (W - div_m, y + 9)], fill=0, width=1)
+    y += 18
+
+    qr_img = _make_qr_image(plant_url, qr_size)
+    img.paste(qr_img, ((W - qr_size) // 2, y))
+    y += qr_size + 14
+
+    date_w = _text_w(td, date_str, date_font)
     d.text(((W - date_w) // 2, y), date_str, font=date_font, fill=0)
 
     return img

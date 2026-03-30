@@ -87,7 +87,7 @@ from py.processing import sort_key, get_unique_locations
 from py.mcp import blueprint as mcp_blueprint
 from py.label_printer import (
     create_label_classic, create_label_circular,
-    create_label_minimal, create_label_detailed,
+    create_label_minimal, create_label_detailed, create_label_qr,
     label_to_png_bytes, label_to_printer_bytes,
 )
 
@@ -649,7 +649,7 @@ def _format_date(iso_date):
     return date.today().strftime("%d-%m-%Y")
 
 
-def _make_label_image(plant, style, extra_notes=None):
+def _make_label_image(plant, style, extra_notes=None, base_url=None):
     common      = plant.get("common", "")
     latin       = plant.get("latin",  "")
     variety     = plant.get("variety") or None
@@ -665,6 +665,9 @@ def _make_label_image(plant, style, extra_notes=None):
         return create_label_minimal(common, latin, date_str, variety, nickname, extra_notes)
     if style == "detailed":
         return create_label_detailed(common, latin, date_str, variety, nickname, location, notes, extra_notes)
+    if style == "qr":
+        plant_url = (base_url or request.url_root).rstrip("/") + "/p/" + str(plant.get("id", ""))
+        return create_label_qr(common, latin, date_str, plant_url, variety, nickname, extra_notes)
     return create_label_classic(common, latin, date_str, variety, nickname, extra_notes)
 
 
@@ -1107,7 +1110,7 @@ def api_print_job_bytes(job_id):
     """Render the label and return raw ESC/POS bytes for the printer."""
     with get_conn() as conn:
         row = conn.execute(
-            """SELECT j.style, j.extra_notes,
+            """SELECT j.style, j.extra_notes, p.id AS plant_id,
                       p.common, p.latin, p.variety, p.nickname, p.location, p.notes,
                       (SELECT MIN(e.happened_on) FROM events e WHERE e.plant_id = p.id) AS earliest_date
                FROM print_jobs j
@@ -1131,6 +1134,9 @@ def api_print_job_bytes(job_id):
         img = create_label_minimal(row["common"], row["latin"], date_str, variety, nickname, extra_notes)
     elif style == "detailed":
         img = create_label_detailed(row["common"], row["latin"], date_str, variety, nickname, location, notes, extra_notes)
+    elif style == "qr":
+        plant_url = request.url_root.rstrip("/") + "/p/" + str(row["plant_id"])
+        img = create_label_qr(row["common"], row["latin"], date_str, plant_url, variety, nickname, extra_notes)
     else:
         img = create_label_classic(row["common"], row["latin"], date_str, variety, nickname, extra_notes)
     return Response(label_to_printer_bytes(img), mimetype="application/octet-stream")

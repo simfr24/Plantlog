@@ -74,9 +74,11 @@
               <label class="btn btn-outline-secondary btn-sm" for="styleMinimal">{{ t['Minimal'] }}</label>
               <input type="radio" class="btn-check" name="labelStyle" id="styleDetailed" value="detailed">
               <label class="btn btn-outline-secondary btn-sm" for="styleDetailed">{{ t['Detailed'] }}</label>
+              <input type="radio" class="btn-check" name="labelStyle" id="styleQr" value="qr">
+              <label class="btn btn-outline-secondary btn-sm" for="styleQr"><i class="fas fa-qrcode me-1"></i>QR</label>
             </div>
           </div>
-          <div class="mb-2">
+          <div class="mb-2" id="labelExtraNotesWrap">
             <textarea id="labelExtraNotes" class="form-control form-control-sm"
                       rows="2" placeholder="{{ t['label_extra_notes_placeholder'] }}"
                       style="resize:none;"></textarea>
@@ -116,8 +118,13 @@
         `/label_preview/${plantId}?style=${currentStyle()}${qs}&_=${Date.now()}`;
     }
 
+    function updateNotesVisibility() {
+      document.getElementById('labelExtraNotesWrap').style.display =
+        currentStyle() === 'qr' ? 'none' : '';
+    }
+
     document.querySelectorAll('input[name="labelStyle"]').forEach(function(r) {
-      r.addEventListener('change', updatePreview);
+      r.addEventListener('change', function() { updateNotesVisibility(); updatePreview(); });
     });
 
     let _previewTimer = null;
