@@ -71,6 +71,7 @@ CREATE TABLE IF NOT EXISTS print_jobs (
   plant_id    INTEGER NOT NULL,
   style       TEXT    NOT NULL DEFAULT 'classic',
   extra_notes TEXT,
+  base_url    TEXT,
   status      TEXT    NOT NULL DEFAULT 'pending',  -- pending | done | error
   error_msg   TEXT,
   created_at  TEXT    NOT NULL DEFAULT (datetime('now')),
@@ -218,6 +219,8 @@ def _migrate(conn):
     pj_cols = {row[1] for row in conn.execute("PRAGMA table_info(print_jobs)").fetchall()}
     if "extra_notes" not in pj_cols:
         conn.execute("ALTER TABLE print_jobs ADD COLUMN extra_notes TEXT")
+    if "base_url" not in pj_cols:
+        conn.execute("ALTER TABLE print_jobs ADD COLUMN base_url TEXT")
 
     conn.commit()
 

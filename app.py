@@ -372,6 +372,9 @@ def public_view_plant(idx):
     if plant is None or plant["id"] is None:
         abort(404)
 
+    if g.user and plant.get("user_id") == g.user["id"]:
+        return redirect(url_for("view_plant", idx=idx, lang=g.lang))
+
     return render_template(
         "plant.html",
         plant=plant,
@@ -679,7 +682,8 @@ def label_preview(idx):
         abort(403)
     style       = request.args.get("style", "classic")
     extra_notes = request.args.get("extra") or None
-    img = _make_label_image(plant, style, extra_notes)
+    base_url    = request.args.get("base_url") or None
+    img = _make_label_image(plant, style, extra_notes, base_url=base_url)
     return Response(label_to_png_bytes(img), mimetype="image/png")
 
 
@@ -693,10 +697,11 @@ def print_label_route(idx):
     data        = request.get_json(silent=True) or {}
     style       = data.get("style", "classic")
     extra_notes = data.get("extra_notes") or None
+    base_url    = data.get("base_url") or None
     with get_conn() as conn:
         cur = conn.execute(
-            "INSERT INTO print_jobs (user_id, plant_id, style, extra_notes) VALUES (?,?,?,?)",
-            (g.user["id"], idx, style, extra_notes),
+            "INSERT INTO print_jobs (user_id, plant_id, style, extra_notes, base_url) VALUES (?,?,?,?,?)",
+            (g.user["id"], idx, style, extra_notes, base_url),
         )
         job_id = cur.lastrowid
         conn.commit()
@@ -1110,7 +1115,7 @@ def api_print_job_bytes(job_id):
     """Render the label and return raw ESC/POS bytes for the printer."""
     with get_conn() as conn:
         row = conn.execute(
-            """SELECT j.style, j.extra_notes, p.id AS plant_id,
+            """SELECT j.style, j.extra_notes, j.base_url, p.id AS plant_id,
                       p.common, p.latin, p.variety, p.nickname, p.location, p.notes,
                       (SELECT MIN(e.happened_on) FROM events e WHERE e.plant_id = p.id) AS earliest_date
                FROM print_jobs j
@@ -1135,7 +1140,8 @@ def api_print_job_bytes(job_id):
     elif style == "detailed":
         img = create_label_detailed(row["common"], row["latin"], date_str, variety, nickname, location, notes, extra_notes)
     elif style == "qr":
-        plant_url = request.url_root.rstrip("/") + "/p/" + str(row["plant_id"])
+        base_url  = (row["base_url"] or request.url_root).rstrip("/")
+        plant_url = base_url + "/p/" + str(row["plant_id"])
         img = create_label_qr(row["common"], row["latin"], date_str, plant_url, variety, nickname, extra_notes)
     else:
         img = create_label_classic(row["common"], row["latin"], date_str, variety, nickname, extra_notes)

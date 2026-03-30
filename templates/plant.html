@@ -113,9 +113,11 @@
 
     function updatePreview() {
       const extra = extraNotes();
-      const qs = extra ? `&extra=${encodeURIComponent(extra)}` : '';
-      document.getElementById('labelPreview').src =
-        `/label_preview/${plantId}?style=${currentStyle()}${qs}&_=${Date.now()}`;
+      const style = currentStyle();
+      let qs = `style=${style}&_=${Date.now()}`;
+      if (extra) qs += `&extra=${encodeURIComponent(extra)}`;
+      if (style === 'qr') qs += `&base_url=${encodeURIComponent(window.location.origin)}`;
+      document.getElementById('labelPreview').src = `/label_preview/${plantId}?${qs}`;
     }
 
     function updateNotesVisibility() {
@@ -166,7 +168,8 @@
       fetch(`/print_label/${plantId}`, {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({style: currentStyle(), extra_notes: extraNotes() || null})
+        body: JSON.stringify({style: currentStyle(), extra_notes: extraNotes() || null,
+          base_url: currentStyle() === 'qr' ? window.location.origin : null})
       })
       .then(function(r) { return r.json(); })
       .then(function(data) {
