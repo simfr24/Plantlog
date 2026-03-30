@@ -20,7 +20,7 @@
         {% set age_days = (now_date - sprouted_date).days %}
         <li class="list-group-item d-flex justify-content-between align-items-center">
           <span><i class="fas fa-calendar-day me-2 text-success"></i> {{ t['Age'] }}</span>
-          <span class="badge bg-success rounded-pill">{{ age_days }} {{ t['days'] }}</span>
+          <span class="badge bg-success rounded-pill">{{ format_age(age_days, t) }}</span>
         </li>
       {% endif %}
       {% if last_measurement %}

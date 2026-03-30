@@ -353,7 +353,7 @@
               <div class="flex-grow-1">
                 <div class="fw-semibold {{ 'text-muted' if is_dead_state else '' }}">
                   {% if p.nickname %}<span class="text-primary me-1">{{ p.nickname }}</span>{% endif %}
-                  {{ p.common }}{% if p.variety %} <small class="text-muted fw-normal">— {{ p.variety }}</small>{% endif %}
+                  {{ p.common }}{% if p.variety %} <small class="text-muted fw-normal fst-italic">'{{ p.variety }}'</small>{% endif %}
                   {% if p.count and p.count > 1 %}<span class="badge bg-secondary ms-1">×{{ p.count }}</span>{% endif %}
                   <small class="text-muted fst-italic">({{ p.latin }})</small>
                 </div>

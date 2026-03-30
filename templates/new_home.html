@@ -387,7 +387,8 @@
   <div class="state-pills" id="statePills">
     <button class="pill active" data-state="all">
       {{ t['All'] }}
-      <span class="pill-count">{{ plants | rejectattr('state', 'none') | selectattr('state.label', 'ne', 'Dead') | list | length }}</span>
+      {% set ns = namespace(total=0) %}{% for _, sp, _ in alive_states %}{% set ns.total = ns.total + sp|length %}{% endfor %}
+      <span class="pill-count">{{ ns.total }}</span>
     </button>
     {% for state, state_plants, is_dead_state in alive_states %}
       {% set col = state_colors.get(state|lower, '#8898aa') %}
@@ -547,7 +548,7 @@
           <div class="modal-plant-info">
             <div class="modal-plant-name">
               {% if p.nickname %}<span class="nickname">{{ p.nickname }}</span> · {% endif %}
-              {{ p.common }}{% if p.variety %} <span style="color:#a0aec0;font-weight:400">— {{ p.variety }}</span>{% endif %}
+              {{ p.common }}{% if p.variety %} <span style="color:#a0aec0;font-weight:400;font-style:italic">'{{ p.variety }}'</span>{% endif %}
             </div>
             {% if p.location %}
             <div class="modal-plant-meta">
@@ -680,7 +681,7 @@
       {% if p.count and p.count > 1 %}&thinsp;<span class="badge bg-secondary" style="font-size:0.7rem">×{{ p.count }}</span>{% endif %}
     </div>
     <div class="tile-latin">
-      {{ p.latin }}{% if p.variety %} — {{ p.variety }}{% endif %}
+      {{ p.latin }}{% if p.variety %} <em>'{{ p.variety }}'</em>{% endif %}
     </div>
     <div class="tile-status">
       <span class="state-label">{{ t[state] if state in t else state }}</span>
