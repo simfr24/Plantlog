@@ -1117,7 +1117,12 @@ def api_print_job_bytes(job_id):
         row = conn.execute(
             """SELECT j.style, j.extra_notes, j.base_url, p.id AS plant_id,
                       p.common, p.latin, p.variety, p.nickname, p.location, p.notes,
-                      (SELECT MIN(e.happened_on) FROM events e WHERE e.plant_id = p.id) AS earliest_date
+                      COALESCE(
+                        (SELECT MIN(e.happened_on) FROM events e
+                         JOIN event_types et ON et.id = e.event_type_id
+                         WHERE e.plant_id = p.id AND et.code IN ('sow','plant')),
+                        (SELECT MIN(e.happened_on) FROM events e WHERE e.plant_id = p.id)
+                      ) AS earliest_date
                FROM print_jobs j
                JOIN plants p ON p.id = j.plant_id
                WHERE j.id = ? AND j.user_id = ?""",
