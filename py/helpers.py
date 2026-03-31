@@ -683,6 +683,177 @@ def duration_to_days(val: int, unit: str) -> int:
     return val
 
 
+###############################################################################
+# Location hierarchy helpers
+###############################################################################
+
+LOCATION_SEP = "/"
+
+def parse_location_path(location_str: Optional[str]) -> List[str]:
+    """Split a location string into path segments using / as separator."""
+    if not location_str:
+        return []
+    return [s.strip() for s in location_str.split(LOCATION_SEP) if s.strip()]
+
+
+def build_location_tree(plants: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    """
+    Build a flat, depth-annotated list of location nodes from a list of plants.
+    Each node: {label, full_path, depth, count}
+    Sorted top-level alphabetically, children follow their parent immediately.
+    Plants with no location accumulate under full_path=None.
+    """
+    from collections import defaultdict, OrderedDict
+
+    # count how many plants live at each exact full_path
+    path_counts: Dict[str, int] = defaultdict(int)
+    no_location_count = 0
+
+    for p in plants:
+        path = parse_location_path(p.get("location"))
+        if not path:
+            no_location_count += 1
+        else:
+            full = LOCATION_SEP.join(path)
+            path_counts[full] += 1
+            # also credit every ancestor
+            for depth in range(1, len(path)):
+                ancestor = LOCATION_SEP.join(path[:depth])
+                path_counts[ancestor] += 0  # ensure key exists but don't double-count
+
+    # build a set of all nodes (including intermediates)
+    all_nodes: Dict[str, List[str]] = {}  # full_path -> path segments
+    for p in plants:
+        path = parse_location_path(p.get("location"))
+        for depth in range(1, len(path) + 1):
+            fp = LOCATION_SEP.join(path[:depth])
+            if fp not in all_nodes:
+                all_nodes[fp] = path[:depth]
+
+    # compute cumulative count for each node (plants at node + all descendants)
+    def count_for(fp: str) -> int:
+        return sum(
+            cnt for pfp, cnt in path_counts.items()
+            if pfp == fp or pfp.startswith(fp + LOCATION_SEP)
+        )
+
+    # build flat sorted list depth-first
+    result: List[Dict[str, Any]] = []
+
+    def _recurse(prefix: Optional[str], depth: int):
+        children = sorted(
+            (fp for fp, segs in all_nodes.items()
+             if len(segs) == depth + 1 and (
+                 prefix is None and depth == 0 or
+                 (prefix is not None and fp.startswith(prefix + LOCATION_SEP) and len(fp.split(LOCATION_SEP)) == depth + 1)
+                 or (depth == 0)
+             )),
+        )
+        # top level: segments of length 1
+        if depth == 0:
+            children = sorted(fp for fp, segs in all_nodes.items() if len(segs) == 1)
+        else:
+            children = sorted(
+                fp for fp, segs in all_nodes.items()
+                if len(segs) == depth + 1 and fp.startswith(prefix + LOCATION_SEP)
+            )
+        for fp in children:
+            segs = all_nodes[fp]
+            result.append({
+                "label":     segs[-1],
+                "full_path": fp,
+                "depth":     depth,
+                "count":     count_for(fp),
+            })
+            _recurse(fp, depth + 1)
+
+    _recurse(None, 0)
+
+    if no_location_count:
+        result.append({
+            "label":     None,
+            "full_path": None,
+            "depth":     0,
+            "count":     no_location_count,
+        })
+
+    return result
+
+
+###############################################################################
+# Attention / urgency helpers
+###############################################################################
+
+def compute_attention(plants: List[Dict[str, Any]]) -> Dict[str, List]:
+    """
+    Return dict of plants that require attention, grouped by alert type:
+      overdue_sow   – sow events past the max germination date
+      strat_done    – stratification periods that have elapsed
+      soak_done     – soaking periods that have elapsed
+      anytime_soon  – sow events currently inside the germination window
+      coming_up     – sow events whose window opens within 7 days
+    """
+    from datetime import date as _date
+    today = _date.today()
+
+    overdue_sow: List[Dict] = []
+    strat_done:  List[Dict] = []
+    soak_done:   List[Dict] = []
+    anytime_soon: List[Dict] = []
+    coming_up:   List[Dict] = []
+
+    for plant in plants:
+        state = plant.get("state")
+        if state and state.get("label") in ("Dead", "Stashed"):
+            continue
+        curr = plant.get("current") or {}
+        action = curr.get("action", "")
+        start_str = curr.get("start")
+        if not start_str:
+            continue
+        try:
+            from datetime import date as _date2
+            start = _date2.fromisoformat(start_str)
+        except (ValueError, TypeError):
+            continue
+
+        if action == "sow" and "range" in curr:
+            min_val, min_unit, max_val, max_unit = curr["range"]
+            min_days = duration_to_days(min_val, min_unit)
+            max_days = duration_to_days(max_val, max_unit)
+            from datetime import timedelta as _td
+            min_date = start + _td(days=min_days)
+            max_date = start + _td(days=max_days)
+            if today > max_date:
+                overdue_sow.append(plant)
+            elif today >= min_date:
+                anytime_soon.append({"plant": plant, "days_left": (max_date - today).days})
+            elif (min_date - today).days <= 7:
+                coming_up.append({"plant": plant, "days_until": (min_date - today).days})
+
+        elif action == "strat" and "duration" in curr:
+            val, unit = curr["duration"]
+            from datetime import timedelta as _td
+            end_date = start + _td(days=duration_to_days(val, unit))
+            if today >= end_date:
+                strat_done.append(plant)
+
+        elif action == "soak" and "duration" in curr:
+            val, unit = curr["duration"]
+            from datetime import timedelta as _td
+            end_date = start + _td(days=duration_to_days(val, unit))
+            if today >= end_date:
+                soak_done.append(plant)
+
+    return {
+        "overdue_sow":  overdue_sow,
+        "strat_done":   strat_done,
+        "soak_done":    soak_done,
+        "anytime_soon": anytime_soon,
+        "coming_up":    coming_up,
+    }
+
+
 def get_translations(lang: str):
     if lang in AVAILABLE_LANGS:
         try:

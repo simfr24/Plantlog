@@ -81,7 +81,8 @@ from py.helpers import (
     group_by_batch,
     group_by_latin,
     explode_plant,
-
+    build_location_tree,
+    compute_attention,
 )
 from py.processing import sort_key, get_unique_locations
 from py.mcp import blueprint as mcp_blueprint
@@ -280,6 +281,7 @@ def build_dashboard_context(user_obj, lang):
     left_col, right_col = build_state_cards(state_groups, include_dead=False)
     dead_count   = len(state_groups.get("Dead", []))
     stash_count  = len(state_groups.get("Stashed", []))
+    alive_plants = [p for p in plants if p.get("state") and p["state"].get("label") not in ("Dead", "Stashed")]
     return dict(
         lang      = lang,
         t         = translations,
@@ -294,11 +296,20 @@ def build_dashboard_context(user_obj, lang):
         stash_count = stash_count,
         group_by_batch = group_by_batch,
         group_by_latin = group_by_latin,
+        location_tree = build_location_tree(alive_plants),
+        attention     = compute_attention(alive_plants),
+        alive_count   = len(alive_plants),
     )
 
 @app.route("/")
 @login_required
 def index():
+    ctx = build_dashboard_context(g.user, g.lang)
+    return render_template("dashboard.html", **ctx)
+
+@app.route("/garden")
+@login_required
+def garden():
     ctx = build_dashboard_context(g.user, g.lang)
     return render_template("new_home.html", **ctx)
 

@@ -154,7 +154,8 @@
           <label class="field-lbl" for="location">{{ t['Location'] }}</label>
           <input class="form-control" name="location" id="location"
                  list="locations" value="{{ form.location }}"
-                 placeholder="{{ t['e.g. Greenhouse'] }}">
+                 placeholder="{{ t['location_hint'] }}">
+          <div class="form-text text-muted small">{{ t['location_convention_hint'] }}</div>
           <datalist id="locations">
             {% for loc in locations %}<option value="{{ loc }}">{% endfor %}
           </datalist>

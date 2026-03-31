@@ -49,7 +49,9 @@
             </div>
             <div class="col-md-6">
               <label class="form-label fw-semibold">{{ t['Location'] }}</label>
-              <input class="form-control" name="location" value="{{ form.location }}">
+              <input class="form-control" name="location" value="{{ form.location }}"
+                     placeholder="{{ t['location_hint'] }}">
+              <div class="form-text text-muted small">{{ t['location_convention_hint'] }}</div>
             </div>
             <div class="col-md-6">
               <label class="form-label fw-semibold">{{ t['Variety / Batch'] }} <span class="text-muted fw-normal">({{ t['optional'] }})</span></label>

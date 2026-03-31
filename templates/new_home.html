@@ -77,15 +77,16 @@
   /* ── Search + filter row ─────────────────────────────────────────── */
   .garden-controls {
     display: flex;
-    gap: 0.65rem;
-    align-items: center;
     flex-wrap: wrap;
-    margin-bottom: 1.1rem;
+    gap: 0.4rem;
+    align-items: center;
+    margin-bottom: 0.85rem;
   }
   .garden-controls input[type="search"] {
-    flex: 0 0 300px;
-    font-size: 0.85rem;
-    padding: 0.35rem 0.7rem;
+    flex: 0 1 175px;
+    min-width: 100px;
+    font-size: 0.82rem;
+    padding: 0.28rem 0.6rem;
     border: 1px solid #d0d5dd;
     border-radius: 6px;
     background: #fff;
@@ -96,10 +97,16 @@
     border-color: #6b9eb0;
     box-shadow: 0 0 0 2px rgba(107,158,176,0.18);
   }
-  .state-pills {
+  .pill-row {
     display: flex;
     gap: 0.4rem;
     flex-wrap: wrap;
+  }
+  .pill-row-label {
+    display: flex;
+    align-items: center;
+    color: #a0aec0;
+    font-size: 0.78rem;
   }
   .pill {
     display: inline-flex;
@@ -112,15 +119,28 @@
     font-size: 0.78rem;
     color: #4a5568;
     cursor: pointer;
-    transition: background 0.15s, color 0.15s, border-color 0.15s;
+    transition: background 0.15s, color 0.15s, border-color 0.15s, opacity 0.15s;
     user-select: none;
   }
   .pill:hover { background: #f0f4f8; }
   .pill.active {
-    background: #3d7a68;
-    color: #fff;
-    border-color: #3d7a68;
+    background: #e8f2ee;
+    color: #1e2d3d;
+    border-color: var(--pill-active-bg, #3d7a68);
+    font-weight: 600;
   }
+  .pill-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    display: inline-block;
+    flex-shrink: 0;
+  }
+  .pill.pill-disabled {
+    opacity: 0.35;
+    cursor: default;
+  }
+  .pill.pill-disabled:hover { background: #fff; }
   .pill .pill-count {
     opacity: 0.72;
     font-size: 0.73rem;
@@ -341,8 +361,9 @@
   }
   .view-switcher a:hover { background: #f0f4f8; color: #4a5568; }
 
-  @media (max-width: 480px) {
+  @media (max-width: 768px) {
     .garden-grid { grid-template-columns: 1fr; }
+    .garden-controls { gap: 0.3rem; }
     .garden-controls input[type="search"] { flex: 1 1 100%; }
   }
 </style>
@@ -365,26 +386,17 @@
 
 {% if plants %}
 
-{# ── Summary bar ──────────────────────────────────────────────────────── #}
+{# ── Controls: single left-aligned row ───────────────────────────────── #}
 {% set alive_states = (left_col + right_col) | rejectattr('2') | list %}
-{% if alive_states %}
-<div class="garden-summary">
-  {% for state, state_plants, is_dead_state in alive_states %}
-    {% set col = state_colors.get(state|lower, '#8898aa') %}
-    <div class="summary-item">
-      <span class="summary-dot" style="background:{{ col }}"></span>
-      <span>{{ state_plants|length }}&thinsp;{{ t[state] if state in t else state }}</span>
-    </div>
-  {% endfor %}
-</div>
-{% endif %}
-
-{# ── Controls: search + state filter pills ───────────────────────────── #}
 <div class="garden-controls">
+
   {% if not public_view %}
   <input type="search" id="gardenSearch" placeholder="{{ t['search_placeholder'] }}" autocomplete="off">
   {% endif %}
-  <div class="state-pills" id="statePills">
+
+  {# State pills #}
+  <div class="pill-row" id="statePills">
+    <span class="pill-row-label"><i class="fas fa-seedling me-1"></i></span>
     <button class="pill active" data-state="all">
       {{ t['All'] }}
       {% set ns = namespace(total=0) %}{% for _, sp, _ in alive_states %}{% set ns.total = ns.total + sp|length %}{% endfor %}
@@ -394,11 +406,44 @@
       {% set col = state_colors.get(state|lower, '#8898aa') %}
       <button class="pill" data-state="{{ state|lower }}"
               style="--pill-active-bg: {{ col }}">
+        <span class="pill-dot" style="background: {{ col }}"></span>
         {{ t[state] if state in t else state }}
         <span class="pill-count">{{ state_plants|length }}</span>
       </button>
     {% endfor %}
   </div>
+
+  {# Location pills #}
+  {% if location_tree %}
+  <div class="pill-row" id="locationNav">
+    <span class="pill-row-label"><i class="fas fa-location-dot me-1"></i></span>
+    <button class="pill active" id="locAll" data-loc="">
+      {{ t['All locations'] }}
+    </button>
+    {% for node in location_tree %}
+      {% if node.depth == 0 %}
+      <button class="pill" data-loc="{{ node.full_path if node.full_path is not none else '__none__' }}"
+              data-depth="0">
+        {{ t['No location'] if node.full_path is none else node.label }}
+        <span class="pill-count">{{ node.count }}</span>
+      </button>
+      {% endif %}
+    {% endfor %}
+    {% for node in location_tree %}
+      {% if node.depth > 0 %}
+      <button class="pill loc-child"
+              data-loc="{{ node.full_path }}"
+              data-depth="{{ node.depth }}"
+              data-parent="{{ node.full_path.rsplit('/', 1)[0] }}"
+              style="display:none">
+        {{ node.label }}
+        <span class="pill-count">{{ node.count }}</span>
+      </button>
+      {% endif %}
+    {% endfor %}
+  </div>
+  {% endif %}
+
 </div>
 
 {# ── Garden grid ──────────────────────────────────────────────────────── #}
@@ -417,16 +462,22 @@
 {% if species_plants|length > 1 %}
 {% set first = species_plants[0] %}
 
-{# Build combined search string from all plants in group #}
+{# Build combined search string and location list from all plants in group #}
 {% set grp_search = namespace(val='') %}
+{% set grp_locs = namespace(val=[]) %}
 {% for sp in species_plants %}
   {% set grp_search.val = grp_search.val ~ sp.common|lower ~ ' ' ~ sp.latin|lower ~ ' ' %}
   {% if sp.nickname %}{% set grp_search.val = grp_search.val ~ sp.nickname|lower ~ ' ' %}{% endif %}
-  {% if sp.location %}{% set grp_search.val = grp_search.val ~ sp.location|lower ~ ' ' %}{% endif %}
+  {% if sp.location %}
+    {% set grp_search.val = grp_search.val ~ sp.location|lower ~ ' ' %}
+    {% set normed = sp.location.split('/')|map('trim')|join('/') %}
+    {% if normed not in grp_locs.val %}{% set grp_locs.val = grp_locs.val + [normed] %}{% endif %}
+  {% endif %}
 {% endfor %}
 
 <div class="plant-tile plant-tile-group"
      data-state="{{ state|lower }}"
+     data-location="{{ grp_locs.val | join('|') }}"
      data-search="{{ grp_search.val }}"
      data-bs-toggle="modal"
      data-bs-target="#{{ grp_id }}">
@@ -442,11 +493,14 @@
     <div class="tile-status">
       <span class="state-label">{{ t[state] if state in t else state }}</span>
     </div>
-    {# Locations summary #}
+    {# Locations summary – show only leaf segments #}
     {% set seen_locs = namespace(val=[]) %}
     {% for sp in species_plants %}
-      {% if sp.location and sp.location not in seen_locs.val %}
-        {% set seen_locs.val = seen_locs.val + [sp.location] %}
+      {% if sp.location %}
+        {% set leaf = sp.location.split('/')|last|trim %}
+        {% if leaf not in seen_locs.val %}
+          {% set seen_locs.val = seen_locs.val + [leaf] %}
+        {% endif %}
       {% endif %}
     {% endfor %}
     {% if seen_locs.val %}
@@ -552,7 +606,7 @@
             </div>
             {% if p.location %}
             <div class="modal-plant-meta">
-              <i class="fas fa-location-dot me-1"></i>{{ p.location }}
+              <i class="fas fa-location-dot me-1"></i>{{ p.location.split('/')|last|trim }}
             </div>
             {% endif %}
           </div>
@@ -665,6 +719,7 @@
 
 <div class="plant-tile"
      data-state="{{ state|lower }}"
+     data-location="{{ p.location if p.location else '' }}"
      data-search="{{ p.common|lower }} {{ p.latin|lower }} {{ (p.variety ~ ' ')|lower if p.variety else '' }}{{ (p.nickname ~ ' ')|lower if p.nickname else '' }}{{ (p.location ~ ' ')|lower if p.location else '' }}">
 
   <div class="tile-bar" style="background: {{ bar_color }}"></div>
@@ -688,7 +743,7 @@
       {% if badge_html %}{{ badge_html|safe }}{% endif %}
     </div>
     {% if p.location %}
-    <div class="tile-location"><i class="fas fa-location-dot"></i>{{ p.location }}</div>
+    <div class="tile-location"><i class="fas fa-location-dot"></i>{{ p.location.split('/')|last|trim }}</div>
     {% endif %}
   </div>
   </a>
@@ -745,30 +800,170 @@
 {% endif %}
 
 <script>
-// ── State filter pills ────────────────────────────────────────────────
-const pills = document.querySelectorAll('.pill');
-pills.forEach(pill => {
+// ── Active filter state ───────────────────────────────────────────────
+let activeState = 'all';
+let activeLoc   = '';   // '' = all, '__none__' = no location, else path prefix
+
+const tiles = Array.from(document.querySelectorAll('.plant-tile'));
+
+// Normalize a location string: strip spaces around slashes
+function normLoc(s) {
+  return s ? s.split('/').map(p => p.trim()).join('/') : '';
+}
+
+// Does a tile's location match the given loc filter?
+// data-location may be pipe-separated for group tiles (multiple plants)
+function tileMatchesLoc(tile, loc) {
+  if (loc === '') return true;
+  const raw = tile.dataset.location || '';
+  if (loc === '__none__') return raw === '';
+  const locs = raw.split('|').map(s => normLoc(s)).filter(s => s !== '');
+  return locs.some(l => l === loc || l.startsWith(loc + '/'));
+}
+
+// Count tiles matching both filters
+function countMatching(stateF, locF) {
+  return tiles.filter(t =>
+    (stateF === 'all' || t.dataset.state === stateF) && tileMatchesLoc(t, locF)
+  ).length;
+}
+
+// Reflect current filters in the URL (without reloading)
+function updateURL() {
+  const params = new URLSearchParams(window.location.search);
+  if (activeState && activeState !== 'all') params.set('state', activeState);
+  else params.delete('state');
+  if (activeLoc) params.set('location', activeLoc);
+  else params.delete('location');
+  const q = searchInput ? searchInput.value.trim() : '';
+  if (q) params.set('search', q);
+  else params.delete('search');
+  const qs = params.toString();
+  history.replaceState(null, '', window.location.pathname + (qs ? '?' + qs : ''));
+}
+
+// Show/hide tiles and update pill availability
+function applyFilters() {
+  tiles.forEach(tile => {
+    const stateOk = activeState === 'all' || tile.dataset.state === activeState;
+    tile.style.display = (stateOk && tileMatchesLoc(tile, activeLoc)) ? '' : 'none';
+  });
+  updatePillAvailability();
+  updateURL();
+}
+
+// Grey out pills that would yield 0 results given the other active filter
+function updatePillAvailability() {
+  document.querySelectorAll('#statePills .pill').forEach(pill => {
+    if (pill.dataset.state === 'all') return;
+    pill.classList.toggle('pill-disabled', countMatching(pill.dataset.state, activeLoc) === 0);
+  });
+  const locNav = document.getElementById('locationNav');
+  if (!locNav) return;
+  locNav.querySelectorAll('.pill').forEach(pill => {
+    if (!pill.id) { // skip #locAll
+      const loc = pill.dataset.loc;
+      pill.classList.toggle('pill-disabled', countMatching(activeState, loc) === 0);
+    }
+  });
+}
+
+// ── State pills ───────────────────────────────────────────────────────
+const statePills = document.querySelectorAll('#statePills .pill');
+statePills.forEach(pill => {
   pill.addEventListener('click', function() {
-    pills.forEach(p => p.classList.remove('active'));
+    const newState = this.dataset.state;
+    if (this.classList.contains('pill-disabled')) {
+      // Impossible combo: switch state and reset location
+      activeLoc = '';
+      const locNav = document.getElementById('locationNav');
+      if (locNav) {
+        locNav.querySelectorAll('.pill').forEach(p => p.classList.remove('active'));
+        const locAll = document.getElementById('locAll');
+        if (locAll) locAll.classList.add('active');
+      }
+      document.querySelectorAll('.loc-child').forEach(c => c.style.display = 'none');
+    }
+    statePills.forEach(p => p.classList.remove('active'));
     this.classList.add('active');
-    const state = this.dataset.state;
-    document.querySelectorAll('.plant-tile').forEach(tile => {
-      tile.style.display = (state === 'all' || tile.dataset.state === state) ? '' : 'none';
-    });
+    activeState = newState;
+    applyFilters();
   });
 });
+
+// ── Location pills ────────────────────────────────────────────────────
+function setActiveLoc(loc) {
+  activeLoc = loc;
+  const locNav = document.getElementById('locationNav');
+  if (!locNav) return;
+  locNav.querySelectorAll('.pill').forEach(p => {
+    p.classList.toggle('active', (p.dataset.loc || '') === loc);
+  });
+  // Show only direct children of selected loc (cascade when nested)
+  document.querySelectorAll('.loc-child').forEach(child => {
+    const parent = child.dataset.parent || '';
+    // Show if parent is exactly the active loc, or is an ancestor on the active path
+    const show = loc !== '' && loc !== '__none__' &&
+      (parent === loc || (loc.startsWith(parent + '/') && child.dataset.loc === loc));
+    child.style.display = show ? '' : 'none';
+  });
+  applyFilters();
+}
+
+const locAllBtn = document.getElementById('locAll');
+if (locAllBtn) locAllBtn.addEventListener('click', () => setActiveLoc(''));
+
+document.querySelectorAll('#locationNav .pill:not(#locAll)').forEach(pill => {
+  pill.addEventListener('click', function() {
+    if (this.classList.contains('pill-disabled')) {
+      // Impossible combo: switch location and reset state
+      activeState = 'all';
+      statePills.forEach(p => p.classList.remove('active'));
+      document.querySelector('[data-state="all"]').classList.add('active');
+    }
+    setActiveLoc(this.dataset.loc);
+  });
+});
+
+// ── Pre-select from URL params ────────────────────────────────────────
+(function() {
+  const params = new URLSearchParams(window.location.search);
+  const loc    = params.get('location');
+  const state  = params.get('state');
+  const search = params.get('search');
+  if (state) {
+    const pill = document.querySelector(`#statePills [data-state="${state}"]`);
+    if (pill) { statePills.forEach(p => p.classList.remove('active')); pill.classList.add('active'); activeState = state; }
+  }
+  if (search && searchInput) {
+    searchInput.value = search;
+  }
+  if (loc) setActiveLoc(loc);
+  else if (state || search) applyFilters();
+  if (search && searchInput) {
+    // apply search filter on top of any state/loc filter
+    const q = search.toLowerCase();
+    tiles.forEach(tile => {
+      if (tile.style.display !== 'none') {
+        tile.style.display = tile.dataset.search.includes(q) ? '' : 'none';
+      }
+    });
+  }
+})();
 
 // ── Search ────────────────────────────────────────────────────────────
 const searchInput = document.getElementById('gardenSearch');
 if (searchInput) {
   searchInput.addEventListener('input', function() {
     const q = this.value.toLowerCase().trim();
-    // Reset state filter to "all" when searching
-    pills.forEach(p => p.classList.remove('active'));
-    document.querySelector('[data-state="all"]').classList.add('active');
-    document.querySelectorAll('.plant-tile').forEach(tile => {
-      tile.style.display = (!q || tile.dataset.search.includes(q)) ? '' : 'none';
-    });
+    if (q) {
+      tiles.forEach(tile => {
+        tile.style.display = tile.dataset.search.includes(q) ? '' : 'none';
+      });
+    } else {
+      applyFilters();
+    }
+    updateURL();
   });
 }
 

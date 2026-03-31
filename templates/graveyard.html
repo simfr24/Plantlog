@@ -21,7 +21,7 @@
         <span class="fw-semibold text-muted">{{ p.common }}</span>
         {% if p.variety %}<small class="text-muted fst-italic"> '{{ p.variety }}'</small>{% endif %}
         <small class="text-muted fst-italic ms-1">({{ p.latin }})</small>
-        {% if p.location %}<small class="text-muted ms-2"><i class="fas fa-location-dot me-1"></i>{{ p.location }}</small>{% endif %}
+        {% if p.location %}<small class="text-muted ms-2"><i class="fas fa-location-dot me-1"></i>{{ p.location.split('/')|last|trim }}</small>{% endif %}
       </div>
       <small class="text-muted text-nowrap">{{ died_on }}</small>
     </a>

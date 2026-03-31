@@ -14,31 +14,24 @@
       background-color: #f8fafc;
     }
 
-    .navbar-brand img {
-      transition: transform 0.3s ease;
+    /* ── Navbar links ── */
+    .nav-link {
+      padding: 0.3rem 0.6rem;
+      border-radius: 6px;
+      font-size: 0.875rem;
+      color: #4a5568;
+      transition: background 0.13s, color 0.13s;
     }
-
-    .navbar-brand:hover img {
-      transform: scale(1.1);
+    .nav-link:hover { background: #f0f4f8; color: #1e2d3d; }
+    .navbar-nav .nav-link.active,
+    .navbar-nav .nav-link.nav-active {
+      background: #e6f2ec;
+      color: #2a6b4a;
+      font-weight: 600;
     }
-
-    .nav-link, .btn {
-      transition: all 0.3s ease;
-    }
-
-    .nav-link:hover, .btn:hover {
-      transform: translateY(-2px);
-    }
-
-    .active {
-      background-color: #1daa88 !important;
-      color: white !important;
-      box-shadow: 0 4px 12px rgba(29, 170, 136, 0.2);
-    }
-
     .dropdown-item:hover {
-      background-color: #1daa88;
-      color: white;
+      background-color: #e6f2ec;
+      color: #2a6b4a;
     }
 
     /* ── Toned-down color palette (less eye-searing yellow/teal) ── */
@@ -84,23 +77,28 @@
       </button>
 
       <div class="collapse navbar-collapse" id="navbarContent">
-        <ul class="navbar-nav mx-auto mb-2 mb-lg-0 gap-2">
+        <ul class="navbar-nav me-auto mb-2 mb-lg-0 gap-1">
           <li class="nav-item">
-            <a class="nav-link btn btn-outline-secondary {% if request.endpoint in ['index', 'list_view'] %}active{% endif %}" href="{{ url_for('index') }}">
-              <i class="fa-solid fa-seedling"></i> {{ t['My plants'] }}
+            <a class="nav-link {% if request.endpoint == 'index' %}nav-active{% endif %}" href="{{ url_for('index') }}">
+              <i class="fa-solid fa-gauge-high me-1"></i>{{ t['Dashboard'] }}
             </a>
           </li>
           <li class="nav-item">
-            <a class="nav-link btn btn-outline-success {% if request.endpoint == 'add_plant' %}active{% endif %}" href="{{ url_for('add_plant') }}">
-              <i class="fa-solid fa-plus"></i> {{ t['Add plant'] }}
+            <a class="nav-link {% if request.endpoint in ['garden', 'list_view'] %}nav-active{% endif %}" href="{{ url_for('garden') }}">
+              <i class="fa-solid fa-seedling me-1"></i>{{ t['Garden'] }}
+            </a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link {% if request.endpoint == 'add_plant' %}nav-active{% endif %}" href="{{ url_for('add_plant') }}">
+              <i class="fa-solid fa-plus me-1"></i>{{ t['Add plant'] }}
             </a>
           </li>
         </ul>
 
-        <ul class="navbar-nav gap-2">
+        <ul class="navbar-nav gap-1">
           <li class="nav-item dropdown">
-            <a class="nav-link dropdown-toggle btn btn-outline-secondary" href="#" role="button" data-bs-toggle="dropdown">
-              <i class="fa-solid fa-language"></i> {{ t['Language'] }}
+            <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
+              <i class="fa-solid fa-language me-1"></i>{{ t['Language'] }}
             </a>
             <ul class="dropdown-menu dropdown-menu-end">
               <li><a class="dropdown-item" href="{{ request.path }}?lang=en">English</a></li>
@@ -109,16 +107,16 @@
             </ul>
           </li>
           <li class="nav-item">
-            <a class="nav-link btn btn-outline-secondary {% if request.endpoint=='help_page' %}active{% endif %}"
+            <a class="nav-link {% if request.endpoint=='help_page' %}nav-active{% endif %}"
                href="{{ url_for('help_page') }}">
-              <i class="fas fa-question-circle"></i> {{ t['Help'] }}
+              <i class="fas fa-question-circle me-1"></i>{{ t['Help'] }}
             </a>
           </li>
 
           {% if g.user %}
             <li class="nav-item dropdown">
-              <a class="nav-link dropdown-toggle btn btn-outline-primary" href="#" role="button" data-bs-toggle="dropdown">
-                <i class="fa-solid fa-user"></i> {{ g.user['username'] }}
+              <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
+                <i class="fa-solid fa-user me-1"></i>{{ g.user['username'] }}
               </a>
               <ul class="dropdown-menu dropdown-menu-end">
                 <li>
@@ -143,13 +141,13 @@
             </li>
           {% else %}
             <li class="nav-item">
-              <a class="nav-link btn btn-outline-primary" href="{{ url_for('login') }}">
-                <i class="fa-solid fa-right-to-bracket"></i> {{ t['login_button'] }}
+              <a class="nav-link" href="{{ url_for('login') }}">
+                <i class="fa-solid fa-right-to-bracket me-1"></i>{{ t['login_button'] }}
               </a>
             </li>
             <li class="nav-item">
-              <a class="nav-link btn btn-outline-secondary" href="{{ url_for('register') }}">
-                <i class="fa-solid fa-user-plus"></i> {{ t['register'] }}
+              <a class="nav-link" href="{{ url_for('register') }}">
+                <i class="fa-solid fa-user-plus me-1"></i>{{ t['register'] }}
               </a>
             </li>
           {% endif %}
