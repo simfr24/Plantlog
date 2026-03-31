@@ -77,14 +77,12 @@
   /* ── Search + filter row ─────────────────────────────────────────── */
   .garden-controls {
     display: flex;
-    flex-wrap: wrap;
     gap: 0.4rem;
     align-items: center;
     margin-bottom: 0.85rem;
   }
   .garden-controls input[type="search"] {
-    flex: 0 1 175px;
-    min-width: 100px;
+    flex: 1 1 0;
     font-size: 0.82rem;
     padding: 0.28rem 0.6rem;
     border: 1px solid #d0d5dd;
@@ -97,6 +95,68 @@
     border-color: #6b9eb0;
     box-shadow: 0 0 0 2px rgba(107,158,176,0.18);
   }
+
+  /* ── Filter button + dropdown ───────────────────────────────────── */
+  .filter-wrap { position: relative; flex-shrink: 0; }
+  .filter-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    font-size: 0.82rem;
+    padding: 0.28rem 0.65rem;
+    border: 1px solid #d0d5dd;
+    border-radius: 6px;
+    background: #fff;
+    color: #4a5568;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background 0.13s, border-color 0.13s;
+  }
+  .filter-btn:hover { background: #f0f4f8; }
+  .filter-btn.has-filters {
+    border-color: #3d7a68;
+    color: #2a5c4e;
+    background: #e8f2ee;
+  }
+  .filter-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: #3d7a68;
+    color: #fff;
+    border-radius: 999px;
+    font-size: 0.68rem;
+    font-weight: 700;
+    min-width: 1.1em;
+    padding: 0.05em 0.35em;
+  }
+  .filter-panel {
+    display: none;
+    position: absolute;
+    top: calc(100% + 0.4rem);
+    right: 0;
+    z-index: 200;
+    background: #fff;
+    border: 1px solid #d0d5dd;
+    border-radius: 10px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.10);
+    padding: 0.75rem 1rem;
+    min-width: 280px;
+    max-width: 420px;
+  }
+  .filter-panel.open { display: block; }
+  .filter-section-label {
+    font-size: 0.72rem;
+    font-weight: 600;
+    color: #a0aec0;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    margin-bottom: 0.4rem;
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+  }
+  .filter-section + .filter-section { margin-top: 0.75rem; }
   .pill-row {
     display: flex;
     gap: 0.4rem;
@@ -361,10 +421,9 @@
   }
   .view-switcher a:hover { background: #f0f4f8; color: #4a5568; }
 
-  @media (max-width: 768px) {
+  @media (max-width: 600px) {
     .garden-grid { grid-template-columns: 1fr; }
-    .garden-controls { gap: 0.3rem; }
-    .garden-controls input[type="search"] { flex: 1 1 100%; }
+    .filter-panel { right: auto; left: 0; max-width: calc(100vw - 2rem); }
   }
 </style>
 
@@ -386,7 +445,7 @@
 
 {% if plants %}
 
-{# ── Controls: single left-aligned row ───────────────────────────────── #}
+{# ── Controls ─────────────────────────────────────────────────────────── #}
 {% set alive_states = (left_col + right_col) | rejectattr('2') | list %}
 <div class="garden-controls">
 
@@ -394,55 +453,68 @@
   <input type="search" id="gardenSearch" placeholder="{{ t['search_placeholder'] }}" autocomplete="off">
   {% endif %}
 
-  {# State pills #}
-  <div class="pill-row" id="statePills">
-    <span class="pill-row-label"><i class="fas fa-seedling me-1"></i></span>
-    <button class="pill active" data-state="all">
-      {{ t['All'] }}
-      {% set ns = namespace(total=0) %}{% for _, sp, _ in alive_states %}{% set ns.total = ns.total + sp|length %}{% endfor %}
-      <span class="pill-count">{{ ns.total }}</span>
+  <div class="filter-wrap">
+    <button class="filter-btn" id="filterBtn" onclick="toggleFilterPanel()">
+      <i class="fas fa-sliders"></i>
+      <span id="filterLabel">{{ t['All'] }}</span>
+      <span class="filter-badge" id="filterBadge" style="display:none"></span>
+      <i class="fas fa-chevron-down" style="font-size:0.65rem; opacity:0.6"></i>
     </button>
-    {% for state, state_plants, is_dead_state in alive_states %}
-      {% set col = state_colors.get(state|lower, '#8898aa') %}
-      <button class="pill" data-state="{{ state|lower }}"
-              style="--pill-active-bg: {{ col }}">
-        <span class="pill-dot" style="background: {{ col }}"></span>
-        {{ t[state] if state in t else state }}
-        <span class="pill-count">{{ state_plants|length }}</span>
-      </button>
-    {% endfor %}
-  </div>
 
-  {# Location pills #}
-  {% if location_tree %}
-  <div class="pill-row" id="locationNav">
-    <span class="pill-row-label"><i class="fas fa-location-dot me-1"></i></span>
-    <button class="pill active" id="locAll" data-loc="">
-      {{ t['All locations'] }}
-    </button>
-    {% for node in location_tree %}
-      {% if node.depth == 0 %}
-      <button class="pill" data-loc="{{ node.full_path if node.full_path is not none else '__none__' }}"
-              data-depth="0">
-        {{ t['No location'] if node.full_path is none else node.label }}
-        <span class="pill-count">{{ node.count }}</span>
-      </button>
+    <div class="filter-panel" id="filterPanel">
+
+      {# State pills #}
+      <div class="filter-section">
+        <div class="filter-section-label"><i class="fas fa-seedling"></i> {{ t['Garden'] }}</div>
+        <div class="pill-row" id="statePills">
+          <button class="pill active" data-state="all">
+            {{ t['All'] }}
+            {% set ns = namespace(total=0) %}{% for _, sp, _ in alive_states %}{% set ns.total = ns.total + sp|length %}{% endfor %}
+            <span class="pill-count">{{ ns.total }}</span>
+          </button>
+          {% for state, state_plants, is_dead_state in alive_states %}
+            {% set col = state_colors.get(state|lower, '#8898aa') %}
+            <button class="pill" data-state="{{ state|lower }}" style="--pill-active-bg: {{ col }}">
+              <span class="pill-dot" style="background: {{ col }}"></span>
+              {{ t[state] if state in t else state }}
+              <span class="pill-count">{{ state_plants|length }}</span>
+            </button>
+          {% endfor %}
+        </div>
+      </div>
+
+      {# Location pills #}
+      {% if location_tree %}
+      <div class="filter-section">
+        <div class="filter-section-label"><i class="fas fa-location-dot"></i> {{ t['dash_section_locations'] }}</div>
+        <div class="pill-row" id="locationNav">
+          <button class="pill active" id="locAll" data-loc="">{{ t['All locations'] }}</button>
+          {% for node in location_tree %}
+            {% if node.depth == 0 %}
+            <button class="pill" data-loc="{{ node.full_path if node.full_path is not none else '__none__' }}" data-depth="0">
+              {{ t['No location'] if node.full_path is none else node.label }}
+              <span class="pill-count">{{ node.count }}</span>
+            </button>
+            {% endif %}
+          {% endfor %}
+          {% for node in location_tree %}
+            {% if node.depth > 0 %}
+            <button class="pill loc-child"
+                    data-loc="{{ node.full_path }}"
+                    data-depth="{{ node.depth }}"
+                    data-parent="{{ node.full_path.rsplit('/', 1)[0] }}"
+                    style="display:none">
+              {{ node.label }}
+              <span class="pill-count">{{ node.count }}</span>
+            </button>
+            {% endif %}
+          {% endfor %}
+        </div>
+      </div>
       {% endif %}
-    {% endfor %}
-    {% for node in location_tree %}
-      {% if node.depth > 0 %}
-      <button class="pill loc-child"
-              data-loc="{{ node.full_path }}"
-              data-depth="{{ node.depth }}"
-              data-parent="{{ node.full_path.rsplit('/', 1)[0] }}"
-              style="display:none">
-        {{ node.label }}
-        <span class="pill-count">{{ node.count }}</span>
-      </button>
-      {% endif %}
-    {% endfor %}
-  </div>
-  {% endif %}
+
+    </div>{# .filter-panel #}
+  </div>{# .filter-wrap #}
 
 </div>
 
@@ -800,6 +872,53 @@
 {% endif %}
 
 <script>
+// ── Filter panel toggle ───────────────────────────────────────────────
+function toggleFilterPanel() {
+  document.getElementById('filterPanel').classList.toggle('open');
+}
+document.addEventListener('click', function(e) {
+  const wrap = document.getElementById('filterPanel');
+  const btn  = document.getElementById('filterBtn');
+  if (wrap && btn && !wrap.contains(e.target) && !btn.contains(e.target)) {
+    wrap.classList.remove('open');
+  }
+});
+
+function updateFilterBtn() {
+  const badge = document.getElementById('filterBadge');
+  const label = document.getElementById('filterLabel');
+  const btn   = document.getElementById('filterBtn');
+  let count = 0;
+  const parts = [];
+  if (activeState && activeState !== 'all') {
+    count++;
+    const pill = document.querySelector(`#statePills [data-state="${activeState}"]`);
+    if (pill) {
+      // grab only the direct text node (skip child spans)
+      const text = Array.from(pill.childNodes)
+        .filter(n => n.nodeType === 3)
+        .map(n => n.textContent.trim())
+        .join('').trim();
+      if (text) parts.push(text);
+    }
+  }
+  if (activeLoc) {
+    count++;
+    const lpill = document.querySelector(`#locationNav [data-loc="${activeLoc}"]`);
+    if (lpill) {
+      const text = Array.from(lpill.childNodes)
+        .filter(n => n.nodeType === 3)
+        .map(n => n.textContent.trim())
+        .join('').trim();
+      if (text) parts.push(text);
+    }
+  }
+  badge.textContent = count;
+  badge.style.display = count ? '' : 'none';
+  label.textContent = parts.length ? parts.join(' · ') : '{{ t["All"] }}';
+  btn.classList.toggle('has-filters', count > 0);
+}
+
 // ── Active filter state ───────────────────────────────────────────────
 let activeState = 'all';
 let activeLoc   = '';   // '' = all, '__none__' = no location, else path prefix
@@ -849,6 +968,7 @@ function applyFilters() {
     tile.style.display = (stateOk && tileMatchesLoc(tile, activeLoc)) ? '' : 'none';
   });
   updatePillAvailability();
+  updateFilterBtn();
   updateURL();
 }
 
