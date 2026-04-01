@@ -91,7 +91,7 @@ def anytime_soon_badge(days_left, progress, t):
 
 def countdown_badge(days_left, t):
     return Markup(
-        f'<span class="badge bg-info text-dark ms-2">{format_age(days_left, t)} {t["left"]}</span>'
+        f'<span class="badge bg-info text-white ms-2">{format_age(days_left, t)} {t["left"]}</span>'
     )
 
 def done_badge(t):
