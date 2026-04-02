@@ -15,13 +15,31 @@
               <strong class="{{ evspec.color_class }}">
                 {% if h.action == 'custom' and h.custom_label %}
                   {{ h.custom_label }}
+                {% elif h.action == 'acquire' %}
+                  {% set prep_map = {'bought': t['acquire_prep_bought'] if 'acquire_prep_bought' in t else 'Bought at', 'gift': t['acquire_prep_gift'] if 'acquire_prep_gift' in t else 'Received from', 'foraged': t['acquire_prep_foraged'] if 'acquire_prep_foraged' in t else 'Foraged', 'swap': t['acquire_prep_swap'] if 'acquire_prep_swap' in t else 'Swapped with', 'received': t['acquire_prep_received'] if 'acquire_prep_received' in t else 'Received from', 'other': t['acquire_prep_other'] if 'acquire_prep_other' in t else 'Acquired'} %}
+                  {% set atype = h.acquire_type or 'other' %}
+                  {% set prep = prep_map.get(atype, atype) %}
+                  {% if h.source %}{{ prep }} {{ h.source }}{% else %}{{ prep }}{% endif %}
+                {% elif h.action == 'order' %}
+                  {% if h.source %}{{ t['acquire_prep_ordered'] if 'acquire_prep_ordered' in t else 'Ordered from' }} {{ h.source }}{% else %}{{ t['Order'] if 'Order' in t else 'Order' }}{% endif %}
                 {% else %}
                   {{ t[evspec.label] if evspec.label in t else evspec.label }}
                 {% endif %}
               </strong>
               <span class="text-muted ms-2">{{ h.start }}</span>
             </div>
-            {% if h.action == 'sow' %}
+            {% if h.action in ('order', 'acquire') and h.price is defined %}
+              <div class="text-muted small mt-1">
+                <i class="fas fa-coins me-1"></i><span class="fmt-price"
+                  data-amount="{{ h.price }}"
+                  data-currency="{{ h.price_currency or '' }}">{{ h.price }}</span>
+              </div>
+            {% endif %}
+            {% if h.action == 'order' and h.expected_on %}
+              <div class="text-muted small mt-1">
+                <i class="fas fa-calendar me-1"></i>{{ t['order_expected_date'] if 'order_expected_date' in t else 'Expected arrival' }}: {{ h.expected_on }}
+              </div>
+            {% elif h.action == 'sow' %}
               <div class="text-muted small mt-1">
                 {{ t['Expected sprout time'] }}: {{ h.range[0] }} {{ t[h.range[1]] }} – {{ h.range[2] }} {{ t[h.range[3]] }}
               </div>

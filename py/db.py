@@ -97,6 +97,9 @@ CREATE TABLE IF NOT EXISTS events (
   custom_note     TEXT,
   ended_on        TEXT,
   source          TEXT,
+  acquire_type    TEXT,
+  price           REAL,
+  price_currency  TEXT,
   FOREIGN KEY(plant_id)      REFERENCES plants(id) ON DELETE CASCADE,
   FOREIGN KEY(event_type_id) REFERENCES event_types(id)
 );
@@ -143,6 +146,7 @@ def init_and_fill_db():
         conn.executescript(SCHEMA)
         # 2) upsert state_types
         state_types = [
+            ('ordered',    'Ordered',     'text-warning',  'fa-truck',    0),
             ('stash',      'Stashed',     'text-secondary','fa-box',      1),
             ('seed',       'Sown',        'text-success','fa-seedling',  10),
             ('soaked',     'Soaking',     'text-primary','fa-tint',      5),
@@ -156,6 +160,7 @@ def init_and_fill_db():
 
         # 3) upsert event_types
         event_types = [
+            ('order',     'Order',        'text-warning',   'fa-truck',        'ordered',   0),
             ('acquire',   'Acquire',      'text-secondary', 'fa-box',          'stash',     1),
             ('soak',      'Soak',         'text-primary',   'fa-tint',         'soaked',    4),
             ('strat',     'Strat',        'text-info',      'fa-snowflake',    'strat',     5),
@@ -199,6 +204,12 @@ def _migrate(conn):
         conn.execute("ALTER TABLE events ADD COLUMN ended_on TEXT")
     if "source" not in event_cols:
         conn.execute("ALTER TABLE events ADD COLUMN source TEXT")
+    if "acquire_type" not in event_cols:
+        conn.execute("ALTER TABLE events ADD COLUMN acquire_type TEXT")
+    if "price" not in event_cols:
+        conn.execute("ALTER TABLE events ADD COLUMN price REAL")
+    if "price_currency" not in event_cols:
+        conn.execute("ALTER TABLE events ADD COLUMN price_currency TEXT")
 
     # print_jobs table (for existing DBs that pre-date the SCHEMA addition)
     conn.execute("""

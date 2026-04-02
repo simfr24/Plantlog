@@ -6,7 +6,7 @@
 
 {# Group event codes into tabs #}
 {% set tab_groups = [
-  ('prep',   'stage_tab_prep',   'fa-seedling',  ['acquire','soak','strat','sow','plant']),
+  ('prep',   'stage_tab_prep',   'fa-seedling',  ['order','acquire','soak','strat','sow','plant']),
   ('growth', 'stage_tab_growth', 'fa-leaf',      ['sprout','flower','fruit','dead']),
   ('care',   'stage_tab_care',   'fa-droplet',   ['water','fertilize','measure','custom']),
 ] %}
@@ -187,18 +187,79 @@
          value="{{ form.event_date or today }}">
 </div>
 
-<!-- Acquire: source -->
-<div id="extra-acquire" class="stage-extra"
-     {% if form.status != 'acquire' %}style="display:none"{% endif %}>
+<!-- Order: vendor + optional expected arrival -->
+<div id="extra-order" class="stage-extra"
+     {% if form.status != 'order' %}style="display:none"{% endif %}>
   <div class="row g-3">
     <div class="col-sm-6">
       <label class="form-label">
+        {{ t['acquire_source_vendor'] if 'acquire_source_vendor' in t else 'Vendor' }}
+        <span style="font-weight:400; color:#a0aec0; font-size:0.78rem">({{ t['optional'] }})</span>
+      </label>
+      <input type="text" class="form-control" name="event_source" value="{{ form.event_source }}"
+             placeholder="{{ t['acquire_source_vendor_placeholder'] if 'acquire_source_vendor_placeholder' in t else 'e.g. Bakker, Tourne-Sol' }}">
+    </div>
+    <div class="col-sm-6">
+      <label class="form-label">
+        {{ t['order_expected_date'] if 'order_expected_date' in t else 'Expected arrival' }}
+        <span style="font-weight:400; color:#a0aec0; font-size:0.78rem">({{ t['optional'] }})</span>
+      </label>
+      <input type="date" class="form-control" name="event_ended_on" value="{{ form.event_ended_on }}">
+    </div>
+    <div class="col-sm-4">
+      <label class="form-label">
+        {{ t['price_label'] if 'price_label' in t else 'Price' }}
+        <span style="font-weight:400; color:#a0aec0; font-size:0.78rem">({{ t['optional'] }})</span>
+      </label>
+      <div class="input-group">
+        <input type="number" class="form-control" name="event_order_price" step="0.01" min="0"
+               value="{{ form.event_order_price }}" placeholder="0.00">
+        <input type="text" class="form-control" name="event_order_price_currency" maxlength="4"
+               value="{{ form.event_order_price_currency }}" placeholder="" style="max-width:70px;">
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Acquire: type + source -->
+<div id="extra-acquire" class="stage-extra"
+     {% if form.status != 'acquire' %}style="display:none"{% endif %}>
+  <div class="row g-3">
+    <div class="col-sm-5">
+      <label class="form-label">{{ t['acquire_type_label'] if 'acquire_type_label' in t else 'How' }}</label>
+      <select class="form-select" name="event_acquire_type" id="acquire-type-select">
+        {% set acquire_types = [
+          ('bought',   t['acquire_type_bought']   if 'acquire_type_bought'   in t else 'Bought'),
+          ('gift',     t['acquire_type_gift']     if 'acquire_type_gift'     in t else 'Gift'),
+          ('foraged',  t['acquire_type_foraged']  if 'acquire_type_foraged'  in t else 'Foraged'),
+          ('swap',     t['acquire_type_swap']     if 'acquire_type_swap'     in t else 'Swap'),
+          ('received', t['acquire_type_received'] if 'acquire_type_received' in t else 'Received order'),
+          ('other',    t['acquire_type_other']    if 'acquire_type_other'    in t else 'Other'),
+        ] %}
+        {% for val, label in acquire_types %}
+          <option value="{{ val }}" {% if form.event_acquire_type == val %}selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="col-sm-4" id="acquire-price-wrap" {% if form.event_acquire_type not in ('bought', '') %}style="display:none"{% endif %}>
+      <label class="form-label">
+        {{ t['price_label'] if 'price_label' in t else 'Price' }}
+        <span style="font-weight:400; color:#a0aec0; font-size:0.78rem">({{ t['optional'] }})</span>
+      </label>
+      <div class="input-group">
+        <input type="number" class="form-control" name="event_price" step="0.01" min="0"
+               value="{{ form.event_price }}" placeholder="0.00">
+        <input type="text" class="form-control" name="event_price_currency" maxlength="4"
+               value="{{ form.event_price_currency }}" placeholder="" style="max-width:70px;">
+      </div>
+    </div>
+    <div class="col-sm-3" id="acquire-source-wrap">
+      <label class="form-label" id="acquire-source-label">
         {{ t['stash_source_label'] if 'stash_source_label' in t else 'Source' }}
         <span style="font-weight:400; color:#a0aec0; font-size:0.78rem">({{ t['optional'] }})</span>
       </label>
-      <input type="text" class="form-control"
-             name="event_source" value="{{ form.event_source }}"
-             placeholder="{{ t['stash_source_placeholder'] if 'stash_source_placeholder' in t else 'e.g. garden centre, gift, foraged' }}">
+      <input type="text" class="form-control" name="event_source" id="acquire-source-input"
+             value="{{ form.event_source }}">
     </div>
   </div>
 </div>
@@ -321,6 +382,7 @@
   (function () {
     // ── Extra-fields logic ───────────────────────────────────────────
     var extraMap = {
+      'order':  'extra-order',
       'acquire':'extra-acquire',
       'sow':    'extra-sow',
       'soak':   'extra-duration',
@@ -330,6 +392,30 @@
       'fruit':  'extra-flower-fruit',
       'custom': 'extra-custom-action',
     };
+
+    // Dynamic source label/placeholder for acquire type
+    var acquireLabels = {
+      'bought':  { label: '{{ (t["acquire_source_vendor"] if "acquire_source_vendor" in t else "Vendor") }}',  placeholder: '{{ (t["acquire_source_vendor_placeholder"] if "acquire_source_vendor_placeholder" in t else "e.g. garden centre, shop") }}' },
+      'gift':    { label: '{{ (t["acquire_source_from"] if "acquire_source_from" in t else "From") }}',        placeholder: '{{ (t["acquire_source_from_placeholder"] if "acquire_source_from_placeholder" in t else "e.g. friend, neighbour") }}' },
+      'foraged': { label: '{{ (t["acquire_source_where"] if "acquire_source_where" in t else "Where") }}',     placeholder: '{{ (t["acquire_source_where_placeholder"] if "acquire_source_where_placeholder" in t else "e.g. forest, roadside") }}' },
+      'swap':    { label: '{{ (t["acquire_source_with"] if "acquire_source_with" in t else "With") }}',        placeholder: '{{ (t["acquire_source_with_placeholder"] if "acquire_source_with_placeholder" in t else "e.g. seed swap, neighbour") }}' },
+      'received':{ label: '{{ (t["acquire_source_vendor"] if "acquire_source_vendor" in t else "Vendor") }}',  placeholder: '{{ (t["acquire_source_vendor_placeholder"] if "acquire_source_vendor_placeholder" in t else "e.g. shop, nursery") }}' },
+      'other':   { label: '{{ (t["stash_source_label"] if "stash_source_label" in t else "Source") }}',        placeholder: '' },
+    };
+    function updateAcquireSource(type) {
+      var info = acquireLabels[type] || acquireLabels['other'];
+      var lbl = document.getElementById('acquire-source-label');
+      var inp = document.getElementById('acquire-source-input');
+      if (lbl) lbl.firstChild.textContent = info.label + ' ';
+      if (inp) inp.placeholder = info.placeholder;
+      var priceWrap = document.getElementById('acquire-price-wrap');
+      if (priceWrap) priceWrap.style.display = (type === 'bought' || type === 'received') ? '' : 'none';
+    }
+    var acquireTypeSelect = document.getElementById('acquire-type-select');
+    if (acquireTypeSelect) {
+      acquireTypeSelect.addEventListener('change', function() { updateAcquireSource(this.value); });
+      updateAcquireSource(acquireTypeSelect.value);
+    }
 
     function applyExtras(val) {
       document.querySelectorAll('.stage-extra').forEach(function(el) {

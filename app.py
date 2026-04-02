@@ -280,8 +280,8 @@ def build_dashboard_context(user_obj, lang):
     state_groups = group_plants_by_state(plants)
     left_col, right_col = build_state_cards(state_groups, include_dead=False)
     dead_count   = len(state_groups.get("Dead", []))
-    stash_count  = len(state_groups.get("Stashed", []))
-    alive_plants = [p for p in plants if p.get("state") and p["state"].get("label") not in ("Dead", "Stashed")]
+    stash_count  = len(state_groups.get("Stashed", [])) + len(state_groups.get("Ordered", []))
+    alive_plants = [p for p in plants if p.get("state") and p["state"].get("label") not in ("Dead", "Stashed", "Ordered")]
     return dict(
         lang      = lang,
         t         = translations,
@@ -336,12 +336,52 @@ def graveyard():
 def stash():
     t      = get_translations(g.lang)
     plants = load_data(g.user["id"])
+    ordered = sorted(
+        [p for p in plants if p.get("state") and p["state"].get("label", "").lower() == "ordered"],
+        key=lambda p: (p.get("current") or {}).get("start", ""),
+        reverse=True,
+    )
     stashed = sorted(
         [p for p in plants if p.get("state") and p["state"].get("label", "").lower() == "stashed"],
         key=lambda p: (p.get("current") or {}).get("start", ""),
         reverse=True,
     )
-    return render_template("stash.html", stashed=stashed, t=t, lang=g.lang, today=date.today())
+    return render_template("stash.html", ordered=ordered, stashed=stashed, t=t, lang=g.lang, today=date.today())
+
+
+@app.route("/plant_from_stash/<int:idx>", methods=["POST"])
+@login_required_for_plant
+def plant_from_stash(idx):
+    plant = load_one(idx) or abort(404)
+    event = {
+        "action": "plant",
+        "start": date.today().isoformat(),
+    }
+    plant_data = {k: plant.get(k) or "" for k in ("common", "latin", "location", "notes", "variety", "nickname")}
+    plant_data["count"] = plant.get("count", 1)
+    update_plant(plant["id"], plant_data, new_event=event)
+    return redirect(url_for("view_plant", idx=idx, lang=g.lang))
+
+
+@app.route("/receive_plant/<int:idx>", methods=["POST"])
+@login_required_for_plant
+def receive_plant(idx):
+    plant = load_one(idx) or abort(404)
+    # Copy source from the most recent order event
+    order_ev = next((e for e in reversed(plant["history"]) if e["action"] == "order"), None)
+    event = {
+        "action": "acquire",
+        "start": date.today().isoformat(),
+        "acquire_type": "received",
+        "source": order_ev["source"] if order_ev and order_ev.get("source") else None,
+        "price": None,
+        "price_currency": None,
+    }
+    plant_data = {k: plant.get(k) or "" for k in ("common", "latin", "location", "notes", "variety", "nickname")}
+    plant_data["count"] = plant.get("count", 1)
+    update_plant(plant["id"], plant_data, new_event=event)
+    return redirect(url_for("stash", lang=g.lang))
+
 
 @app.route("/explode/<int:idx>", methods=["POST"])
 @login_required
@@ -448,8 +488,8 @@ def add_plant():
         form = get_form_data(request)
         errors, event = validate_form(form, translations, context="add")
         if not errors:
-            save_new_plant(form, event, g.user["id"])
-            return redirect(url_for("index", lang=lang))
+            new_id = save_new_plant(form, event, g.user["id"])
+            return redirect(url_for("view_plant", idx=new_id, lang=lang))
         # fall‑through: show form with errors
     else:
         form = get_empty_form()
@@ -458,7 +498,7 @@ def add_plant():
             form["status"] = default_event
         errors = []
 
-    _starting_codes = {'acquire', 'sow', 'soak', 'strat', 'plant'}
+    _starting_codes = {'order', 'acquire', 'sow', 'soak', 'strat', 'plant'}
     starting_event_specs = [s for s in get_event_specs() if s['code'] in _starting_codes]
 
     return render_template(
@@ -488,7 +528,7 @@ def edit_plant(idx):
         errors, _ = validate_form(form, translations, context="edit")
         if not errors:
             update_plant(plant["id"], form, new_event=None)  # metadata‑only edit
-            return redirect(url_for("index", lang=lang))
+            return redirect(url_for("view_plant", idx=plant["id"], lang=lang))
     else:
         form = get_form_from_plant(plant)
         errors = []
@@ -533,7 +573,7 @@ def add_stage(idx):
                 "notes": plant["notes"],
             }
             update_plant(plant["id"], plant_data, new_event=event)
-            return redirect(url_for("index", lang=lang))
+            return redirect(url_for("view_plant", idx=plant["id"], lang=lang))
     else:
         form = get_empty_form()
         form.update({"common": plant["common"], "latin": plant["latin"]})
@@ -566,7 +606,7 @@ def edit_stage(action_id):
         errors, event = validate_form(form, translations, context="edit_stage")
         if not errors:
             update_action(action_id, event)
-            return redirect(url_for("index", lang=lang))
+            return redirect(url_for("view_plant", idx=ev["plant_id"], lang=lang))
     else:
         form = get_empty_form()
         form["status"] = ev["action"]
@@ -588,7 +628,11 @@ def edit_stage(action_id):
 @app.route("/delete_stage/<int:action_id>", methods=["POST"])
 @login_required_for_action
 def delete_stage(action_id):
+    ev = get_action_by_id(action_id)
+    plant_id = ev["plant_id"] if ev else None
     process_delete_action(action_id, g.user["id"])
+    if plant_id:
+        return redirect(url_for("view_plant", idx=plant_id, lang=g.lang))
     return redirect(url_for("index", lang=g.lang))
 
 

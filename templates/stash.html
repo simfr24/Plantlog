@@ -7,17 +7,77 @@
       <i class="fas fa-box me-2 text-secondary"></i>
       {{ t['stash_title'] if 'stash_title' in t else 'Seed Stash' }}
     </h2>
-    <span class="badge bg-secondary ms-2">{{ stashed|length }}</span>
+    <span class="badge bg-secondary ms-2">{{ (ordered|length) + (stashed|length) }}</span>
     <a href="{{ url_for('index', lang=lang) }}" class="btn btn-outline-secondary btn-sm ms-auto">
       <i class="fas fa-arrow-left me-1"></i>{{ t['Back to dashboard'] }}
     </a>
   </div>
 
+  {# ── On order ─────────────────────────────────────────────────────── #}
+  {% if ordered %}
+  <h6 class="text-muted text-uppercase fw-semibold mb-2" style="font-size:0.72rem; letter-spacing:.06em;">
+    <i class="fas fa-truck me-1"></i>{{ t['stash_section_ordered'] if 'stash_section_ordered' in t else 'On order' }}
+    <span class="badge bg-warning text-dark ms-1">{{ ordered|length }}</span>
+  </h6>
+  <div class="list-group shadow-sm mb-4">
+    {% for p in ordered %}
+    {% set ev = p.current %}
+    {% set vendor = ev.source if ev and ev.source else None %}
+    {% set expected = ev.expected_on if ev and ev.expected_on else None %}
+    <div class="list-group-item d-flex align-items-center gap-3 py-2">
+      <i class="fas fa-truck text-warning"></i>
+      <div class="flex-grow-1">
+        <a href="{{ url_for('view_plant', idx=p.id, lang=lang) }}"
+           class="fw-semibold text-decoration-none text-dark">{{ p.common }}</a>
+        {% if p.variety %}<small class="text-muted fst-italic"> '{{ p.variety }}'</small>{% endif %}
+        <small class="text-muted fst-italic ms-1">({{ p.latin }})</small>
+        {% if vendor %}<small class="text-muted ms-2"><i class="fas fa-store me-1"></i>{{ vendor }}</small>{% endif %}
+        {% if ev and ev.price is defined %}<small class="text-muted ms-2"><i class="fas fa-tag me-1"></i><span class="fmt-price" data-amount="{{ ev.price }}" data-currency="{{ ev.price_currency or '' }}">{{ ev.price }}</span></small>{% endif %}
+      </div>
+      <div class="d-flex align-items-center gap-2 flex-shrink-0">
+        {% if expected %}
+          {% set exp_date = expected|todate %}
+          {% set delta = (exp_date - today).days %}
+          {% if delta < 0 %}
+            <span class="badge bg-danger text-white">{{ t['stash_overdue'] if 'stash_overdue' in t else 'Overdue' }}</span>
+          {% elif delta == 0 %}
+            <span class="badge bg-success text-white">{{ t['stash_today'] if 'stash_today' in t else 'Today' }}</span>
+          {% else %}
+            <small class="text-muted text-nowrap">{{ t['stash_expected_in'] if 'stash_expected_in' in t else 'Expected in' }} {{ delta }}{{ t['d'] if 'd' in t else 'd' }}</small>
+          {% endif %}
+        {% else %}
+          <small class="text-muted text-nowrap">{{ (ev.start if ev else '?') }}</small>
+        {% endif %}
+        <form method="post" action="{{ url_for('receive_plant', idx=p.id, lang=lang) }}" class="d-inline">
+          <button type="submit" class="btn btn-outline-warning btn-sm text-nowrap">
+            <i class="fas fa-box me-1"></i>{{ t['stash_mark_received'] if 'stash_mark_received' in t else 'Mark as received' }}
+          </button>
+        </form>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  {# ── In hand ──────────────────────────────────────────────────────── #}
   {% if stashed %}
-  <div class="list-group shadow-sm">
+  <h6 class="text-muted text-uppercase fw-semibold mb-2" style="font-size:0.72rem; letter-spacing:.06em;">
+    <i class="fas fa-box me-1"></i>{{ t['stash_section_inhand'] if 'stash_section_inhand' in t else 'In hand' }}
+    <span class="badge bg-secondary ms-1">{{ stashed|length }}</span>
+  </h6>
+  <div class="list-group shadow-sm mb-4">
     {% for p in stashed %}
-    {% set acquired_on = p.current.start if p.current else '?' %}
-    {% set source = p.current.source if p.current and p.current.source else None %}
+    {% set ev = p.current %}
+    {% set atype = ev.acquire_type if ev and ev.acquire_type else 'other' %}
+    {% set src   = ev.source if ev and ev.source else None %}
+    {% set acquire_label_map = {
+      'bought':   t['acquire_type_bought']   if 'acquire_type_bought'   in t else 'Bought',
+      'gift':     t['acquire_type_gift']     if 'acquire_type_gift'     in t else 'Gift',
+      'foraged':  t['acquire_type_foraged']  if 'acquire_type_foraged'  in t else 'Foraged',
+      'swap':     t['acquire_type_swap']     if 'acquire_type_swap'     in t else 'Swap',
+      'received': t['acquire_type_received'] if 'acquire_type_received' in t else 'Received order',
+      'other':    t['acquire_type_other']    if 'acquire_type_other'    in t else 'Other',
+    } %}
     <div class="list-group-item d-flex align-items-center gap-3 py-2">
       <i class="fas fa-box text-secondary"></i>
       <div class="flex-grow-1">
@@ -26,24 +86,35 @@
         {% if p.variety %}<small class="text-muted fst-italic"> '{{ p.variety }}'</small>{% endif %}
         <small class="text-muted fst-italic ms-1">({{ p.latin }})</small>
         {% if p.location %}<small class="text-muted ms-2"><i class="fas fa-location-dot me-1"></i>{{ p.location.split('/')|last|trim }}</small>{% endif %}
-        {% if source %}<small class="text-muted ms-2"><i class="fas fa-tag me-1"></i>{{ source }}</small>{% endif %}
+        <small class="text-muted ms-2">
+          <i class="fas fa-tag me-1"></i>
+          {% if src %}{{ acquire_label_map.get(atype, atype) }} · {{ src }}{% else %}{{ acquire_label_map.get(atype, atype) }}{% endif %}
+          {% if ev and ev.price is defined %} · <span class="fmt-price" data-amount="{{ ev.price }}" data-currency="{{ ev.price_currency or '' }}">{{ ev.price }}</span>{% endif %}
+        </small>
       </div>
       <div class="d-flex align-items-center gap-2 flex-shrink-0">
-        <small class="text-muted text-nowrap">{{ acquired_on }}</small>
-        <a href="{{ url_for('add_stage', idx=p.id, lang=lang) }}?default_event=sow"
-           class="btn btn-outline-success btn-sm text-nowrap">
-          <i class="fas fa-seedling me-1"></i>{{ t['stash_sow_btn'] if 'stash_sow_btn' in t else 'Sow now' }}
-        </a>
+        <small class="text-muted text-nowrap">{{ ev.start if ev else '?' }}</small>
+        <form method="post" action="{{ url_for('plant_from_stash', idx=p.id, lang=lang) }}" class="d-inline">
+          <button type="submit" class="btn btn-outline-success btn-sm text-nowrap">
+            <i class="fas fa-seedling me-1"></i>{{ t['stash_sow_btn'] if 'stash_sow_btn' in t else 'Plant now' }}
+          </button>
+        </form>
       </div>
     </div>
     {% endfor %}
   </div>
-  {% else %}
+  {% endif %}
+
+  {% if not ordered and not stashed %}
   <p class="text-muted">{{ t['stash_empty'] if 'stash_empty' in t else 'No seeds in the stash yet.' }}</p>
   {% endif %}
 
-  <div class="mt-4">
-    <a href="{{ url_for('add_plant', lang=lang) }}?default_event=acquire"
+  <div class="mt-2 d-flex gap-2">
+    <a href="{{ url_for('add_plant', lang=lang, default_event='order') }}"
+       class="btn btn-outline-warning btn-sm">
+      <i class="fas fa-truck me-1"></i>{{ t['stash_order_btn'] if 'stash_order_btn' in t else 'New order' }}
+    </a>
+    <a href="{{ url_for('add_plant', lang=lang, default_event='acquire') }}"
        class="btn btn-outline-secondary btn-sm">
       <i class="fas fa-plus me-1"></i>{{ t['stash_add_btn'] if 'stash_add_btn' in t else 'Add to stash' }}
     </a>

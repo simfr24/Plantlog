@@ -73,7 +73,7 @@ TOOLS = [
                 "common":          {"type": "string", "description": "Common name."},
                 "latin":           {"type": "string", "description": "Latin name."},
                 "first_event":     {"type": "string", "default": "sow",
-                                    "description": "First event: acquire (seed stash), sow, plant, soak, strat, sprout, flower, fruit, water, fertilize, measure, custom."},
+                                    "description": "First event: order (placed an order, goes to stash/ordered), acquire (physically in hand, goes to stash), sow, plant, soak, strat, sprout, flower, fruit, water, fertilize, measure, custom."},
                 "event_date":      {"type": "string", "description": "ISO date YYYY-MM-DD. Defaults to today."},
                 "location":        {"type": "string"},
                 "notes":           {"type": "string"},
@@ -95,7 +95,7 @@ TOOLS = [
             "properties": {
                 "plant_id":        {"type": "integer"},
                 "event_type":      {"type": "string",
-                                    "description": "acquire, sow, plant, soak, strat, sprout, flower, fruit, water, fertilize, measure, custom, dead."},
+                                    "description": "order (placed an order → Ordered state), acquire (physically in hand → Stashed), sow, plant, soak, strat, sprout, flower, fruit, water, fertilize, measure, custom, dead."},
                 "event_date":      {"type": "string", "description": "ISO date YYYY-MM-DD. Defaults to today."},
                 "sprout_min_days": {"type": "integer", "description": "Min germination days (sow only — look up the species, do not guess)."},
                 "sprout_max_days": {"type": "integer", "description": "Max germination days (sow only — look up the species, do not guess)."},
@@ -105,7 +105,11 @@ TOOLS = [
                 "size_unit":       {"type": "string",  "description": "mm, cm, m."},
                 "custom_label":    {"type": "string",  "description": "Label (custom events)."},
                 "custom_note":     {"type": "string",  "description": "Note (custom events)."},
-                "source":          {"type": "string",  "description": "Where the seeds/cuttings came from (acquire events only)."},
+                "source":          {"type": "string",  "description": "Vendor/person/place (order and acquire events). Always capture this when known."},
+                "acquire_type":    {"type": "string",  "description": "How acquired: bought, gift, foraged, swap, other (acquire events only)."},
+                "expected_date":   {"type": "string",  "description": "ISO date YYYY-MM-DD. Expected arrival date (order events only)."},
+                "price":           {"type": "number",  "description": "Purchase price (order and acquire/bought events)."},
+                "price_currency":  {"type": "string",  "description": "Currency code, e.g. EUR, USD (order and acquire/bought events)."},
             },
             "required": ["plant_id", "event_type"],
         },
@@ -206,6 +210,10 @@ def _event_detail(h: dict) -> dict:
         ev["note"]  = h.get("custom_note")
     elif h["action"] == "acquire":
         ev["source"] = h.get("source")
+        ev["acquire_type"] = h.get("acquire_type")
+    elif h["action"] == "order":
+        ev["source"] = h.get("source")
+        ev["expected_on"] = h.get("expected_on")
     return ev
 
 # ── tool implementations ──────────────────────────────────────────────────────
@@ -244,7 +252,11 @@ def _call_tool(name: str, args: dict, user: dict) -> str:
             "event_range_max_u": "days",
             "event_dur_val":     args.get("duration_val", 24),
             "event_dur_unit":    args.get("duration_unit", "hours"),
-            "event_source":      args.get("source", ""),
+            "event_source":        args.get("source", ""),
+            "event_acquire_type":  args.get("acquire_type", "bought"),
+            "event_ended_on":      args.get("expected_date", ""),
+            "event_price":         str(args["price"]) if args.get("price") is not None else "",
+            "event_price_currency": args.get("price_currency", ""),
         })
         errors, event = validate_form(form, get_translations(lang), context="add")
         if errors:
@@ -271,7 +283,11 @@ def _call_tool(name: str, args: dict, user: dict) -> str:
             "event_size_unit":    args.get("size_unit", "cm"),
             "event_custom_label": args.get("custom_label", ""),
             "event_custom_note":  args.get("custom_note", ""),
-            "event_source":       args.get("source", ""),
+            "event_source":        args.get("source", ""),
+            "event_acquire_type":  args.get("acquire_type", "bought"),
+            "event_ended_on":      args.get("expected_date", ""),
+            "event_price":         str(args["price"]) if args.get("price") is not None else "",
+            "event_price_currency": args.get("price_currency", ""),
         })
         errors, event = validate_form(form, get_translations(lang), context="add_stage")
         if errors:

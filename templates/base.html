@@ -162,5 +162,22 @@
   </main>
 
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script>
+    document.querySelectorAll('.fmt-price').forEach(function(el) {
+      var amount = parseFloat(el.dataset.amount);
+      var currency = el.dataset.currency;
+      if (isNaN(amount)) return;
+      try {
+        if (currency) {
+          el.textContent = new Intl.NumberFormat(undefined, {style: 'currency', currency: currency, minimumFractionDigits: 0, maximumFractionDigits: 2}).format(amount);
+        } else {
+          el.textContent = new Intl.NumberFormat(undefined, {minimumFractionDigits: 0, maximumFractionDigits: 2}).format(amount);
+        }
+      } catch(e) {
+        // unknown currency code — fall back to plain number + code
+        el.textContent = new Intl.NumberFormat(undefined, {minimumFractionDigits: 0, maximumFractionDigits: 2}).format(amount) + (currency ? ' ' + currency : '');
+      }
+    });
+  </script>
 </body>
 </html>

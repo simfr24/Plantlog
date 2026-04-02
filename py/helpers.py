@@ -165,7 +165,7 @@ def build_state_cards(state_groups, include_dead=False):
     total_plants = sum(len(plants) for plants in state_groups.values())
     for i, (state, plants) in enumerate(state_groups.items()):
         is_dead_state = (state.lower() == "dead")
-        is_stash_state = (state.lower() == "stashed")
+        is_stash_state = (state.lower() in ("stashed", "ordered"))
         if is_dead_state and not include_dead:
             continue
         if is_stash_state:
@@ -202,7 +202,7 @@ def _events_for_plant(conn, plant_id: int) -> List[Dict[str, Any]]:
                e.dur_val,  e.dur_unit,
                e.measure_val, e.measure_unit,
                e.custom_label, e.custom_note,
-               e.ended_on, e.source
+               e.ended_on, e.source, e.acquire_type, e.price, e.price_currency
         FROM events      e
         JOIN event_types et ON et.id = e.event_type_id
         WHERE e.plant_id = ?
@@ -229,6 +229,17 @@ def _events_for_plant(conn, plant_id: int) -> List[Dict[str, Any]]:
             ev["custom_note"] = a["custom_note"]
         elif a["action"] == "acquire":
             ev["source"] = a["source"]
+            ev["acquire_type"] = a["acquire_type"]
+            if a["price"] is not None:
+                ev["price"] = a["price"]
+                ev["price_currency"] = a["price_currency"]
+        elif a["action"] == "order":
+            ev["source"] = a["source"]
+            if a["ended_on"]:
+                ev["expected_on"] = a["ended_on"]
+            if a["price"] is not None:
+                ev["price"] = a["price"]
+                ev["price_currency"] = a["price_currency"]
         if a["action"] in ("flower", "fruit") and a["ended_on"]:
             ev["ended_on"] = a["ended_on"]
         hist.append(ev)
@@ -384,8 +395,17 @@ def _insert_event(cur, plant_id: int, ev: Dict[str, Any]) -> None:
         )
     elif ev["action"] == "acquire":
         cur.execute(
-            f"INSERT INTO events ({','.join(base_cols)}, source) VALUES (?,?,?,?)",
-            base_vals + (ev.get("source") or None,),
+            f"INSERT INTO events ({','.join(base_cols)}, source, acquire_type, price, price_currency)"
+            " VALUES (?,?,?,?,?,?,?)",
+            base_vals + (ev.get("source") or None, ev.get("acquire_type") or None,
+                         ev.get("price") or None, ev.get("price_currency") or None),
+        )
+    elif ev["action"] == "order":
+        cur.execute(
+            f"INSERT INTO events ({','.join(base_cols)}, source, ended_on, price, price_currency)"
+            " VALUES (?,?,?,?,?,?,?)",
+            base_vals + (ev.get("source") or None, ev.get("expected_on") or None,
+                         ev.get("price") or None, ev.get("price_currency") or None),
         )
     elif ev["action"] in ("flower", "fruit") and ev.get("ended_on"):
         cur.execute(
@@ -493,6 +513,22 @@ def update_action(event_id: int, ev: Dict[str, Any]) -> None:  # ✓ kept name
                 "UPDATE events SET event_type_id = ?, happened_on = ?, ended_on = ? WHERE id = ?",
                 base + (ev.get("ended_on") or None, event_id),
             )
+        elif ev["action"] == "order":
+            cur.execute(
+                """UPDATE events SET event_type_id = ?, happened_on = ?,
+                       source = ?, ended_on = ?, price = ?, price_currency = ?
+                   WHERE id = ?""",
+                base + (ev.get("source") or None, ev.get("expected_on") or None,
+                        ev.get("price") or None, ev.get("price_currency") or None, event_id),
+            )
+        elif ev["action"] == "acquire":
+            cur.execute(
+                """UPDATE events SET event_type_id = ?, happened_on = ?,
+                       source = ?, acquire_type = ?, price = ?, price_currency = ?
+                   WHERE id = ?""",
+                base + (ev.get("source") or None, ev.get("acquire_type") or None,
+                        ev.get("price") or None, ev.get("price_currency") or None, event_id),
+            )
         else:
             cur.execute(
                 "UPDATE events SET event_type_id = ?, happened_on = ? WHERE id = ?",
@@ -515,7 +551,7 @@ def get_action_by_id(event_id: int) -> Optional[Dict[str, Any]]:  # ✓ kept nam
                    e.measure_val, e.measure_unit,
                    p.common, p.latin,
                    e.custom_label, e.custom_note,
-                   e.ended_on
+                   e.ended_on, e.source, e.acquire_type, e.price, e.price_currency
             FROM events      e
             JOIN event_types et ON et.id = e.event_type_id
             JOIN plants      p  ON p.id  = e.plant_id
@@ -545,6 +581,16 @@ def get_action_by_id(event_id: int) -> Optional[Dict[str, Any]]:  # ✓ kept nam
             act["custom_note"] = a["custom_note"]
         if a["action"] in ("flower", "fruit") and a["ended_on"]:
             act["ended_on"] = a["ended_on"]
+        if a["action"] == "order":
+            act["source"] = a["source"]
+            act["expected_on"] = a["ended_on"]
+            act["price"] = a["price"]
+            act["price_currency"] = a["price_currency"]
+        elif a["action"] == "acquire":
+            act["source"] = a["source"]
+            act["acquire_type"] = a["acquire_type"]
+            act["price"] = a["price"]
+            act["price_currency"] = a["price_currency"]
         return act
 
 
@@ -609,15 +655,15 @@ def explode_plant(plant_id: int, count: int, user_id: int) -> List[int]:
             # Copy all events to the new plant
             events = conn.execute(
                 "SELECT event_type_id, happened_on, range_min, range_min_u, range_max, range_max_u, "
-                "dur_val, dur_unit, measure_val, measure_unit, custom_label, custom_note, source "
+                "dur_val, dur_unit, measure_val, measure_unit, custom_label, custom_note, source, acquire_type, price, price_currency "
                 "FROM events WHERE plant_id = ? ORDER BY happened_on, id",
                 (plant_id,),
             ).fetchall()
             for ev in events:
                 cur.execute(
                     "INSERT INTO events (plant_id, event_type_id, happened_on, range_min, range_min_u, "
-                    "range_max, range_max_u, dur_val, dur_unit, measure_val, measure_unit, custom_label, custom_note, source) "
-                    "VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+                    "range_max, range_max_u, dur_val, dur_unit, measure_val, measure_unit, custom_label, custom_note, source, acquire_type, price, price_currency) "
+                    "VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
                     (new_plant_id,) + tuple(ev),
                 )
         conn.commit()
@@ -905,6 +951,11 @@ def get_empty_form():
         "event_size_unit": "cm",
         "event_ended_on": "",
         "event_source": "",
+        "event_acquire_type": "bought",
+        "event_price": "",
+        "event_price_currency": "EUR",
+        "event_order_price": "",
+        "event_order_price_currency": "EUR",
         "notes": "",
     }
 
@@ -933,6 +984,11 @@ def get_form_data(request):
         "event_custom_note": request.form.get("event_custom_note", "").strip(),
         "event_ended_on": request.form.get("event_ended_on", "").strip(),
         "event_source": request.form.get("event_source", "").strip(),
+        "event_acquire_type": request.form.get("event_acquire_type", "bought").strip(),
+        "event_price": request.form.get("event_price", "").strip(),
+        "event_price_currency": request.form.get("event_price_currency", "").strip(),
+        "event_order_price": request.form.get("event_order_price", "").strip(),
+        "event_order_price_currency": request.form.get("event_order_price_currency", "").strip(),
     }
 
 
@@ -1046,10 +1102,26 @@ def validate_form(form, translations, context="add"):
 
 
     elif status == "acquire":
+        raw_price = form.get("event_price", "").strip()
+        price = float(raw_price) if raw_price else None
         event = {
             "action": "acquire",
             "start": date,
             "source": form.get("event_source", "").strip() or None,
+            "acquire_type": form.get("event_acquire_type", "bought").strip() or "bought",
+            "price": price,
+            "price_currency": form.get("event_price_currency", "").strip() or None if price is not None else None,
+        }
+    elif status == "order":
+        raw_price = form.get("event_order_price", "").strip()
+        price = float(raw_price) if raw_price else None
+        event = {
+            "action": "order",
+            "start": date,
+            "source": form.get("event_source", "").strip() or None,
+            "expected_on": form.get("event_ended_on", "").strip() or None,
+            "price": price,
+            "price_currency": form.get("event_order_price_currency", "").strip() or None if price is not None else None,
         }
     elif status in ("flower", "fruit"):
         ended = form.get("event_ended_on", "").strip() or None
@@ -1099,6 +1171,16 @@ def form_keys_for(action_dict):
         })
     if action in ("flower", "fruit"):
         extras["event_ended_on"] = action_dict.get("ended_on", "")
+    elif action == "order":
+        extras["event_source"] = action_dict.get("source") or ""
+        extras["event_ended_on"] = action_dict.get("expected_on") or ""
+        extras["event_order_price"] = action_dict["price"] if action_dict.get("price") is not None else ""
+        extras["event_order_price_currency"] = action_dict.get("price_currency") or ""
+    elif action == "acquire":
+        extras["event_source"] = action_dict.get("source") or ""
+        extras["event_acquire_type"] = action_dict.get("acquire_type") or "bought"
+        extras["event_price"] = action_dict["price"] if action_dict.get("price") is not None else ""
+        extras["event_price_currency"] = action_dict.get("price_currency") or ""
 
     return "event_date", extras
 
