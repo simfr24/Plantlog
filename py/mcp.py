@@ -27,6 +27,9 @@ from py.helpers import (
     load_one,
     save_new_plant,
     update_plant as _update_plant,
+    update_action as _update_action,
+    get_action_by_id,
+    process_delete_action as _delete_event,
     validate_form,
     get_empty_form,
     get_event_specs,
@@ -52,8 +55,14 @@ def _auth():
 TOOLS = [
     {
         "name": "list_plants",
-        "description": "Return all your plants with their current state.",
-        "inputSchema": {"type": "object", "properties": {}, "required": []},
+        "description": "Return your plants. Defaults to all active plants (living, stashed, ordered) — excludes dead plants. Pass include_dead=true to also include dead plants.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "include_dead": {"type": "boolean", "description": "Also include dead plants (graveyard)."},
+            },
+            "required": [],
+        },
     },
     {
         "name": "get_plant",
@@ -154,6 +163,32 @@ TOOLS = [
         },
     },
     {
+        "name": "update_event",
+        "description": "Patch fields on an existing event. Only supplied fields are changed; omitted fields keep their current value. Useful for retroactively adding source, price, or correcting a date.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "event_id":       {"type": "integer"},
+                "date":           {"type": "string", "description": "ISO date (YYYY-MM-DD) to change the event date."},
+                "source":         {"type": "string", "description": "Vendor / person / place (order and acquire events)."},
+                "acquire_type":   {"type": "string", "enum": ["bought", "gift", "foraged", "swap", "received", "other"], "description": "Acquire sub-type (acquire events only)."},
+                "expected_on":    {"type": "string", "description": "ISO date — expected arrival (order events only)."},
+                "price":          {"type": "number", "description": "Price paid (order and acquire events)."},
+                "price_currency": {"type": "string", "description": "ISO 4217 currency code, e.g. EUR, USD (only saved when price is also set)."},
+            },
+            "required": ["event_id"],
+        },
+    },
+    {
+        "name": "delete_event",
+        "description": "Permanently delete a single event from a plant's history.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {"event_id": {"type": "integer"}},
+            "required": ["event_id"],
+        },
+    },
+    {
         "name": "list_event_types",
         "description": "Return all available event types and the state each one triggers.",
         "inputSchema": {"type": "object", "properties": {}, "required": []},
@@ -187,6 +222,7 @@ def _plant_summary(p: dict) -> dict:
         "notes":    p.get("notes"),
         "count":    p.get("count", 1),
         "state":    state.get("label"),
+        "state_code": state.get("code"),
         "last_event": {
             "type": current.get("action"),
             "date": current.get("start"),
@@ -211,9 +247,15 @@ def _event_detail(h: dict) -> dict:
     elif h["action"] == "acquire":
         ev["source"] = h.get("source")
         ev["acquire_type"] = h.get("acquire_type")
+        if h.get("price") is not None:
+            ev["price"] = h["price"]
+            ev["price_currency"] = h.get("price_currency")
     elif h["action"] == "order":
         ev["source"] = h.get("source")
         ev["expected_on"] = h.get("expected_on")
+        if h.get("price") is not None:
+            ev["price"] = h["price"]
+            ev["price_currency"] = h.get("price_currency")
     return ev
 
 # ── tool implementations ──────────────────────────────────────────────────────
@@ -224,6 +266,9 @@ def _call_tool(name: str, args: dict, user: dict) -> str:
 
     if name == "list_plants":
         plants = load_data(uid)
+        include_dead = args.get("include_dead", False)
+        if not include_dead:
+            plants = [p for p in plants if (p.get("state") or {}).get("code") != "dead"]
         return json.dumps([_plant_summary(p) for p in plants], indent=2)
 
     if name == "get_plant":
@@ -252,11 +297,13 @@ def _call_tool(name: str, args: dict, user: dict) -> str:
             "event_range_max_u": "days",
             "event_dur_val":     args.get("duration_val", 24),
             "event_dur_unit":    args.get("duration_unit", "hours"),
-            "event_source":        args.get("source", ""),
-            "event_acquire_type":  args.get("acquire_type", "bought"),
-            "event_ended_on":      args.get("expected_date", ""),
-            "event_price":         str(args["price"]) if args.get("price") is not None else "",
-            "event_price_currency": args.get("price_currency", ""),
+            "event_source":              args.get("source", ""),
+            "event_acquire_type":         args.get("acquire_type", "bought"),
+            "event_ended_on":             args.get("expected_date", ""),
+            "event_price":                str(args["price"]) if args.get("price") is not None else "",
+            "event_price_currency":       args.get("price_currency", ""),
+            "event_order_price":          str(args["price"]) if args.get("price") is not None else "",
+            "event_order_price_currency": args.get("price_currency", ""),
         })
         errors, event = validate_form(form, get_translations(lang), context="add")
         if errors:
@@ -283,11 +330,13 @@ def _call_tool(name: str, args: dict, user: dict) -> str:
             "event_size_unit":    args.get("size_unit", "cm"),
             "event_custom_label": args.get("custom_label", ""),
             "event_custom_note":  args.get("custom_note", ""),
-            "event_source":        args.get("source", ""),
-            "event_acquire_type":  args.get("acquire_type", "bought"),
-            "event_ended_on":      args.get("expected_date", ""),
-            "event_price":         str(args["price"]) if args.get("price") is not None else "",
-            "event_price_currency": args.get("price_currency", ""),
+            "event_source":              args.get("source", ""),
+            "event_acquire_type":         args.get("acquire_type", "bought"),
+            "event_ended_on":             args.get("expected_date", ""),
+            "event_price":                str(args["price"]) if args.get("price") is not None else "",
+            "event_price_currency":       args.get("price_currency", ""),
+            "event_order_price":          str(args["price"]) if args.get("price") is not None else "",
+            "event_order_price_currency": args.get("price_currency", ""),
         })
         errors, event = validate_form(form, get_translations(lang), context="add_stage")
         if errors:
@@ -326,6 +375,38 @@ def _call_tool(name: str, args: dict, user: dict) -> str:
         if not ids:
             raise ValueError("Plant not found or not authorized.")
         return json.dumps({"ok": True, "plant_ids": ids})
+
+    if name == "update_event":
+        ev = get_action_by_id(args["event_id"])
+        if ev is None:
+            raise ValueError("Event not found.")
+        p = load_one(ev["plant_id"])
+        if p is None or p["user_id"] != uid:
+            raise ValueError("Event not found.")
+        # Merge supplied fields over current values
+        if "date" in args:
+            ev["start"] = args["date"]
+        if "source" in args:
+            ev["source"] = args["source"]
+        if "acquire_type" in args:
+            ev["acquire_type"] = args["acquire_type"]
+        if "expected_on" in args:
+            ev["expected_on"] = args["expected_on"]
+        if "price" in args:
+            ev["price"] = args["price"]
+            ev["price_currency"] = args.get("price_currency", ev.get("price_currency"))
+        _update_action(args["event_id"], ev)
+        return json.dumps({"ok": True})
+
+    if name == "delete_event":
+        ev = get_action_by_id(args["event_id"])
+        if ev is None:
+            raise ValueError("Event not found.")
+        p = load_one(ev["plant_id"])
+        if p is None or p["user_id"] != uid:
+            raise ValueError("Event not found.")
+        _delete_event(args["event_id"], uid)
+        return json.dumps({"ok": True})
 
     if name == "list_event_types":
         specs = get_event_specs()
