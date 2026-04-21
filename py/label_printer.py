@@ -579,6 +579,71 @@ def create_label_detailed(common_name, latin_name, date_str,
 
 
 # ---------------------------------------------------------------------------
+# Stake-wrap label
+# ---------------------------------------------------------------------------
+
+def create_label_stake_wrap(common_name, latin_name, date_str,
+                            variety=None, nickname=None, extra_notes=None,
+                            back_text=None):
+    W     = PRINTER_WIDTH
+    SEC_W = W // 3
+    PAD   = 12
+
+    name_font  = _get_font("bold",    34)
+    latin_font = _get_font("italic",  17)
+    var_font   = _get_font("italic",  17)
+    date_font  = _get_font("regular", 16)
+
+    hero = nickname if nickname else common_name
+
+    tmp = PIL.Image.new("1", (1, 1))
+    td  = PIL.ImageDraw.Draw(tmp)
+
+    hero_w  = _text_w(td, hero, name_font)
+    latin_w = _text_w(td, latin_name, latin_font)
+    date_w  = _text_w(td, date_str, date_font)
+    var_w   = (_text_w(td, f"'{variety}'", var_font) + 6) if variety else 0
+    # latin + variety on same line
+    latin_line_w = latin_w + var_w
+
+    H     = max(hero_w, latin_line_w, date_w) + PAD * 2
+    COL_H = SEC_W - PAD * 2
+
+    img = PIL.Image.new("1", (W, H), 1)
+
+    def _draw_rotated_text(section_idx, angle):
+        tmp2 = PIL.Image.new("1", (H, COL_H), 1)
+        td2  = PIL.ImageDraw.Draw(tmp2)
+
+        main_h  = _text_h(td2, hero, name_font)
+        latin_h = _text_h(td2, latin_name, latin_font)
+        date_h  = _text_h(td2, date_str, date_font)
+        block   = main_h + 4 + latin_h + 4 + date_h
+        y0      = (COL_H - block) // 2
+
+        td2.text((H // 2, y0), hero, font=name_font, fill=0, anchor="ma")
+
+        # Latin + variety on same line
+        latin_str = latin_name
+        if variety:
+            latin_str += f"  '{variety}'"
+        td2.text((H // 2, y0 + main_h + 4), latin_str, font=latin_font, fill=0, anchor="ma")
+
+        td2.text((H // 2, y0 + main_h + 4 + latin_h + 4), date_str,
+                 font=date_font, fill=0, anchor="ma")
+
+        rotated = tmp2.rotate(angle, expand=True)
+        sx      = section_idx * SEC_W
+        paste_x = sx + (SEC_W - rotated.width) // 2
+        paste_y = (H - rotated.height) // 2
+        img.paste(rotated, (paste_x, paste_y))
+
+    _draw_rotated_text(1, 270)
+    _draw_rotated_text(2, 90)
+
+    return img
+
+# ---------------------------------------------------------------------------
 # QR code label
 # ---------------------------------------------------------------------------
 

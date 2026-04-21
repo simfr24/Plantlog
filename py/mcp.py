@@ -200,7 +200,7 @@ TOOLS = [
             "type": "object",
             "properties": {
                 "plant_id": {"type": "integer"},
-                "style":    {"type": "string", "enum": ["classic", "circular"], "default": "classic"},
+                "style":    {"type": "string", "enum": ["classic", "circular", "minimal", "detailed", "qr", "stake_wrap"], "default": "classic"},
             },
             "required": ["plant_id"],
         },

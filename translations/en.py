@@ -295,6 +295,7 @@ translations = {
     "Circular": "Circular",
     "Minimal": "Minimal",
     "Detailed": "Detailed",
+    "Stake wrap": "Stake wrap",
     "label_extra_notes_placeholder": "Personal notes (optional — printed on label)…",
     "Print": "Print",
     "print_timeout": "Timed out waiting for printer.",

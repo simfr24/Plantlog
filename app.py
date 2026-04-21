@@ -89,6 +89,7 @@ from py.mcp import blueprint as mcp_blueprint
 from py.label_printer import (
     create_label_classic, create_label_circular,
     create_label_minimal, create_label_detailed, create_label_qr,
+    create_label_stake_wrap,
     label_to_png_bytes, label_to_printer_bytes,
 )
 
@@ -726,6 +727,8 @@ def _make_label_image(plant, style, extra_notes=None, base_url=None):
     if style == "qr":
         plant_url = (base_url or request.url_root).rstrip("/") + "/p/" + str(plant.get("id", ""))
         return create_label_qr(common, latin, date_str, plant_url, variety, nickname, extra_notes)
+    if style == "stake_wrap":
+        return create_label_stake_wrap(common, latin, date_str, variety, nickname, extra_notes)
     return create_label_classic(common, latin, date_str, variety, nickname, extra_notes)
 
 
@@ -1203,6 +1206,8 @@ def api_print_job_bytes(job_id):
         base_url  = (row["base_url"] or request.url_root).rstrip("/")
         plant_url = base_url + "/p/" + str(row["plant_id"])
         img = create_label_qr(row["common"], row["latin"], date_str, plant_url, variety, nickname, extra_notes)
+    elif style == "stake_wrap":
+        img = create_label_stake_wrap(row["common"], row["latin"], date_str, variety, nickname, extra_notes)
     else:
         img = create_label_classic(row["common"], row["latin"], date_str, variety, nickname, extra_notes)
     return Response(label_to_printer_bytes(img), mimetype="application/octet-stream")

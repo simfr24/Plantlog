@@ -295,6 +295,7 @@ translations = {
     "Circular": "Circulaire",
     "Minimal": "Minimal",
     "Detailed": "Détaillé",
+    "Stake wrap": "Tuteur",
     "label_extra_notes_placeholder": "Notes personnelles (facultatif — imprimées sur l'étiquette)…",
     "Print": "Imprimer",
     "print_timeout": "Délai d'attente de l'imprimante dépassé.",

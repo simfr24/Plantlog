@@ -295,6 +295,7 @@ translations = {
     "Circular": "Круглый",
     "Minimal": "Минимал",
     "Detailed": "Подробный",
+    "Stake wrap": "На колышек",
     "label_extra_notes_placeholder": "Личные заметки (необязательно — печатаются на этикетке)…",
     "Print": "Печать",
     "print_timeout": "Превышено время ожидания принтера.",
