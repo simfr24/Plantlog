@@ -150,7 +150,7 @@
       const style = currentStyle();
       let qs = `style=${style}&_=${Date.now()}`;
       if (extra) qs += `&extra=${encodeURIComponent(extra)}`;
-      if (style === 'qr') qs += `&base_url=${encodeURIComponent(window.location.origin)}`;
+      if (style === 'qr' || style === 'detailed_h') qs += `&base_url=${encodeURIComponent(window.location.origin)}`;
       document.getElementById('labelPreview').src = `/label_preview/${plantId}?${qs}`;
     }
 

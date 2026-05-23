@@ -730,7 +730,8 @@ def _make_label_image(plant, style, extra_notes=None, base_url=None):
     if style == "detailed_v":
         return create_label_detailed_v(common, latin, date_str, variety, nickname, location, notes, extra_notes)
     if style == "detailed_h":
-        return create_label_detailed_h(common, latin, date_str, variety, nickname, location, notes, extra_notes)
+        plant_url = (base_url or request.url_root).rstrip("/") + "/p/" + str(plant.get("id", ""))
+        return create_label_detailed_h(common, latin, date_str, variety, nickname, location, notes, extra_notes, plant_url=plant_url)
     if style == "qr":
         plant_url = (base_url or request.url_root).rstrip("/") + "/p/" + str(plant.get("id", ""))
         return create_label_qr(common, latin, date_str, plant_url, variety, nickname, extra_notes)
@@ -1216,7 +1217,9 @@ def api_print_job_bytes(job_id):
     elif style == "detailed_v":
         img = create_label_detailed_v(row["common"], row["latin"], date_str, variety, nickname, location, notes, extra_notes)
     elif style == "detailed_h":
-        img = create_label_detailed_h(row["common"], row["latin"], date_str, variety, nickname, location, notes, extra_notes)
+        base_url  = (row["base_url"] or request.url_root).rstrip("/")
+        plant_url = base_url + "/p/" + str(row["plant_id"])
+        img = create_label_detailed_h(row["common"], row["latin"], date_str, variety, nickname, location, notes, extra_notes, plant_url=plant_url)
     elif style == "qr":
         base_url  = (row["base_url"] or request.url_root).rstrip("/")
         plant_url = base_url + "/p/" + str(row["plant_id"])

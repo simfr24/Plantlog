@@ -764,7 +764,8 @@ def create_label_detailed_v(common_name, latin_name, date_str,
 
 def create_label_detailed_h(common_name, latin_name, date_str,
                             variety=None, nickname=None,
-                            location=None, notes=None, extra_notes=None):
+                            location=None, notes=None, extra_notes=None,
+                            plant_url=None):
     """Horizontal detailed label. Fixed reading height = PRINTER_WIDTH;
     content flows across as many columns as needed, then the whole image is
     rotated 90° clockwise so the strip prints at the printer's native width.
@@ -869,8 +870,18 @@ def create_label_detailed_h(common_name, latin_name, date_str,
     # Date pinned to bottom of header column
     date_w_px = _text_w(td, date_str, date_font)
     date_h_px = _text_h(td, date_str, date_font)
-    d.text((hx + (HEADER_W - date_w_px) // 2, H - pad_b - date_h_px - 2),
-           date_str, font=date_font, fill=0)
+    date_y    = H - pad_b - date_h_px - 2
+    d.text((hx + (HEADER_W - date_w_px) // 2, date_y), date_str, font=date_font, fill=0)
+
+    # QR code between location/title block and the date
+    if plant_url:
+        avail_h = date_y - hy - 12
+        qr_size = min(HEADER_W - 30, avail_h)
+        qr_size = (max(60, qr_size) // 4) * 4
+        if qr_size >= 60 and qr_size <= avail_h:
+            qr_y   = hy + (avail_h - qr_size) // 2
+            qr_img = _make_qr_image(plant_url, qr_size)
+            img.paste(qr_img, (hx + (HEADER_W - qr_size) // 2, qr_y))
 
     # ─── content columns ────────────────────────────────────────────────
     col_x = pad_l + HEADER_W + GUTTER
