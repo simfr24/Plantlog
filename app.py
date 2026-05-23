@@ -15,6 +15,7 @@ from datetime import date
 from functools import wraps
 import json
 import markdown as _md
+import PIL.Image
 
 from flask import (
     Flask,
@@ -748,6 +749,10 @@ def label_preview(idx):
     extra_notes = request.args.get("extra") or None
     base_url    = request.args.get("base_url") or None
     img = _make_label_image(plant, style, extra_notes, base_url=base_url)
+    # Rotate the preview into reading orientation for sideways-printed labels.
+    # The bytes sent to the printer are unchanged; this only affects the preview.
+    if style in ("detailed_h", "stake_wrap"):
+        img = img.transpose(PIL.Image.ROTATE_90)
     return Response(label_to_png_bytes(img), mimetype="image/png")
 
 
