@@ -288,6 +288,8 @@ translations = {
     # ────────── variety / batch field ──────────
     "Variety / Batch": "Variété / Lot",
     "e.g. variety": "ex. : Lot A, Jardinière…",
+    "Rusticity": "Rusticité",
+    "rusticity_placeholder": "ex. : −18 °C",
 
     # ────────── print label ──────────
     "Print Label": "Imprimer l'étiquette",
@@ -295,6 +297,8 @@ translations = {
     "Circular": "Circulaire",
     "Minimal": "Minimal",
     "Detailed": "Détaillé",
+    "Detailed V": "Détaillé vertical",
+    "Detailed H": "Détaillé horizontal",
     "Stake wrap": "Tuteur",
     "label_extra_notes_placeholder": "Notes personnelles (facultatif — imprimées sur l'étiquette)…",
     "Print": "Imprimer",

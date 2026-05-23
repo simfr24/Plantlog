@@ -58,6 +58,7 @@ CREATE TABLE IF NOT EXISTS plants (
   notes            TEXT,
   variety          TEXT,
   nickname         TEXT,
+  rusticity        TEXT,
   count            INTEGER NOT NULL DEFAULT 1,
   batch_id         INTEGER REFERENCES plants(id) ON DELETE SET NULL,
   user_id          INTEGER NOT NULL,
@@ -192,6 +193,8 @@ def _migrate(conn):
         conn.execute("ALTER TABLE plants ADD COLUMN count INTEGER NOT NULL DEFAULT 1")
     if "batch_id" not in plant_cols:
         conn.execute("ALTER TABLE plants ADD COLUMN batch_id INTEGER REFERENCES plants(id) ON DELETE SET NULL")
+    if "rusticity" not in plant_cols:
+        conn.execute("ALTER TABLE plants ADD COLUMN rusticity TEXT")
 
     user_cols = {row[1] for row in conn.execute("PRAGMA table_info(users)").fetchall()}
     if "api_key_hash" not in user_cols:

@@ -288,6 +288,8 @@ translations = {
     # ────────── variety / batch field ──────────
     "Variety / Batch": "Variety / Batch",
     "e.g. variety": "e.g. Batch A, Window box…",
+    "Rusticity": "Hardiness",
+    "rusticity_placeholder": "e.g. −18 °C",
 
     # ────────── print label ──────────
     "Print Label": "Print Label",
@@ -295,6 +297,8 @@ translations = {
     "Circular": "Circular",
     "Minimal": "Minimal",
     "Detailed": "Detailed",
+    "Detailed V": "Detailed vertical",
+    "Detailed H": "Detailed horizontal",
     "Stake wrap": "Stake wrap",
     "label_extra_notes_placeholder": "Personal notes (optional — printed on label)…",
     "Print": "Print",

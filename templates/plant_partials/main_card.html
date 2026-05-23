@@ -42,6 +42,17 @@
         </div>
       </div>
       {% endif %}
+      {% if plant.rusticity %}
+      <div class="col-md-6">
+        <div class="d-flex align-items-start">
+          <i class="fas fa-snowflake me-2 text-muted mt-1"></i>
+          <div>
+            <strong>{{ t['Rusticity'] }}:</strong>
+            <div class="text-muted">{{ plant.rusticity }}</div>
+          </div>
+        </div>
+      </div>
+      {% endif %}
       {% if plant.count and plant.count > 1 %}
       <div class="col-md-6">
         <div class="d-flex align-items-start">

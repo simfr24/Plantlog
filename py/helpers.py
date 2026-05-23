@@ -290,6 +290,7 @@ def load_one(plant_id: int) -> Optional[Dict[str, Any]]:
         "notes": p["notes"],
         "variety": p["variety"] if "variety" in p.keys() else None,
         "nickname": p["nickname"] if "nickname" in p.keys() else None,
+        "rusticity": p["rusticity"] if "rusticity" in p.keys() else None,
         "count": p["count"] if "count" in p.keys() else 1,
         "batch_id": p["batch_id"] if "batch_id" in p.keys() else None,
         "history": history,
@@ -320,6 +321,7 @@ def load_data(user_id: int) -> List[Dict[str, Any]]:
                 "notes": p["notes"],
                 "variety": p["variety"] if "variety" in p.keys() else None,
                 "nickname": p["nickname"] if "nickname" in p.keys() else None,
+                "rusticity": p["rusticity"] if "rusticity" in p.keys() else None,
                 "count": p["count"] if "count" in p.keys() else 1,
                 "batch_id": p["batch_id"] if "batch_id" in p.keys() else None,
                 "history": (hist := _events_for_plant(conn, p["id"])),
@@ -429,7 +431,7 @@ def save_new_plant(plant_dict: Dict[str, Any], first_event: Dict[str, Any], user
     with get_conn() as conn:
         cur = conn.cursor()
         cur.execute(
-            "INSERT INTO plants (common, latin, location, notes, variety, nickname, count, batch_id, user_id) VALUES (?,?,?,?,?,?,?,?,?)",
+            "INSERT INTO plants (common, latin, location, notes, variety, nickname, rusticity, count, batch_id, user_id) VALUES (?,?,?,?,?,?,?,?,?,?)",
             (
                 plant_dict["common"],
                 plant_dict["latin"],
@@ -437,6 +439,7 @@ def save_new_plant(plant_dict: Dict[str, Any], first_event: Dict[str, Any], user
                 plant_dict.get("notes"),
                 plant_dict.get("variety") or None,
                 plant_dict.get("nickname") or None,
+                plant_dict.get("rusticity") or None,
                 plant_dict.get("count", 1) or 1,
                 plant_dict.get("batch_id") or None,
                 user_id,
@@ -452,7 +455,7 @@ def update_plant(plant_id: int, plant_dict: Dict[str, Any], new_event: Optional[
     with get_conn() as conn:
         cur = conn.cursor()
         cur.execute(
-            """UPDATE plants SET common = ?, latin = ?, location = ?, notes = ?, variety = ?, nickname = ?, count = ? WHERE id = ?""",
+            """UPDATE plants SET common = ?, latin = ?, location = ?, notes = ?, variety = ?, nickname = ?, rusticity = ?, count = ? WHERE id = ?""",
             (
                 plant_dict["common"],
                 plant_dict["latin"],
@@ -460,6 +463,7 @@ def update_plant(plant_id: int, plant_dict: Dict[str, Any], new_event: Optional[
                 plant_dict.get("notes"),
                 plant_dict.get("variety") or None,
                 plant_dict.get("nickname") or None,
+                plant_dict.get("rusticity") or None,
                 plant_dict.get("count", 1) or 1,
                 plant_id,
             ),
@@ -645,8 +649,8 @@ def explode_plant(plant_id: int, count: int, user_id: int) -> List[int]:
         new_ids = [plant_id]
         for _ in range(count - 1):
             cur.execute(
-                "INSERT INTO plants (common, latin, location, notes, variety, nickname, count, batch_id, user_id, current_state_id) "
-                "SELECT common, latin, location, notes, variety, nickname, 1, ?, user_id, current_state_id "
+                "INSERT INTO plants (common, latin, location, notes, variety, nickname, rusticity, count, batch_id, user_id, current_state_id) "
+                "SELECT common, latin, location, notes, variety, nickname, rusticity, 1, ?, user_id, current_state_id "
                 "FROM plants WHERE id = ?",
                 (plant_id, plant_id),
             )
@@ -937,6 +941,7 @@ def get_empty_form():
         "latin": "",
         "variety": "",
         "nickname": "",
+        "rusticity": "",
         "count": 1,
         "status": "sow",
         "event_date": "",
@@ -967,6 +972,7 @@ def get_form_data(request):
         "latin": request.form.get("latin", "").strip(),
         "variety": request.form.get("variety", "").strip(),
         "nickname": request.form.get("nickname", "").strip(),
+        "rusticity": request.form.get("rusticity", "").strip(),
         "count": max(1, to_int(request.form.get("count", 1))),
         "status": request.form.get("status", ""),
         "event_date": request.form.get("event_date", ""),
@@ -998,6 +1004,7 @@ def get_form_from_plant(plant):
     form["latin"] = plant["latin"]
     form["variety"] = plant.get("variety", "") or ""
     form["nickname"] = plant.get("nickname", "") or ""
+    form["rusticity"] = plant.get("rusticity", "") or ""
     form["count"] = plant.get("count", 1) or 1
     form["location"] = plant.get("location", "") or ""
     form["notes"] = plant.get("notes", "") or ""

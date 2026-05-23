@@ -288,6 +288,8 @@ translations = {
     # ────────── variety / batch field ──────────
     "Variety / Batch": "Разновидность / Партия",
     "e.g. variety": "напр. Партия А, Ящик у окна…",
+    "Rusticity": "Морозостойкость",
+    "rusticity_placeholder": "напр. −18 °C",
 
     # ────────── print label ──────────
     "Print Label": "Напечатать этикетку",
@@ -295,6 +297,8 @@ translations = {
     "Circular": "Круглый",
     "Minimal": "Минимал",
     "Detailed": "Подробный",
+    "Detailed V": "Подробный вертикальный",
+    "Detailed H": "Подробный горизонтальный",
     "Stake wrap": "На колышек",
     "label_extra_notes_placeholder": "Личные заметки (необязательно — печатаются на этикетке)…",
     "Print": "Печать",

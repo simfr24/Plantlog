@@ -62,6 +62,10 @@
               <input class="form-control" name="nickname" value="{{ form.nickname }}" placeholder="{{ t['plant_nickname_placeholder'] }}">
             </div>
             <div class="col-md-6">
+              <label class="form-label fw-semibold">{{ t['Rusticity'] }} <span class="text-muted fw-normal">({{ t['optional'] }})</span></label>
+              <input class="form-control" name="rusticity" value="{{ form.rusticity }}" placeholder="{{ t['rusticity_placeholder'] }}">
+            </div>
+            <div class="col-md-6">
               <label class="form-label fw-semibold">{{ t['plant_count'] }}</label>
               <input class="form-control" type="number" name="count" value="{{ form.count }}" min="1">
               <div class="form-text">{{ t['plant_count_hint'] }}</div>

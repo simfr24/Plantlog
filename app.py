@@ -88,7 +88,7 @@ from py.processing import sort_key, get_unique_locations
 from py.mcp import blueprint as mcp_blueprint
 from py.label_printer import (
     create_label_classic, create_label_circular,
-    create_label_minimal, create_label_detailed, create_label_qr,
+    create_label_minimal, create_label_detailed_v, create_label_detailed_h, create_label_qr,
     create_label_stake_wrap,
     label_to_png_bytes, label_to_printer_bytes,
 )
@@ -358,7 +358,7 @@ def plant_from_stash(idx):
         "action": "plant",
         "start": date.today().isoformat(),
     }
-    plant_data = {k: plant.get(k) or "" for k in ("common", "latin", "location", "notes", "variety", "nickname")}
+    plant_data = {k: plant.get(k) or "" for k in ("common", "latin", "location", "notes", "variety", "nickname", "rusticity")}
     plant_data["count"] = plant.get("count", 1)
     update_plant(plant["id"], plant_data, new_event=event)
     return redirect(url_for("view_plant", idx=idx, lang=g.lang))
@@ -378,7 +378,7 @@ def receive_plant(idx):
         "price": None,
         "price_currency": None,
     }
-    plant_data = {k: plant.get(k) or "" for k in ("common", "latin", "location", "notes", "variety", "nickname")}
+    plant_data = {k: plant.get(k) or "" for k in ("common", "latin", "location", "notes", "variety", "nickname", "rusticity")}
     plant_data["count"] = plant.get("count", 1)
     update_plant(plant["id"], plant_data, new_event=event)
     return redirect(url_for("stash", lang=g.lang))
@@ -572,6 +572,10 @@ def add_stage(idx):
                 "latin": plant["latin"],
                 "location": plant["location"],
                 "notes": plant["notes"],
+                "variety": plant.get("variety") or "",
+                "nickname": plant.get("nickname") or "",
+                "rusticity": plant.get("rusticity") or "",
+                "count": plant.get("count", 1),
             }
             update_plant(plant["id"], plant_data, new_event=event)
             return redirect(url_for("view_plant", idx=plant["id"], lang=lang))
@@ -722,8 +726,10 @@ def _make_label_image(plant, style, extra_notes=None, base_url=None):
         return create_label_circular(common, latin, date_str, variety, nickname, extra_notes)
     if style == "minimal":
         return create_label_minimal(common, latin, date_str, variety, nickname, extra_notes)
-    if style == "detailed":
-        return create_label_detailed(common, latin, date_str, variety, nickname, location, notes, extra_notes)
+    if style == "detailed_v":
+        return create_label_detailed_v(common, latin, date_str, variety, nickname, location, notes, extra_notes)
+    if style == "detailed_h":
+        return create_label_detailed_h(common, latin, date_str, variety, nickname, location, notes, extra_notes)
     if style == "qr":
         plant_url = (base_url or request.url_root).rstrip("/") + "/p/" + str(plant.get("id", ""))
         return create_label_qr(common, latin, date_str, plant_url, variety, nickname, extra_notes)
@@ -804,7 +810,7 @@ def quick_log(idx):
     errors, event = validate_form(form, translations, context="add_stage")
     if errors:
         return jsonify({"ok": False, "errors": errors}), 400
-    plant_data = {k: plant.get(k, "") or "" for k in ("common", "latin", "location", "notes", "variety")}
+    plant_data = {k: plant.get(k, "") or "" for k in ("common", "latin", "location", "notes", "variety", "nickname", "rusticity")}
     update_plant(plant["id"], plant_data, new_event=event)
     return jsonify({"ok": True})
 
@@ -1021,6 +1027,7 @@ def api_add_plant():
         "latin":             data.get("latin", ""),
         "variety":           data.get("variety", ""),
         "nickname":          data.get("nickname", ""),
+        "rusticity":         data.get("rusticity", ""),
         "count":             max(1, int(data.get("count", 1))),
         "location":          data.get("location", ""),
         "notes":             data.get("notes", ""),
@@ -1055,6 +1062,7 @@ def api_update_plant(idx):
         "notes":     data.get("notes",     p.get("notes") or ""),
         "variety":   data.get("variety",   p.get("variety") or ""),
         "nickname":  data.get("nickname",  p.get("nickname") or ""),
+        "rusticity": data.get("rusticity", p.get("rusticity") or ""),
         "count":     data.get("count",     p.get("count", 1)),
     }
     update_plant(idx, plant_data, new_event=None)
@@ -1200,8 +1208,10 @@ def api_print_job_bytes(job_id):
         img = create_label_circular(row["common"], row["latin"], date_str, variety, nickname, extra_notes)
     elif style == "minimal":
         img = create_label_minimal(row["common"], row["latin"], date_str, variety, nickname, extra_notes)
-    elif style == "detailed":
-        img = create_label_detailed(row["common"], row["latin"], date_str, variety, nickname, location, notes, extra_notes)
+    elif style == "detailed_v":
+        img = create_label_detailed_v(row["common"], row["latin"], date_str, variety, nickname, location, notes, extra_notes)
+    elif style == "detailed_h":
+        img = create_label_detailed_h(row["common"], row["latin"], date_str, variety, nickname, location, notes, extra_notes)
     elif style == "qr":
         base_url  = (row["base_url"] or request.url_root).rstrip("/")
         plant_url = base_url + "/p/" + str(row["plant_id"])

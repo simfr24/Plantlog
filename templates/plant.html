@@ -64,20 +64,42 @@
           <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{{ t['Close'] }}"></button>
         </div>
         <div class="modal-body">
-          <div class="mb-2 text-center">
-            <div class="btn-group" role="group">
-              <input type="radio" class="btn-check" name="labelStyle" id="styleClassic"  value="classic"  checked>
-              <label class="btn btn-outline-secondary btn-sm" for="styleClassic">{{ t['Classic'] }}</label>
-              <input type="radio" class="btn-check" name="labelStyle" id="styleCircular" value="circular">
-              <label class="btn btn-outline-secondary btn-sm" for="styleCircular">{{ t['Circular'] }}</label>
-              <input type="radio" class="btn-check" name="labelStyle" id="styleMinimal"  value="minimal">
-              <label class="btn btn-outline-secondary btn-sm" for="styleMinimal">{{ t['Minimal'] }}</label>
-              <input type="radio" class="btn-check" name="labelStyle" id="styleDetailed" value="detailed">
-              <label class="btn btn-outline-secondary btn-sm" for="styleDetailed">{{ t['Detailed'] }}</label>
-              <input type="radio" class="btn-check" name="labelStyle" id="styleStakeWrap" value="stake_wrap">
-              <label class="btn btn-outline-secondary btn-sm" for="styleStakeWrap">{{ t['Stake wrap'] }}</label>
-              <input type="radio" class="btn-check" name="labelStyle" id="styleQr" value="qr">
-              <label class="btn btn-outline-secondary btn-sm" for="styleQr"><i class="fas fa-qrcode me-1"></i>QR</label>
+          {% set _icons = {
+            'classic':    '<svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="4" y="3" width="12" height="14" rx="1"/><line x1="6" y1="7" x2="14" y2="7"/><line x1="6" y1="10" x2="14" y2="10"/></svg>',
+            'circular':   '<svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="10" cy="10" r="7"/><line x1="6" y1="10" x2="14" y2="10"/></svg>',
+            'minimal':    '<svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><line x1="5" y1="7" x2="15" y2="7"/><line x1="3" y1="10" x2="17" y2="10"/><line x1="6" y1="13" x2="14" y2="13"/></svg>',
+            'detailed_v': '<svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="5" y="2" width="10" height="16" rx="1"/><line x1="7" y1="6" x2="13" y2="6"/><line x1="7" y1="9" x2="13" y2="9"/><line x1="7" y1="12" x2="13" y2="12"/><line x1="7" y1="15" x2="13" y2="15"/></svg>',
+            'detailed_h': '<svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="5" width="16" height="10" rx="1"/><line x1="7" y1="7" x2="7" y2="13"/><line x1="11" y1="7" x2="11" y2="13"/><line x1="15" y1="7" x2="15" y2="13"/></svg>',
+            'stake_wrap': '<svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><line x1="10" y1="1" x2="10" y2="19"/><rect x="3" y="7" width="14" height="6" rx="0.5"/></svg>',
+            'qr':         '<svg width="18" height="18" viewBox="0 0 20 20" fill="currentColor"><rect x="2" y="2" width="6" height="6"/><rect x="4" y="4" width="2" height="2" fill="white"/><rect x="12" y="2" width="6" height="6"/><rect x="14" y="4" width="2" height="2" fill="white"/><rect x="2" y="12" width="6" height="6"/><rect x="4" y="14" width="2" height="2" fill="white"/><rect x="11" y="11" width="3" height="3"/><rect x="15" y="11" width="3" height="3"/><rect x="11" y="15" width="3" height="3"/><rect x="15" y="15" width="3" height="3"/></svg>',
+          } %}
+          {% set _styles = [
+            ('classic',    t['Classic']),
+            ('circular',   t['Circular']),
+            ('minimal',    t['Minimal']),
+            ('detailed_v', t['Detailed V']),
+            ('detailed_h', t['Detailed H']),
+            ('stake_wrap', t['Stake wrap']),
+            ('qr',         'QR'),
+          ] %}
+          <div class="mb-2">
+            <div class="dropdown w-100">
+              <button class="btn btn-outline-secondary dropdown-toggle d-flex justify-content-between align-items-center w-100"
+                      type="button" id="labelStyleBtn" data-bs-toggle="dropdown" aria-expanded="false"
+                      data-value="classic">
+                <span id="labelStyleLabel" class="d-flex align-items-center gap-2">
+                  {{ _icons['classic']|safe }}<span>{{ t['Classic'] }}</span>
+                </span>
+              </button>
+              <ul class="dropdown-menu w-100" aria-labelledby="labelStyleBtn">
+                {% for code, name in _styles %}
+                <li>
+                  <button type="button" class="dropdown-item d-flex align-items-center gap-2" data-value="{{ code }}">
+                    {{ _icons[code]|safe }}<span>{{ name }}</span>
+                  </button>
+                </li>
+                {% endfor %}
+              </ul>
             </div>
           </div>
           <div class="mb-2" id="labelExtraNotesWrap">
@@ -105,8 +127,18 @@
   (function() {
     const plantId = {{ plant.id }};
 
+    const styleBtn   = document.getElementById('labelStyleBtn');
+    const styleLabel = document.getElementById('labelStyleLabel');
+
     function currentStyle() {
-      return document.querySelector('input[name="labelStyle"]:checked').value;
+      return styleBtn.getAttribute('data-value');
+    }
+
+    function setStyle(value) {
+      const item = document.querySelector(`.dropdown-item[data-value="${value}"]`);
+      if (!item) return;
+      styleBtn.setAttribute('data-value', value);
+      styleLabel.innerHTML = item.innerHTML;
     }
 
     function extraNotes() {
@@ -127,8 +159,12 @@
         currentStyle() === 'qr' ? 'none' : '';
     }
 
-    document.querySelectorAll('input[name="labelStyle"]').forEach(function(r) {
-      r.addEventListener('change', function() { updateNotesVisibility(); updatePreview(); });
+    document.querySelectorAll('.dropdown-item[data-value]').forEach(function(item) {
+      item.addEventListener('click', function() {
+        setStyle(this.getAttribute('data-value'));
+        updateNotesVisibility();
+        updatePreview();
+      });
     });
 
     let _previewTimer = null;
@@ -194,8 +230,9 @@
     document.getElementById('printLabelModal').addEventListener('hidden.bs.modal', function() {
       document.getElementById('printStatus').textContent = '';
       document.getElementById('printBtn').disabled = false;
-      document.getElementById('styleClassic').checked = true;
+      setStyle('classic');
       document.getElementById('labelExtraNotes').value = '';
+      updateNotesVisibility();
       updatePreview();
     });
   })();

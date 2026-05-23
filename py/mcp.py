@@ -50,6 +50,35 @@ def _auth():
     row = get_user_by_api_key(key) if key else None
     return dict(row) if row else None
 
+# ── notes formatting guide ────────────────────────────────────────────────────
+
+NOTES_FORMAT_GUIDE = (
+    "Free-form Markdown notes about the plant. Unless the user specifies "
+    "otherwise, follow this house style so all plants look consistent:\n"
+    "\n"
+    "# Common name (*Latin name*)\n"
+    "\n"
+    "One short paragraph with the purchase / acquisition context "
+    "(where, when, who) when known.\n"
+    "\n"
+    "## Culture\n"
+    "\n"
+    "A Markdown table with two columns (Paramètre | Valeur) covering the "
+    "rows that apply: Exposition, Température été, Température hiver, "
+    "Humidité, Arrosage, Rempotage, Substrat, Engrais. Omit rows you "
+    "don't have reliable info for — don't invent values.\n"
+    "\n"
+    "## Notes\n"
+    "\n"
+    "A short bulleted list of species-specific tips, quirks, common "
+    "mistakes, and key triggers (e.g. flowering conditions). Use **bold** "
+    "for the most important warnings or triggers.\n"
+    "\n"
+    "Write in the user's language (French by default if the conversation "
+    "is in French). Keep it concise — no fluff, no generic plant-care "
+    "boilerplate."
+)
+
 # ── tool schemas ──────────────────────────────────────────────────────────────
 
 TOOLS = [
@@ -75,19 +104,27 @@ TOOLS = [
     },
     {
         "name": "add_plant",
-        "description": "Add a new plant.",
+        "description": (
+            "Add a new plant. Choosing the starting state matters:\n"
+            "  • Seeds → default to 'sow' (or 'acquire' if they are being stashed for later).\n"
+            "  • Live plants (potted, bare-root, cuttings) → ALWAYS ask the user whether the "
+            "plant is being potted/installed now ('plant') or kept aside in the stash ('acquire'). "
+            "Do not assume — most live-plant purchases are planted directly, but not all. "
+            "If the user clearly already stated their intent (e.g. 'I planted it today'), skip the question."
+        ),
         "inputSchema": {
             "type": "object",
             "properties": {
                 "common":          {"type": "string", "description": "Common name."},
                 "latin":           {"type": "string", "description": "Latin name."},
                 "first_event":     {"type": "string", "default": "sow",
-                                    "description": "First event: order (placed an order, goes to stash/ordered), acquire (physically in hand, goes to stash), sow, plant, soak, strat, sprout, flower, fruit, water, fertilize, measure, custom."},
+                                    "description": "First event. Pick ONE and put the purchase price on THAT one event — never log both an order and an acquire for the same purchase just to split the price. Rules:\n  • If the plant was ordered and has not arrived yet → 'order' (state: Ordered). Price + source go here.\n  • If the plant was ordered AND already received and the user wants both events recorded → still use 'order' here with the order date + price + source, then log a separate 'acquire' event (no price, acquire_type='received') for the arrival date.\n  • If the plant is simply in-hand now (bought in a shop, gift, foraged) with no prior order step → 'acquire'. Price + source go here.\n  • Seeds being sown immediately → 'sow'. Live plants being potted up immediately → 'plant'."},
                 "event_date":      {"type": "string", "description": "ISO date YYYY-MM-DD. Defaults to today."},
                 "location":        {"type": "string"},
-                "notes":           {"type": "string"},
+                "notes":           {"type": "string", "description": NOTES_FORMAT_GUIDE},
                 "variety":         {"type": "string"},
                 "nickname":        {"type": "string"},
+                "rusticity":       {"type": "string", "description": "Cold hardiness as the minimum tolerated temperature in °C (e.g. '−18 °C', '−5 °C', '+5 °C'). Populate this by default — look up the species. Do NOT use USDA zones. Do not invent values; if uncertain, leave empty and tell the user."},
                 "count":           {"type": "integer", "default": 1},
                 "sprout_min_days": {"type": "integer", "description": "Min days to germination (required for sow — look up the species, do not guess)."},
                 "sprout_max_days": {"type": "integer", "description": "Max days to germination (required for sow — look up the species, do not guess)."},
@@ -104,7 +141,7 @@ TOOLS = [
             "properties": {
                 "plant_id":        {"type": "integer"},
                 "event_type":      {"type": "string",
-                                    "description": "order (placed an order → Ordered state), acquire (physically in hand → Stashed), sow, plant, soak, strat, sprout, flower, fruit, water, fertilize, measure, custom, dead."},
+                                    "description": "Event to log. Key distinctions:\n  • 'order' = an order was placed (state → Ordered). Carries the purchase price + vendor.\n  • 'acquire' = the plant is physically in hand (state → Stashed). For a previously-ordered plant arriving, use acquire_type='received' and DO NOT repeat the price (it already lives on the order event).\n  • For a one-step purchase with no prior order, use 'acquire' alone and put the price here.\n  Other types: sow, plant, soak, strat, sprout, flower, fruit, water, fertilize, measure, custom, dead."},
                 "event_date":      {"type": "string", "description": "ISO date YYYY-MM-DD. Defaults to today."},
                 "sprout_min_days": {"type": "integer", "description": "Min germination days (sow only — look up the species, do not guess)."},
                 "sprout_max_days": {"type": "integer", "description": "Max germination days (sow only — look up the species, do not guess)."},
@@ -117,8 +154,8 @@ TOOLS = [
                 "source":          {"type": "string",  "description": "Vendor/person/place (order and acquire events). Always capture this when known."},
                 "acquire_type":    {"type": "string",  "description": "How acquired: bought, gift, foraged, swap, other (acquire events only)."},
                 "expected_date":   {"type": "string",  "description": "ISO date YYYY-MM-DD. Expected arrival date (order events only)."},
-                "price":           {"type": "number",  "description": "Purchase price (order and acquire/bought events)."},
-                "price_currency":  {"type": "string",  "description": "Currency code, e.g. EUR, USD (order and acquire/bought events)."},
+                "price":           {"type": "number",  "description": "Purchase price. Set this on the order event for ordered plants, or on the acquire event for in-shop / gift-with-known-value purchases. NEVER set it on both events for the same purchase."},
+                "price_currency":  {"type": "string",  "description": "Currency code, e.g. EUR, USD. Only meaningful when price is also set."},
             },
             "required": ["plant_id", "event_type"],
         },
@@ -133,9 +170,10 @@ TOOLS = [
                 "common":   {"type": "string"},
                 "latin":    {"type": "string"},
                 "location": {"type": "string"},
-                "notes":    {"type": "string"},
+                "notes":    {"type": "string", "description": NOTES_FORMAT_GUIDE},
                 "variety":  {"type": "string"},
                 "nickname": {"type": "string"},
+                "rusticity": {"type": "string", "description": "Cold hardiness as the minimum tolerated temperature in °C (e.g. '−18 °C')."},
                 "count":    {"type": "integer"},
             },
             "required": ["plant_id"],
@@ -200,7 +238,7 @@ TOOLS = [
             "type": "object",
             "properties": {
                 "plant_id": {"type": "integer"},
-                "style":    {"type": "string", "enum": ["classic", "circular", "minimal", "detailed", "qr", "stake_wrap"], "default": "classic"},
+                "style":    {"type": "string", "enum": ["classic", "circular", "minimal", "detailed_v", "detailed_h", "qr", "stake_wrap"], "default": "classic"},
             },
             "required": ["plant_id"],
         },
@@ -218,6 +256,7 @@ def _plant_summary(p: dict) -> dict:
         "latin":    p["latin"],
         "variety":  p.get("variety"),
         "nickname": p.get("nickname"),
+        "rusticity": p.get("rusticity"),
         "location": p.get("location"),
         "notes":    p.get("notes"),
         "count":    p.get("count", 1),
@@ -286,6 +325,7 @@ def _call_tool(name: str, args: dict, user: dict) -> str:
             "latin":             args.get("latin", ""),
             "variety":           args.get("variety", ""),
             "nickname":          args.get("nickname", ""),
+            "rusticity":         args.get("rusticity", ""),
             "count":             max(1, int(args.get("count", 1))),
             "location":          args.get("location", ""),
             "notes":             args.get("notes", ""),
@@ -341,7 +381,8 @@ def _call_tool(name: str, args: dict, user: dict) -> str:
         errors, event = validate_form(form, get_translations(lang), context="add_stage")
         if errors:
             raise ValueError(str(errors))
-        plant_data = {k: p.get(k) or "" for k in ("common", "latin", "location", "notes", "variety")}
+        plant_data = {k: p.get(k) or "" for k in ("common", "latin", "location", "notes", "variety", "nickname", "rusticity")}
+        plant_data["count"] = p.get("count", 1) or 1
         _update_plant(plant_id, plant_data, new_event=event)
         return json.dumps({"ok": True})
 
@@ -357,6 +398,7 @@ def _call_tool(name: str, args: dict, user: dict) -> str:
             "notes":    args.get("notes",    p.get("notes") or ""),
             "variety":  args.get("variety",  p.get("variety") or ""),
             "nickname": args.get("nickname", p.get("nickname") or ""),
+            "rusticity": args.get("rusticity", p.get("rusticity") or ""),
             "count":    args.get("count",    p.get("count", 1)),
         }
         _update_plant(plant_id, plant_data)

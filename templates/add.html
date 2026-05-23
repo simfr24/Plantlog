@@ -176,6 +176,14 @@
                  placeholder="{{ t['plant_nickname_placeholder'] }}">
         </div>
         <div>
+          <label class="field-lbl" for="rusticity">
+            {{ t['Rusticity'] }} <span class="opt">({{ t['optional'] }})</span>
+          </label>
+          <input class="form-control" name="rusticity" id="rusticity"
+                 value="{{ form.rusticity }}"
+                 placeholder="{{ t['rusticity_placeholder'] }}">
+        </div>
+        <div>
           <label class="field-lbl" for="count">{{ t['plant_count'] }}</label>
           <input class="form-control" type="number" name="count" id="count"
                  value="{{ form.count }}" min="1">
