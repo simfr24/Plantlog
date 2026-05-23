@@ -50,38 +50,80 @@ def _auth():
     row = get_user_by_api_key(key) if key else None
     return dict(row) if row else None
 
-# ── notes formatting guide ────────────────────────────────────────────────────
+# ── language & notes formatting guide ─────────────────────────────────────────
 
-NOTES_FORMAT_GUIDE = (
-    "Free-form Markdown notes about the plant. Unless the user specifies "
-    "otherwise, follow this house style so all plants look consistent:\n"
-    "\n"
-    "# Common name (*Latin name*)\n"
-    "\n"
-    "One short paragraph with the purchase / acquisition context "
-    "(where, when, who) when known.\n"
-    "\n"
-    "## Culture\n"
-    "\n"
-    "A Markdown table with two columns (Paramètre | Valeur) covering the "
-    "rows that apply: Exposition, Température été, Température hiver, "
-    "Humidité, Arrosage, Rempotage, Substrat, Engrais. Omit rows you "
-    "don't have reliable info for — don't invent values.\n"
-    "\n"
-    "## Notes\n"
-    "\n"
-    "A short bulleted list of species-specific tips, quirks, common "
-    "mistakes, and key triggers (e.g. flowering conditions). Use **bold** "
-    "for the most important warnings or triggers.\n"
-    "\n"
-    "Write in the user's language (French by default if the conversation "
-    "is in French). Keep it concise — no fluff, no generic plant-care "
-    "boilerplate."
-)
+LANG_NAMES = {"en": "English", "fr": "French", "ru": "Russian"}
+
+
+def _language_directive(lang_name: str) -> str:
+    return (
+        f"LANGUAGE: This user's preferred language is {lang_name}. Write all "
+        f"user-facing text fields (notes, custom_label, custom_note, nickname "
+        f"when descriptive, etc.) in {lang_name}, even if the current "
+        f"conversation is in another language. Only switch languages if the "
+        f"user explicitly asks for a different one in this particular request."
+    )
+
+
+def _notes_format_guide(lang_name: str) -> str:
+    return (
+        f"Free-form Markdown notes about the plant. Write them in {lang_name} "
+        f"(the user's preferred language) unless the user explicitly asks "
+        f"otherwise in this request. Unless the user specifies a different "
+        f"structure, follow this house style so all plants look consistent:\n"
+        "\n"
+        "# Common name (*Latin name*)\n"
+        "\n"
+        "One short paragraph describing the species itself: origin, what "
+        "makes it interesting, any context the user gave that doesn't fit "
+        "another field.\n"
+        "\n"
+        "## Culture\n"
+        "\n"
+        "A Markdown table with two columns (Paramètre | Valeur) covering "
+        "the rows that apply: Exposition, Température été, Température "
+        "hiver, Humidité, Arrosage, Rempotage, Substrat, Engrais. Omit "
+        "rows you don't have reliable info for; don't invent values.\n"
+        "\n"
+        "## Notes\n"
+        "\n"
+        "A short bulleted list of species-specific tips, quirks, common "
+        "mistakes, and key triggers (e.g. flowering conditions). Use "
+        "**bold** for the most important warnings or triggers.\n"
+        "\n"
+        "DO NOT restate data that already lives in dedicated fields: "
+        "vendor / source, price, acquisition date, order date, location, "
+        "rusticity, variety, count, event history. Those are recorded on "
+        "the plant or its events and would just clutter the notes. The "
+        "ONLY exception is when there's a meaningful extra detail the "
+        "field can't hold (e.g. 'bought as part of a Scandinavian "
+        "rare-seed collection, see the vendor's monograph' adds context "
+        "that 'Impecta' alone doesn't).\n"
+        "\n"
+        "Keep it concise: no fluff, no generic plant-care boilerplate.\n"
+        "\n"
+        "Avoid telltale AI-writing tics. Do not use em dashes (—) or en "
+        "dashes (–) for parenthetical asides; use commas, parentheses, "
+        "or periods instead. Skip 'It's worth noting that...', "
+        "'Importantly,', 'Overall,', 'In essence,', 'plays a key role "
+        "in', and similar filler. Skip rhetorical 'not just X, but Y' "
+        "constructions. Do not open sentences with vague adverbs like "
+        "'Notably,' or 'Interestingly,'. Write the way a knowledgeable "
+        "gardener jotting field notes would: direct, specific, no "
+        "throat-clearing."
+    )
 
 # ── tool schemas ──────────────────────────────────────────────────────────────
 
-TOOLS = [
+
+def _build_tools(lang_name: str) -> list:
+    NOTES_FORMAT_GUIDE = _notes_format_guide(lang_name)
+    LANG_HINT = _language_directive(lang_name)
+    return _TOOLS_TEMPLATE(NOTES_FORMAT_GUIDE, LANG_HINT)
+
+
+def _TOOLS_TEMPLATE(NOTES_FORMAT_GUIDE, LANG_HINT):
+    return [
     {
         "name": "list_plants",
         "description": "Return your plants. Defaults to all active plants (living, stashed, ordered) — excludes dead plants. Pass include_dead=true to also include dead plants.",
@@ -105,6 +147,7 @@ TOOLS = [
     {
         "name": "add_plant",
         "description": (
+            LANG_HINT + "\n\n"
             "Add a new plant. Choosing the starting state matters:\n"
             "  • Seeds → default to 'sow' (or 'acquire' if they are being stashed for later).\n"
             "  • Live plants (potted, bare-root, cuttings) → ALWAYS ask the user whether the "
@@ -243,7 +286,8 @@ TOOLS = [
             "required": ["plant_id"],
         },
     },
-]
+    ]
+
 
 # ── serialisation helpers ─────────────────────────────────────────────────────
 
@@ -483,11 +527,14 @@ def _handle_rpc(msg: dict, user: dict) -> dict | None:
     def err(code, message):
         return {"jsonrpc": "2.0", "id": msg_id, "error": {"code": code, "message": message}}
 
+    lang_name = LANG_NAMES.get(user.get("lang") or "en", "English")
+
     if method == "initialize":
         return ok({
             "protocolVersion": "2024-11-05",
             "capabilities": {"tools": {}},
             "serverInfo": {"name": "Plantlog", "version": "1.0"},
+            "instructions": _language_directive(lang_name),
         })
 
     if method in ("notifications/initialized", "notifications/cancelled"):
@@ -497,7 +544,7 @@ def _handle_rpc(msg: dict, user: dict) -> dict | None:
         return ok({})
 
     if method == "tools/list":
-        return ok({"tools": TOOLS})
+        return ok({"tools": _build_tools(lang_name)})
 
     if method == "tools/call":
         params = msg.get("params", {})
