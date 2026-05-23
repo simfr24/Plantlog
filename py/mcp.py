@@ -148,12 +148,32 @@ def _TOOLS_TEMPLATE(NOTES_FORMAT_GUIDE, LANG_HINT):
         "name": "add_plant",
         "description": (
             LANG_HINT + "\n\n"
-            "Add a new plant. Choosing the starting state matters:\n"
-            "  • Seeds → default to 'sow' (or 'acquire' if they are being stashed for later).\n"
-            "  • Live plants (potted, bare-root, cuttings) → ALWAYS ask the user whether the "
-            "plant is being potted/installed now ('plant') or kept aside in the stash ('acquire'). "
-            "Do not assume — most live-plant purchases are planted directly, but not all. "
-            "If the user clearly already stated their intent (e.g. 'I planted it today'), skip the question."
+            "Add a new plant. Choosing the starting state matters; the rules below also "
+            "preserve the correct chronological order in the timeline (events are sorted "
+            "by date, then by insertion order on ties).\n"
+            "\n"
+            "Seeds:\n"
+            "  • Being sown immediately → first_event='sow'.\n"
+            "  • Stashed for later → first_event='acquire' (carry price/source here).\n"
+            "\n"
+            "Live plants (potted, bare-root, cuttings): ALWAYS ask the user whether the "
+            "plant is being potted/installed now or kept aside in the stash, unless they "
+            "already said so. Most live-plant purchases are installed directly, but not all. "
+            "Then:\n"
+            "  • Installed now → first_event='acquire' (with price, source, "
+            "acquire_type='bought'). Then IMMEDIATELY follow up with a separate "
+            "log_event call for event_type='plant' on the same date. This produces the "
+            "natural order in the timeline: 'Acheté chez …' then 'Plantation' on the "
+            "same day. NEVER use first_event='plant' just to skip the acquire step — "
+            "the price has nowhere to live and the purchase context is lost.\n"
+            "  • Kept in stash → first_event='acquire' (with price/source). No "
+            "follow-up needed.\n"
+            "  • Pre-ordered, not yet received → first_event='order' (with price, "
+            "source, expected_date). When it later arrives, the user marks it received "
+            "from the UI (or a separate log_event with acquire_type='received').\n"
+            "\n"
+            "Rule of thumb: the purchase event (acquire or order) ALWAYS comes first "
+            "in the timeline. Other events (plant, sow, etc.) follow."
         ),
         "inputSchema": {
             "type": "object",
@@ -182,7 +202,13 @@ def _TOOLS_TEMPLATE(NOTES_FORMAT_GUIDE, LANG_HINT):
     },
     {
         "name": "log_event",
-        "description": "Log a new event for a plant.",
+        "description": (
+            "Log a new event for a plant. Reminder: the purchase event "
+            "(order or acquire) always comes first chronologically; sow/plant/sprout/etc. "
+            "follow. When potting a freshly-acquired live plant on the same day, log the "
+            "acquire first (via add_plant or log_event) and the plant event second; "
+            "events with the same date sort by insertion order, so the order of your calls matters."
+        ),
         "inputSchema": {
             "type": "object",
             "properties": {
