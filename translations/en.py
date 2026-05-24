@@ -309,6 +309,20 @@ translations = {
     "print_waiting": "Waiting for label_client…",
     "print_network_error": "Network error.",
 
+    # ────────── free-text label ──────────
+    "freetext_label_title": "Free-text label",
+    "freetext_label_desc": "Compose a free-text label with a title, optional subtitle, and a Markdown body. Useful for jars, gift tags, notes — anything non-plant.",
+    "freetext_label_title_field": "Title",
+    "freetext_label_subtitle_field": "Subtitle (optional)",
+    "freetext_label_body_field": "Body (Markdown)",
+    "freetext_label_refresh": "Refresh preview",
+    "freetext_label_print": "Print",
+    "freetext_label_preview": "Preview",
+    "freetext_label_title_required": "Title is required.",
+    "freetext_label_queuing": "Queuing print job…",
+    "freetext_label_queued": "Queued",
+    "freetext_label_open": "Print a free-text label",
+
     # ────────── settings: mcp ──────────
     "settings_mcp_desc": "The MCP server is built into this app — no extra script needed. Just point Claude Desktop at the URL below.",
     "settings_install_deps": "1. Install dependencies",

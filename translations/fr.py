@@ -309,6 +309,20 @@ translations = {
     "print_waiting": "En attente du client d'impression…",
     "print_network_error": "Erreur réseau.",
 
+    # ────────── étiquette libre ──────────
+    "freetext_label_title": "Étiquette libre",
+    "freetext_label_desc": "Composez une étiquette libre avec un titre, un sous-titre facultatif et un corps en Markdown. Utile pour les bocaux, étiquettes cadeaux, notes — tout ce qui n'est pas une plante.",
+    "freetext_label_title_field": "Titre",
+    "freetext_label_subtitle_field": "Sous-titre (facultatif)",
+    "freetext_label_body_field": "Contenu (Markdown)",
+    "freetext_label_refresh": "Actualiser l'aperçu",
+    "freetext_label_print": "Imprimer",
+    "freetext_label_preview": "Aperçu",
+    "freetext_label_title_required": "Le titre est obligatoire.",
+    "freetext_label_queuing": "Envoi à l'imprimante…",
+    "freetext_label_queued": "En file d'attente",
+    "freetext_label_open": "Imprimer une étiquette libre",
+
     # ────────── settings: mcp ──────────
     "settings_mcp_desc": "Le serveur MCP est intégré à cette application aucun script supplémentaire n'est nécessaire. Pointez simplement Claude Desktop vers l'URL ci-dessous.",
     "settings_install_deps": "1. Installer les dépendances",

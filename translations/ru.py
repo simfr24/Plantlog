@@ -309,6 +309,20 @@ translations = {
     "print_waiting": "Ожидание label_client…",
     "print_network_error": "Ошибка сети.",
 
+    # ────────── свободная этикетка ──────────
+    "freetext_label_title": "Свободная этикетка",
+    "freetext_label_desc": "Создайте этикетку с заголовком, необязательным подзаголовком и текстом Markdown. Удобно для банок, подарочных бирок, заметок — всего, что не связано с растениями.",
+    "freetext_label_title_field": "Заголовок",
+    "freetext_label_subtitle_field": "Подзаголовок (необязательно)",
+    "freetext_label_body_field": "Текст (Markdown)",
+    "freetext_label_refresh": "Обновить предпросмотр",
+    "freetext_label_print": "Печать",
+    "freetext_label_preview": "Предпросмотр",
+    "freetext_label_title_required": "Заголовок обязателен.",
+    "freetext_label_queuing": "Постановка задания в очередь…",
+    "freetext_label_queued": "В очереди",
+    "freetext_label_open": "Напечатать свободную этикетку",
+
     # ────────── settings: mcp ──────────
     "settings_mcp_desc": "MCP-сервер встроен в это приложение — дополнительный скрипт не нужен. Просто укажите Claude Desktop URL ниже.",
     "settings_install_deps": "1. Установить зависимости",
