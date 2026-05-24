@@ -312,6 +312,54 @@ def _TOOLS_TEMPLATE(NOTES_FORMAT_GUIDE, LANG_HINT):
         "inputSchema": {"type": "object", "properties": {}, "required": []},
     },
     {
+        "name": "batch",
+        "description": (
+            "Run several tool calls in one turn. Use this whenever you would otherwise "
+            "call the same tool many times in a row (e.g. setting rusticity on 40 "
+            "plants), or chain a known sequence on a single plant (e.g. add_plant → "
+            "log_event → log_event → print_label).\n"
+            "\n"
+            "Operations run sequentially in order. Each entry is {\"tool\": <name>, "
+            "\"arguments\": {…}}. The same `arguments` schema as the individual tools "
+            "applies. The response is a JSON array, one entry per op, in input order; "
+            "each entry has {\"index\", \"tool\", \"ok\", and either \"result\" (parsed "
+            "JSON when the underlying tool returned JSON, else raw string) or \"error\"}.\n"
+            "\n"
+            "By default a failing op does NOT abort the rest of the batch — useful for "
+            "bulk updates where you want to know which ones failed. Pass "
+            "stop_on_error=true if subsequent ops depend on earlier ones succeeding.\n"
+            "\n"
+            "Cross-op references: when an op needs an id produced by an earlier op in "
+            "the same batch, use a placeholder string of the form \"$N.field\" in any "
+            "argument value, where N is the 0-based index of the earlier op and field "
+            "is a key in that op's JSON result (e.g. \"$0.id\" to reference the plant "
+            "id returned by the first op). Resolution happens just before each op runs; "
+            "if the referenced op failed or the field is missing, the current op fails "
+            "with a clear error.\n"
+            "\n"
+            "Do NOT nest batch inside batch."
+        ),
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "operations": {
+                    "type": "array",
+                    "description": "Ordered list of tool calls.",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "tool":      {"type": "string", "description": "Tool name (any tool except 'batch')."},
+                            "arguments": {"type": "object", "description": "Arguments object for that tool."},
+                        },
+                        "required": ["tool"],
+                    },
+                },
+                "stop_on_error": {"type": "boolean", "default": False, "description": "If true, abort the batch on the first failing op."},
+            },
+            "required": ["operations"],
+        },
+    },
+    {
         "name": "print_label",
         "description": "Queue a label print job for a plant on the server's Bluetooth printer.",
         "inputSchema": {
@@ -377,6 +425,41 @@ def _event_detail(h: dict) -> dict:
             ev["price"] = h["price"]
             ev["price_currency"] = h.get("price_currency")
     return ev
+
+# ── batch helpers ─────────────────────────────────────────────────────────────
+
+import re as _re
+
+_BATCH_REF_RE = _re.compile(r'^\$(\d+)((?:\.[A-Za-z_][A-Za-z0-9_]*)+)$')
+
+
+def _resolve_batch_refs(value, prior_results):
+    """Walk an argument structure replacing '$N.field.subfield' strings with
+    values from earlier batch ops' results. Lists and dicts are walked
+    recursively. Raises ValueError if the reference can't be resolved."""
+    if isinstance(value, str):
+        m = _BATCH_REF_RE.match(value)
+        if not m:
+            return value
+        idx = int(m.group(1))
+        path = m.group(2).lstrip(".").split(".")
+        if idx < 0 or idx >= len(prior_results):
+            raise ValueError(f"Batch ref {value!r}: no op at index {idx}.")
+        entry = prior_results[idx]
+        if not entry.get("ok"):
+            raise ValueError(f"Batch ref {value!r}: op #{idx} did not succeed.")
+        cur = entry.get("result")
+        for key in path:
+            if not isinstance(cur, dict) or key not in cur:
+                raise ValueError(f"Batch ref {value!r}: field {key!r} missing in op #{idx} result.")
+            cur = cur[key]
+        return cur
+    if isinstance(value, list):
+        return [_resolve_batch_refs(v, prior_results) for v in value]
+    if isinstance(value, dict):
+        return {k: _resolve_batch_refs(v, prior_results) for k, v in value.items()}
+    return value
+
 
 # ── tool implementations ──────────────────────────────────────────────────────
 
@@ -534,6 +617,47 @@ def _call_tool(name: str, args: dict, user: dict) -> str:
     if name == "list_event_types":
         specs = get_event_specs()
         return json.dumps([{"code": s["code"], "label": s["label"]} for s in specs])
+
+    if name == "batch":
+        ops = args.get("operations") or []
+        if not isinstance(ops, list):
+            raise ValueError("'operations' must be an array.")
+        stop_on_error = bool(args.get("stop_on_error", False))
+        results: list[dict] = []
+        for i, op in enumerate(ops):
+            if not isinstance(op, dict):
+                entry = {"index": i, "tool": None, "ok": False, "error": "Operation must be an object."}
+                results.append(entry)
+                if stop_on_error:
+                    break
+                continue
+            tool_name = op.get("tool")
+            if not tool_name or tool_name == "batch":
+                results.append({"index": i, "tool": tool_name, "ok": False,
+                                "error": "Tool name missing or nested 'batch' is not allowed."})
+                if stop_on_error:
+                    break
+                continue
+            raw_args = op.get("arguments") or {}
+            try:
+                resolved_args = _resolve_batch_refs(raw_args, results)
+            except ValueError as e:
+                results.append({"index": i, "tool": tool_name, "ok": False, "error": str(e)})
+                if stop_on_error:
+                    break
+                continue
+            try:
+                text = _call_tool(tool_name, resolved_args, user)
+                try:
+                    parsed = json.loads(text)
+                except (ValueError, TypeError):
+                    parsed = text
+                results.append({"index": i, "tool": tool_name, "ok": True, "result": parsed})
+            except ValueError as e:
+                results.append({"index": i, "tool": tool_name, "ok": False, "error": str(e)})
+                if stop_on_error:
+                    break
+        return json.dumps(results, indent=2)
 
     if name == "print_label":
         plant_id = args["plant_id"]
