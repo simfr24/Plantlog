@@ -262,12 +262,22 @@ def _runs_height(d, runs, fonts, max_w, default_style="regular", line_gap=2):
 def _draw_runs(d, runs, fonts, x, y, max_w, default_style="regular", line_gap=2):
     lines = _wrap_runs(runs, fonts, max_w, default_style)
     for i, line in enumerate(lines):
+        # Coalesce adjacent same-style tokens into one segment so PIL can shape
+        # the whole string in one d.text call. Drawing token-by-token and
+        # advancing the cursor by font.getlength causes the next token to land
+        # inside the previous glyph's right-side bearing, swallowing spaces.
+        segments = []
+        for t, s in line:
+            if segments and segments[-1][1] == s:
+                segments[-1][0] += t
+            else:
+                segments.append([t, s])
         h = _line_h(d, line, fonts, default_style)
         cx = x
-        for t, style in line:
+        for text, style in segments:
             font = fonts.get(style, fonts[default_style])
-            d.text((cx, y), t, font=font, fill=0)
-            cx += font.getlength(t)
+            d.text((cx, y), text, font=font, fill=0)
+            cx += font.getlength(text)
         y += h
         if i < len(lines) - 1:
             y += line_gap
