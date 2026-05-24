@@ -143,6 +143,10 @@
             {{ t['settings_printer_warning'] | safe }}
           </div>
 
+          <a href="{{ url_for('freetext_label', lang=lang) }}" class="btn btn-outline-secondary btn-sm mb-3">
+            <i class="fas fa-tag me-1"></i> {{ t.get('freetext_label_open', 'Print a free-text label') }}
+          </a>
+
           <p class="text-muted small mb-3">{{ t['settings_printer_desc'] | safe }}</p>
 
           <h6 class="fw-semibold mb-1">{{ t['settings_install_deps'] }}</h6>

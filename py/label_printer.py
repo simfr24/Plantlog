@@ -1060,6 +1060,76 @@ def create_label_qr(common_name, latin_name, date_str, plant_url,
 
 
 # ---------------------------------------------------------------------------
+# Free-text label (non-plant)
+# ---------------------------------------------------------------------------
+
+def create_label_freetext(title, subtitle=None, body_md=None):
+    """Classic double-border label with a title, optional subtitle, and MD body.
+
+    Intended for non-plant uses (gift tags, jar labels, notes, etc.)."""
+    W = PRINTER_WIDTH
+    margin, pad_t, pad_b = 20, 32, 28
+
+    title_font = _get_font("bold",    40)
+    sub_font   = _get_font("italic",  22)
+    md_fonts   = _build_md_fonts(16)
+
+    tmp = PIL.Image.new("1", (1, 1))
+    td  = PIL.ImageDraw.Draw(tmp)
+
+    inner_w = W - margin * 2 - 24
+
+    title       = (title or "").strip() or " "
+    title_lines = _wrap(title, title_font, inner_w)
+    title_w     = _ml_w(td, title_lines, title_font)
+    title_h     = _ml_h(td, title_lines, title_font)
+
+    sub = (subtitle or "").strip() or None
+    if sub:
+        sub_wrapped = _wrap(sub, sub_font, inner_w)
+        sub_w_px    = _ml_w(td, sub_wrapped, sub_font)
+        sub_h_px    = _ml_h(td, sub_wrapped, sub_font)
+    else:
+        sub_wrapped = None
+        sub_w_px = sub_h_px = 0
+
+    md_segs = _parse_md(body_md.strip()) if body_md and body_md.strip() else []
+    body_h  = _md_height(td, md_segs, md_fonts, inner_w) if md_segs else 0
+
+    rule_h = 14 if md_segs else 0
+
+    total_h = pad_t + title_h + (10 + sub_h_px if sub else 0) + rule_h + body_h + pad_b
+    img = PIL.Image.new("1", (W, total_h), 1)
+    d   = PIL.ImageDraw.Draw(img)
+
+    bx0, by0, bx1, by1 = margin - 5, 5, W - margin + 5, total_h - 6
+    d.rectangle([bx0, by0, bx1, by1], outline=0, width=3)
+    d.rectangle([bx0 + 6, by0 + 6, bx1 - 6, by1 - 6], outline=0, width=1)
+    _square_notches(d, bx0 + 6, by0 + 6, bx1 - 6, by1 - 6)
+
+    y = pad_t
+    d.multiline_text(((W - title_w) // 2, y), title_lines,
+                     font=title_font, fill=0, align="center")
+    y += title_h
+
+    if sub:
+        y += 10
+        d.multiline_text(((W - sub_w_px) // 2, y), sub_wrapped,
+                         font=sub_font, fill=0, align="center")
+        y += sub_h_px
+
+    if md_segs:
+        div_m = margin + 15
+        y += 6
+        d.line([(div_m, y), (W - div_m, y)], fill=0, width=1)
+        d.line([(div_m, y + 2), (W - div_m, y + 2)], fill=0, width=1)
+        y += 8
+        _render_md(d, md_segs, md_fonts, margin + 15, y, inner_w)
+
+    return img
+
+
+# ---------------------------------------------------------------------------
 # Rendering to bytes / PNG
 # ---------------------------------------------------------------------------
 

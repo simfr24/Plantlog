@@ -90,7 +90,7 @@ from py.mcp import blueprint as mcp_blueprint
 from py.label_printer import (
     create_label_classic, create_label_circular,
     create_label_minimal, create_label_detailed_v, create_label_detailed_h, create_label_qr,
-    create_label_stake_wrap,
+    create_label_stake_wrap, create_label_freetext,
     label_to_png_bytes, label_to_printer_bytes,
 )
 
@@ -778,6 +778,46 @@ def print_label_route(idx):
     return jsonify({"ok": True, "job_id": job_id})
 
 
+@app.route("/freetext_label", methods=["GET"])
+@login_required
+def freetext_label():
+    return render_template(
+        "freetext_label.html",
+        lang=g.lang,
+        t=get_translations(g.lang),
+    )
+
+
+@app.route("/freetext_label/preview")
+@login_required
+def freetext_label_preview():
+    title    = request.args.get("title", "")
+    subtitle = request.args.get("subtitle") or None
+    body     = request.args.get("body") or None
+    img = create_label_freetext(title, subtitle, body)
+    return Response(label_to_png_bytes(img), mimetype="image/png")
+
+
+@app.route("/freetext_label/print", methods=["POST"])
+@login_required
+def freetext_label_print():
+    data     = request.get_json(silent=True) or {}
+    title    = (data.get("title") or "").strip()
+    subtitle = (data.get("subtitle") or "").strip() or None
+    body     = (data.get("body") or "").strip() or None
+    if not title:
+        return jsonify({"error": "title required"}), 400
+    with get_conn() as conn:
+        cur = conn.execute(
+            """INSERT INTO print_jobs (user_id, kind, style, title, subtitle, body)
+               VALUES (?, 'freetext', 'freetext', ?, ?, ?)""",
+            (g.user["id"], title, subtitle, body),
+        )
+        job_id = cur.lastrowid
+        conn.commit()
+    return jsonify({"ok": True, "job_id": job_id})
+
+
 @app.route("/print_job_status/<int:job_id>")
 @login_required
 def print_job_status(job_id):
@@ -1162,10 +1202,10 @@ def api_print_queue_pending():
     """Printer client polls this to get its pending jobs."""
     with get_conn() as conn:
         rows = conn.execute(
-            """SELECT j.id, j.style, j.created_at,
+            """SELECT j.id, j.style, j.kind, j.title, j.created_at,
                       p.common
                FROM print_jobs j
-               JOIN plants p ON p.id = j.plant_id
+               LEFT JOIN plants p ON p.id = j.plant_id
                WHERE j.user_id = ? AND j.status = 'pending'
                ORDER BY j.created_at ASC""",
             (g.api_user["id"],),
@@ -1175,7 +1215,7 @@ def api_print_queue_pending():
             "job_id":     r["id"],
             "style":      r["style"],
             "created_at": r["created_at"],
-            "plant": {"common": r["common"]},
+            "plant": {"common": r["common"] if r["kind"] == "plant" else (r["title"] or "Free-text label")},
         }
         for r in rows
     ])
@@ -1187,7 +1227,9 @@ def api_print_job_bytes(job_id):
     """Render the label and return raw ESC/POS bytes for the printer."""
     with get_conn() as conn:
         row = conn.execute(
-            """SELECT j.style, j.extra_notes, j.base_url, p.id AS plant_id,
+            """SELECT j.style, j.kind, j.extra_notes, j.base_url,
+                      j.title, j.subtitle, j.body,
+                      p.id AS plant_id,
                       p.common, p.latin, p.variety, p.nickname, p.location, p.notes,
                       COALESCE(
                         (SELECT MIN(e.happened_on) FROM events e
@@ -1196,12 +1238,15 @@ def api_print_job_bytes(job_id):
                         (SELECT MIN(e.happened_on) FROM events e WHERE e.plant_id = p.id)
                       ) AS earliest_date
                FROM print_jobs j
-               JOIN plants p ON p.id = j.plant_id
+               LEFT JOIN plants p ON p.id = j.plant_id
                WHERE j.id = ? AND j.user_id = ?""",
             (job_id, g.api_user["id"]),
         ).fetchone()
     if not row:
         abort(404)
+    if row["kind"] == "freetext":
+        img = create_label_freetext(row["title"], row["subtitle"], row["body"])
+        return Response(label_to_printer_bytes(img), mimetype="application/octet-stream")
     date_str    = _format_date(row["earliest_date"])
     variety     = row["variety"]  or None
     nickname    = row["nickname"] or None

@@ -235,6 +235,47 @@ def _migrate(conn):
         conn.execute("ALTER TABLE print_jobs ADD COLUMN extra_notes TEXT")
     if "base_url" not in pj_cols:
         conn.execute("ALTER TABLE print_jobs ADD COLUMN base_url TEXT")
+    if "kind" not in pj_cols:
+        conn.execute("ALTER TABLE print_jobs ADD COLUMN kind TEXT NOT NULL DEFAULT 'plant'")
+    if "title" not in pj_cols:
+        conn.execute("ALTER TABLE print_jobs ADD COLUMN title TEXT")
+    if "subtitle" not in pj_cols:
+        conn.execute("ALTER TABLE print_jobs ADD COLUMN subtitle TEXT")
+    if "body" not in pj_cols:
+        conn.execute("ALTER TABLE print_jobs ADD COLUMN body TEXT")
+
+    # Drop the NOT NULL constraint on plant_id so freetext jobs can omit it.
+    pj_info = conn.execute("PRAGMA table_info(print_jobs)").fetchall()
+    plant_id_col = next((c for c in pj_info if c[1] == "plant_id"), None)
+    if plant_id_col and plant_id_col[3] == 1:  # notnull == 1
+        conn.executescript("""
+            CREATE TABLE print_jobs_new (
+              id          INTEGER PRIMARY KEY AUTOINCREMENT,
+              user_id     INTEGER NOT NULL,
+              plant_id    INTEGER,
+              kind        TEXT    NOT NULL DEFAULT 'plant',
+              style       TEXT    NOT NULL DEFAULT 'classic',
+              extra_notes TEXT,
+              base_url    TEXT,
+              title       TEXT,
+              subtitle    TEXT,
+              body        TEXT,
+              status      TEXT    NOT NULL DEFAULT 'pending',
+              error_msg   TEXT,
+              created_at  TEXT    NOT NULL DEFAULT (datetime('now')),
+              updated_at  TEXT    NOT NULL DEFAULT (datetime('now')),
+              FOREIGN KEY(user_id)  REFERENCES users(id)  ON DELETE CASCADE,
+              FOREIGN KEY(plant_id) REFERENCES plants(id) ON DELETE CASCADE
+            );
+            INSERT INTO print_jobs_new
+              (id, user_id, plant_id, kind, style, extra_notes, base_url,
+               title, subtitle, body, status, error_msg, created_at, updated_at)
+            SELECT id, user_id, plant_id, kind, style, extra_notes, base_url,
+                   title, subtitle, body, status, error_msg, created_at, updated_at
+            FROM print_jobs;
+            DROP TABLE print_jobs;
+            ALTER TABLE print_jobs_new RENAME TO print_jobs;
+        """)
 
     conn.commit()
 

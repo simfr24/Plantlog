@@ -1,0 +1,127 @@
+{% extends "base.html" %}
+{% block title %}{{ t.get('freetext_label_title', 'Free-text label') }} – Plantlog{% endblock %}
+{% block content %}
+<div class="container py-4" style="max-width:960px;">
+  <h2 class="mb-4">
+    <i class="fas fa-tag me-2 text-secondary"></i>
+    {{ t.get('freetext_label_title', 'Free-text label') }}
+  </h2>
+
+  <p class="text-muted small mb-3">
+    {{ t.get('freetext_label_desc',
+       'Compose a free-text label with a title, optional subtitle, and a Markdown body. Useful for jars, gift tags, notes — anything non-plant.') }}
+  </p>
+
+  <div class="row g-4">
+    <div class="col-md-6">
+      <div class="card shadow-sm">
+        <div class="card-body">
+
+          <label class="form-label fw-semibold" for="ftTitle">{{ t.get('freetext_label_title_field', 'Title') }}</label>
+          <input type="text" id="ftTitle" class="form-control mb-3" maxlength="120"
+                 placeholder="Hello world">
+
+          <label class="form-label fw-semibold" for="ftSubtitle">{{ t.get('freetext_label_subtitle_field', 'Subtitle (optional)') }}</label>
+          <input type="text" id="ftSubtitle" class="form-control mb-3" maxlength="200"
+                 placeholder="A short tagline">
+
+          <label class="form-label fw-semibold" for="ftBody">
+            {{ t.get('freetext_label_body_field', 'Body (Markdown)') }}
+          </label>
+          <textarea id="ftBody" class="form-control font-monospace" rows="10"
+                    placeholder="# Heading
+**bold** and *italic*
+- bullet one
+- bullet two
+
+| Key | Value |
+| --- | ----- |
+| A   | 1     |"></textarea>
+
+          <div class="d-flex gap-2 mt-3">
+            <button class="btn btn-outline-secondary btn-sm" id="ftRefreshBtn" type="button">
+              <i class="fas fa-arrows-rotate me-1"></i> {{ t.get('freetext_label_refresh', 'Refresh preview') }}
+            </button>
+            <button class="btn btn-primary btn-sm ms-auto" id="ftPrintBtn" type="button">
+              <i class="fas fa-print me-1"></i> {{ t.get('freetext_label_print', 'Print') }}
+            </button>
+          </div>
+
+          <div id="ftStatus" class="small mt-2"></div>
+
+        </div>
+      </div>
+    </div>
+
+    <div class="col-md-6">
+      <div class="card shadow-sm">
+        <div class="card-body text-center">
+          <div class="small text-muted mb-2">{{ t.get('freetext_label_preview', 'Preview') }}</div>
+          <img id="ftPreview" alt="preview"
+               style="max-width:100%; image-rendering: pixelated; background:#fff; border:1px solid #e2e8f0; border-radius:4px;">
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function() {
+  const titleEl    = document.getElementById('ftTitle');
+  const subtitleEl = document.getElementById('ftSubtitle');
+  const bodyEl     = document.getElementById('ftBody');
+  const preview    = document.getElementById('ftPreview');
+  const status     = document.getElementById('ftStatus');
+  const refreshBtn = document.getElementById('ftRefreshBtn');
+  const printBtn   = document.getElementById('ftPrintBtn');
+
+  let debounce = null;
+
+  function refresh() {
+    const params = new URLSearchParams({
+      title:    titleEl.value,
+      subtitle: subtitleEl.value,
+      body:     bodyEl.value,
+      _ts:      Date.now(),
+    });
+    preview.src = "{{ url_for('freetext_label_preview') }}?" + params.toString();
+  }
+
+  function scheduleRefresh() {
+    clearTimeout(debounce);
+    debounce = setTimeout(refresh, 350);
+  }
+
+  [titleEl, subtitleEl, bodyEl].forEach(el => el.addEventListener('input', scheduleRefresh));
+  refreshBtn.addEventListener('click', refresh);
+
+  printBtn.addEventListener('click', async () => {
+    const title = titleEl.value.trim();
+    if (!title) {
+      status.innerHTML = '<span class="text-danger">' +
+        "{{ t.get('freetext_label_title_required', 'Title is required.') }}" +
+        '</span>';
+      titleEl.focus();
+      return;
+    }
+    status.innerHTML = '<span class="text-muted"><i class="fas fa-spinner fa-spin me-1"></i>' +
+      "{{ t.get('freetext_label_queuing', 'Queuing print job…') }}" + '</span>';
+    try {
+      const r = await fetch("{{ url_for('freetext_label_print') }}", {
+        method:  'POST',
+        headers: {'Content-Type': 'application/json'},
+        body:    JSON.stringify({title: title, subtitle: subtitleEl.value, body: bodyEl.value}),
+      });
+      const j = await r.json();
+      if (!r.ok || !j.ok) throw new Error(j.error || 'failed');
+      status.innerHTML = '<span class="text-success"><i class="fas fa-check me-1"></i>' +
+        "{{ t.get('freetext_label_queued', 'Queued') }} (#" + j.job_id + ')</span>';
+    } catch (e) {
+      status.innerHTML = '<span class="text-danger">' + (e.message || 'error') + '</span>';
+    }
+  });
+
+  refresh();
+})();
+</script>
+{% endblock %}
