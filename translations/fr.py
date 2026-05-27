@@ -221,6 +221,7 @@ translations = {
     "settings_api_copied": "Copié",
     "settings_api_download_json": "Télécharger label_client.json (pré-rempli)",
     "settings_api_download_py": "Télécharger label_client.py",
+    "settings_api_download_exe": "Télécharger pour Windows (.exe)",
     "settings_api_download_mcp": "Télécharger mcp_server.py",
     "settings_printer_title": "Configuration du client imprimante",
     "settings_mcp_title": "Agent IA (MCP)",

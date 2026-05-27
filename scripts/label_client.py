@@ -16,13 +16,106 @@ Configuration is loaded in this order:
 """
 
 import json
+import locale
 import os
 import sys
 import time
 import socket
 import logging
-import platform
 from pathlib import Path
+
+
+DEFAULT_URL           = "https://plantlog.fr"
+DEFAULT_PRINTER_PORT  = 2
+DEFAULT_POLL_INTERVAL = 5
+
+
+TRANSLATIONS = {
+    "en": {
+        "setup_header":   "── Plantlog label client setup ──────────────────",
+        "setup_hint":     "Press Enter to keep the current value.",
+        "api_key":        "API key (from Settings → API Key)",
+        "printer_mac":    "Printer Bluetooth MAC",
+        "config_loaded":  "Config loaded from {path}",
+        "config_saved":   "Config saved to {path}",
+        "config_warn":    "Warning: could not read {path}: {err}",
+        "err_missing":    "ERROR: missing config: {keys}",
+        "err_hint":       "Set env vars or run interactively to create a config file.",
+        "started":        "Plantlog label client started",
+        "server":         "Server : {url}",
+        "printer":        "Printer: {mac} (port {port})",
+        "polling":        "Polling every {sec}s — Ctrl-C to stop",
+        "connecting":     "Connecting to printer…",
+        "connected":      "Printer connected",
+        "job_printing":   "Job #{jid} — printing '{name}' ({style})",
+        "job_done":       "Job #{jid} — done",
+        "job_failed":     "Job #{jid} — FAILED: {err}",
+        "warn_server":    "Cannot reach server — will retry",
+        "unexpected":     "Unexpected error: {err}",
+        "interrupted":    "Interrupted — shutting down",
+        "closed":         "Printer connection closed",
+    },
+    "fr": {
+        "setup_header":   "── Configuration du client d'étiquettes Plantlog ──",
+        "setup_hint":     "Appuyez sur Entrée pour conserver la valeur actuelle.",
+        "api_key":        "Clé API (depuis Paramètres → Clé API)",
+        "printer_mac":    "Adresse MAC Bluetooth de l'imprimante",
+        "config_loaded":  "Configuration chargée depuis {path}",
+        "config_saved":   "Configuration enregistrée dans {path}",
+        "config_warn":    "Attention : lecture impossible de {path} : {err}",
+        "err_missing":    "ERREUR : configuration manquante : {keys}",
+        "err_hint":       "Définissez les variables d'environnement ou lancez en interactif.",
+        "started":        "Client d'étiquettes Plantlog démarré",
+        "server":         "Serveur  : {url}",
+        "printer":        "Imprimante : {mac} (port {port})",
+        "polling":        "Interrogation toutes les {sec}s — Ctrl-C pour arrêter",
+        "connecting":     "Connexion à l'imprimante…",
+        "connected":      "Imprimante connectée",
+        "job_printing":   "Tâche #{jid} — impression de '{name}' ({style})",
+        "job_done":       "Tâche #{jid} — terminée",
+        "job_failed":     "Tâche #{jid} — ÉCHEC : {err}",
+        "warn_server":    "Serveur injoignable — nouvelle tentative",
+        "unexpected":     "Erreur inattendue : {err}",
+        "interrupted":    "Interrompu — arrêt en cours",
+        "closed":         "Connexion imprimante fermée",
+    },
+    "ru": {
+        "setup_header":   "── Настройка клиента печати Plantlog ──────────",
+        "setup_hint":     "Нажмите Enter, чтобы оставить текущее значение.",
+        "api_key":        "API-ключ (из Настройки → API-ключ)",
+        "printer_mac":    "Bluetooth MAC-адрес принтера",
+        "config_loaded":  "Конфигурация загружена из {path}",
+        "config_saved":   "Конфигурация сохранена в {path}",
+        "config_warn":    "Предупреждение: не удалось прочитать {path}: {err}",
+        "err_missing":    "ОШИБКА: отсутствует конфигурация: {keys}",
+        "err_hint":       "Задайте переменные окружения или запустите интерактивно.",
+        "started":        "Клиент печати Plantlog запущен",
+        "server":         "Сервер  : {url}",
+        "printer":        "Принтер : {mac} (порт {port})",
+        "polling":        "Опрос каждые {sec} с — Ctrl-C для остановки",
+        "connecting":     "Подключение к принтеру…",
+        "connected":      "Принтер подключён",
+        "job_printing":   "Задание #{jid} — печать '{name}' ({style})",
+        "job_done":       "Задание #{jid} — готово",
+        "job_failed":     "Задание #{jid} — ОШИБКА: {err}",
+        "warn_server":    "Сервер недоступен — повтор",
+        "unexpected":     "Непредвиденная ошибка: {err}",
+        "interrupted":    "Прервано — завершение работы",
+        "closed":         "Соединение с принтером закрыто",
+    },
+}
+
+
+def _detect_lang() -> str:
+    try:
+        code = (locale.getlocale()[0] or locale.getdefaultlocale()[0] or "")
+    except Exception:
+        code = ""
+    code = (code or os.environ.get("LANG", "")).lower()[:2]
+    return code if code in TRANSLATIONS else "en"
+
+
+T = TRANSLATIONS[_detect_lang()]
 
 try:
     import requests
@@ -33,12 +126,14 @@ except ImportError:
 
 # ── config loading ────────────────────────────────────────────────────────────
 
+def _app_dir() -> Path:
+    if getattr(sys, "frozen", False):
+        return Path(sys.executable).parent
+    return Path(__file__).resolve().parent
+
+
 def _default_config_path():
-    if platform.system() == "Windows":
-        base = Path(os.environ.get("APPDATA", Path.home()))
-    else:
-        base = Path(os.environ.get("XDG_CONFIG_HOME", Path.home() / ".config"))
-    return base / "plantlog" / "label_client.json"
+    return _app_dir() / "label_client.json"
 
 
 def _load_json_config():
@@ -51,19 +146,18 @@ def _load_json_config():
             try:
                 with open(path) as f:
                     data = json.load(f)
-                print(f"Config loaded from {path}")
+                print(T["config_loaded"].format(path=path))
                 return data
             except Exception as e:
-                print(f"Warning: could not read {path}: {e}")
+                print(T["config_warn"].format(path=path, err=e))
     return {}
 
 
 def _save_json_config(cfg: dict):
     path = _default_config_path()
-    path.parent.mkdir(parents=True, exist_ok=True)
     with open(path, "w") as f:
         json.dump(cfg, f, indent=2)
-    print(f"Config saved to {path}")
+    print(T["config_saved"].format(path=path))
 
 
 def _prompt(label, default=""):
@@ -73,36 +167,34 @@ def _prompt(label, default=""):
 
 
 def _interactive_setup(existing: dict) -> dict:
-    print("\n── Plantlog label client setup ──────────────────")
-    print("Press Enter to keep the current value.\n")
+    print("\n" + T["setup_header"])
+    print(T["setup_hint"] + "\n")
     cfg = dict(existing)
-    cfg["url"]           = _prompt("Plantlog server URL", cfg.get("url", "https://"))
-    cfg["api_key"]       = _prompt("API key (from Settings → API Key)", cfg.get("api_key", ""))
-    cfg["printer_mac"]   = _prompt("Printer Bluetooth MAC", cfg.get("printer_mac", "25:00:14:00:83:5E"))
-    cfg["printer_port"]  = int(_prompt("Printer RFCOMM port", str(cfg.get("printer_port", 2))))
-    cfg["poll_interval"] = int(_prompt("Poll interval (seconds)", str(cfg.get("poll_interval", 5))))
-    save = _prompt("Save config for next time? (y/n)", "y").lower()
-    if save == "y":
-        _save_json_config(cfg)
+    cfg["api_key"]     = _prompt(T["api_key"],     cfg.get("api_key", ""))
+    cfg["printer_mac"] = _prompt(T["printer_mac"], cfg.get("printer_mac", ""))
+    _save_json_config(cfg)
     return cfg
 
 
 def load_config() -> dict:
     file_cfg = _load_json_config()
     cfg = {
-        "url":           os.environ.get("PLANTLOG_URL")     or file_cfg.get("url",           ""),
-        "api_key":       os.environ.get("PLANTLOG_API_KEY") or file_cfg.get("api_key",       ""),
-        "printer_mac":   os.environ.get("PRINTER_MAC")      or file_cfg.get("printer_mac",   ""),
-        "printer_port":  int(os.environ.get("PRINTER_PORT",  file_cfg.get("printer_port",  2))),
-        "poll_interval": int(os.environ.get("POLL_INTERVAL", file_cfg.get("poll_interval", 5))),
+        "url":           os.environ.get("PLANTLOG_URL")     or file_cfg.get("url",         DEFAULT_URL),
+        "api_key":       os.environ.get("PLANTLOG_API_KEY") or file_cfg.get("api_key",     ""),
+        "printer_mac":   os.environ.get("PRINTER_MAC")      or file_cfg.get("printer_mac", ""),
+        "printer_port":  int(os.environ.get("PRINTER_PORT",  file_cfg.get("printer_port",  DEFAULT_PRINTER_PORT))),
+        "poll_interval": int(os.environ.get("POLL_INTERVAL", file_cfg.get("poll_interval", DEFAULT_POLL_INTERVAL))),
     }
-    missing = [k for k in ("url", "api_key", "printer_mac") if not cfg[k]]
+    missing = [k for k in ("api_key", "printer_mac") if not cfg[k]]
     if missing:
         if sys.stdin.isatty():
             cfg = _interactive_setup(cfg)
+            cfg.setdefault("url", DEFAULT_URL)
+            cfg.setdefault("printer_port", DEFAULT_PRINTER_PORT)
+            cfg.setdefault("poll_interval", DEFAULT_POLL_INTERVAL)
         else:
-            print(f"ERROR: missing config: {', '.join(missing)}", file=sys.stderr)
-            print("Set env vars or run interactively to create a config file.", file=sys.stderr)
+            print(T["err_missing"].format(keys=", ".join(missing)), file=sys.stderr)
+            print(T["err_hint"], file=sys.stderr)
             sys.exit(1)
     return cfg
 
@@ -202,15 +294,15 @@ def main():
     )
     log = logging.getLogger("label_client")
 
-    log.info("Plantlog label client started")
-    log.info("Server : %s", base_url)
-    log.info("Printer: %s (port %s)", mac, port)
-    log.info("Polling every %ss — Ctrl-C to stop", interval)
+    log.info(T["started"])
+    log.info(T["server"].format(url=base_url))
+    log.info(T["printer"].format(mac=mac, port=port))
+    log.info(T["polling"].format(sec=interval))
 
     printer = Printer(mac, port)
-    log.info("Connecting to printer…")
+    log.info(T["connecting"])
     printer.connect()
-    log.info("Printer connected")
+    log.info(T["connected"])
 
     try:
         while True:
@@ -219,30 +311,30 @@ def main():
                 for job in jobs:
                     jid  = job["job_id"]
                     name = job["plant"]["common"]
-                    log.info("Job #%s — printing '%s' (%s)", jid, name, job["style"])
+                    log.info(T["job_printing"].format(jid=jid, name=name, style=job["style"]))
                     try:
                         data = fetch_label_bytes(base_url, headers, jid)
                         printer.print_bytes(data)
                         mark_done(base_url, headers, jid)
-                        log.info("Job #%s — done", jid)
+                        log.info(T["job_done"].format(jid=jid))
                     except KeyboardInterrupt:
                         raise
                     except Exception as exc:
-                        log.error("Job #%s — FAILED: %s", jid, exc)
+                        log.error(T["job_failed"].format(jid=jid, err=exc))
                         mark_error(base_url, headers, jid, str(exc))
             except KeyboardInterrupt:
                 raise
             except requests.exceptions.ConnectionError:
-                log.warning("Cannot reach server — will retry")
+                log.warning(T["warn_server"])
             except Exception as exc:
-                log.error("Unexpected error: %s", exc)
+                log.error(T["unexpected"].format(err=exc))
 
             time.sleep(interval)
     except KeyboardInterrupt:
-        log.info("Interrupted — shutting down")
+        log.info(T["interrupted"])
     finally:
         printer.close()
-        log.info("Printer connection closed")
+        log.info(T["closed"])
 
 
 if __name__ == "__main__":
