@@ -924,6 +924,19 @@ def download_label_client():
     )
 
 
+@app.route("/download/label_client.exe")
+@login_required
+def download_label_client_exe():
+    path = os.path.join(os.path.dirname(__file__), "dist", "plantlog-label-client.exe")
+    if not os.path.exists(path):
+        return ("Windows build not available", 404)
+    return Response(
+        open(path, "rb").read(),
+        mimetype="application/vnd.microsoft.portable-executable",
+        headers={"Content-Disposition": "attachment; filename=plantlog-label-client.exe"},
+    )
+
+
 @app.route("/download/mcp_server.py")
 @login_required
 def download_mcp_server():
