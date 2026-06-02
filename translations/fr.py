@@ -9,6 +9,10 @@ translations = {
     "{name}'s plants": "Plantes de {name}",
     "Language": "Langue",
     "auto_translated": "traduit automatiquement",
+    "auto_translated_from": "traduit automatiquement du {lang}",
+    "lang_name_en": "anglais",
+    "lang_name_fr": "français",
+    "lang_name_ru": "russe",
     "Log out": "Se déconnecter",
     "Back to dashboard": "Retour au tableau de bord",
 

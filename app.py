@@ -117,7 +117,7 @@ def t_content_filter(text):
     """Translate user-generated free text into the current UI language."""
     if not text or not CONFIG.get("features", {}).get("translate_content", True):
         return text
-    return translate_content(text, getattr(g, "lang", None))
+    return translate_content(text, getattr(g, "lang", None), getattr(g, "content_lang", None))
 
 
 def _tr_global(text):
@@ -243,6 +243,11 @@ def load_logged_in_user_and_language():
 
     session["lang"] = g.lang
 
+    # Hint for translating user content: assume it was authored in the content
+    # owner's language. Defaults to the logged-in user; views that display
+    # someone else's content (public profiles) override this.
+    g.content_lang = g.user["lang"] if g.user else None
+
 
 def login_required(view):
     @wraps(view)
@@ -291,6 +296,8 @@ def login_required_for_action(view):
 
 def build_dashboard_context(user_obj, lang):
     """Return the kwargs needed by either dashboard template."""
+    # Content shown here belongs to user_obj, so treat its language as theirs.
+    g.content_lang = user_obj["lang"]
     translations = get_translations(lang)
     plants       = sorted(load_data(user_obj["id"]), key=sort_key)
     state_groups = group_plants_by_state(plants)
@@ -441,6 +448,10 @@ def public_view_plant(idx):
 
     if g.user and plant.get("user_id") == g.user["id"]:
         return redirect(url_for("view_plant", idx=idx, lang=g.lang))
+
+    # Content belongs to the plant's owner; use their language as the hint.
+    owner = get_user_by_id(plant["user_id"])
+    g.content_lang = owner["lang"] if owner else None
 
     return render_template(
         "plant.html",
