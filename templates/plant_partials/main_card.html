@@ -70,8 +70,8 @@
           <i class="fas fa-sticky-note me-2 text-muted mt-1"></i>
           <div class="flex-grow-1">
             <strong>{{ t['Notes'] }}:</strong>
-            {% set _n = tr(plant.notes) %}
-            <div class="mt-1 text-muted md-notes">{{ _n.text | mdrender }}</div>
+            {% set _n = tr_md(plant.notes) %}
+            <div class="mt-1 text-muted md-notes">{{ _n.html }}</div>
             {% if _n.translated %}
             {% set _src = t.get('lang_name_' ~ _n.source, _n.source) if _n.source else None %}
             <small class="text-muted fst-italic"><i class="fas fa-language me-1"></i>{% if _src %}{{ t.get('auto_translated_from', 'auto-translated from {lang}').replace('{lang}', _src) }}{% else %}{{ t.get('auto_translated', 'auto-translated') }}{% endif %}</small>
