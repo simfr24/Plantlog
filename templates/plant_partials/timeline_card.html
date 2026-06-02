@@ -64,9 +64,11 @@
               <div class="text-muted small mt-1">{{ h.custom_note | t_content }}</div>
             {% endif %}
           </div>
+          {% if not public_view %}
           <a href="{{ url_for('edit_stage', action_id=h.id, lang=lang) }}" class="text-secondary ms-2 timeline-edit" title="{{ t['Edit stage'] }}">
             <i class="fas fa-edit"></i>
           </a>
+          {% endif %}
         </li>
         {% endif %}
       {% endfor %}
