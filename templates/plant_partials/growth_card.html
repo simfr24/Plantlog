@@ -112,7 +112,20 @@
               type: 'linear',
               min: lo - pad,
               max: hi + pad,
-              ticks: { maxRotation: 0, autoSkip: true, callback: v => fmtDate(v) }
+              ticks: {
+                maxRotation: 0,
+                autoSkip: true,
+                autoSkipPadding: 12,
+                callback: v => fmtDate(v)
+              },
+              afterBuildTicks: function(axis) {
+                const w = axis.width || 300;
+                const target = Math.max(2, Math.min(8, Math.floor(w / 90)));
+                const lo = axis.min, hi = axis.max;
+                axis.ticks = Array.from({ length: target }, (_, i) => ({
+                  value: lo + (hi - lo) * i / (target - 1)
+                }));
+              }
             };
           })(),
           y: {
