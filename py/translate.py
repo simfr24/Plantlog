@@ -136,9 +136,18 @@ def translate_content(text, target_lang: str, source_lang=None) -> str:
     if cached is not None:
         return cached
 
-    result = _machine_translate(text, source_lang, target_lang)
+    # A standalone capitalized word can be misparsed as a proper noun (e.g.
+    # "Avocatier" -> "Lawyer" instead of "Avocado"). Translating it lowercased
+    # avoids that; we restore the leading capital on the result.
+    leading_upper = text[:1].isupper()
+    to_send = (text[:1].lower() + text[1:]) if leading_upper else text
+
+    result = _machine_translate(to_send, source_lang, target_lang)
     if not result:
         return text  # graceful degradation: show the original
+
+    if leading_upper and result[:1].islower():
+        result = result[:1].upper() + result[1:]
 
     _cache_put(text, target_lang, result, source_lang=source_lang)
     return result
