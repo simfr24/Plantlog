@@ -422,7 +422,7 @@ def public_view(username):
     user = get_user_by_username(username) or abort(404)
     lang = request.args.get("lang", user["lang"])
     ctx  = build_dashboard_context(user, lang)
-    return render_template("index.html", public_view=True, **ctx)
+    return render_template("new_home.html", public_view=True, **ctx)
 
 @app.route("/plant/<int:idx>")
 @login_required
