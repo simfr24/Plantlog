@@ -130,6 +130,8 @@ translations = {
     "Actions": "Actions",
     "Quick Stats": "Quick Stats",
     "Latest size": "Latest size",
+    "Growth": "Growth",
+    "Height (cm)": "Height (cm)",
     "Last watered": "Last watered",
     "Last fertilized": "Last fertilized",
     "days ago": "days ago",

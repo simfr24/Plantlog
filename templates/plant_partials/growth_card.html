@@ -1,0 +1,67 @@
+{% set measurements = plant.history|selectattr('action', 'equalto', 'measure')|list %}
+{% set measurements = measurements|sort(attribute='start') %}
+{% if measurements %}
+<div class="card shadow-sm mb-4">
+  <div class="card-header">
+    <i class="fas fa-chart-line me-2 text-muted"></i>
+    <span class="fw-semibold">{{ t['Growth'] }}</span>
+  </div>
+  <div class="card-body">
+    <canvas class="growth-chart" height="200"></canvas>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+<script>
+(function() {
+  const points = [
+    {% for m in measurements %}
+      {% set v = m.size[0]|float %}
+      {% set u = m.size[1] %}
+      {% set cm = v / 10.0 if u == 'mm' else (v * 100.0 if u == 'm' else v) %}
+      { x: "{{ m.start }}", y: {{ cm }} },
+    {% endfor %}
+  ];
+
+  function render() {
+    if (typeof Chart === 'undefined') { setTimeout(render, 50); return; }
+    // The plant page renders both a mobile and a desktop layout in the DOM
+    // (one hidden via CSS), so there can be several canvases to draw.
+    document.querySelectorAll('.growth-chart').forEach(function(canvas) {
+      if (canvas.dataset.rendered) return;
+      canvas.dataset.rendered = '1';
+      new Chart(canvas.getContext('2d'), {
+        type: 'line',
+        data: {
+          labels: points.map(p => p.x),
+          datasets: [{
+            label: '{{ t["Height (cm)"] }}',
+            data: points.map(p => p.y),
+            borderColor: '#28a745',
+            backgroundColor: 'rgba(40, 167, 69, 0.12)',
+            borderWidth: 2,
+            pointBackgroundColor: '#28a745',
+            pointRadius: 4,
+            tension: 0.25,
+            fill: true
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { display: false } },
+          scales: {
+            y: {
+              beginAtZero: true,
+              title: { display: true, text: '{{ t["Height (cm)"] }}' },
+              ticks: { precision: 0 }
+            }
+          }
+        }
+      });
+    });
+  }
+  render();
+})();
+</script>
+{% endif %}
