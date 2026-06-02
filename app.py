@@ -1181,6 +1181,14 @@ def api_add_event(idx):
     return jsonify({"ok": True}), 201
 
 
+@app.route("/api/me", methods=["GET"])
+@_api_auth_required
+def api_me():
+    """Return the authenticated user (used by the label client on startup)."""
+    u = g.api_user
+    return jsonify({"id": u["id"], "username": u["username"], "lang": u["lang"]})
+
+
 @app.route("/api/event_types", methods=["GET"])
 @_api_auth_required
 def api_event_types():

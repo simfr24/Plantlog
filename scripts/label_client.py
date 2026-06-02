@@ -42,6 +42,8 @@ TRANSLATIONS = {
         "err_missing":    "ERROR: missing config: {keys}",
         "err_hint":       "Set env vars or run interactively to create a config file.",
         "started":        "Plantlog label client started",
+        "logged_in":      "Logged in as {username}",
+        "login_failed":   "Could not verify API key — check your credentials",
         "server":         "Server : {url}",
         "printer":        "Printer: {mac} (port {port})",
         "polling":        "Polling every {sec}s — Ctrl-C to stop",
@@ -66,6 +68,8 @@ TRANSLATIONS = {
         "err_missing":    "ERREUR : configuration manquante : {keys}",
         "err_hint":       "Définissez les variables d'environnement ou lancez en interactif.",
         "started":        "Client d'étiquettes Plantlog démarré",
+        "logged_in":      "Connecté en tant que {username}",
+        "login_failed":   "Impossible de vérifier la clé API — vérifiez vos identifiants",
         "server":         "Serveur  : {url}",
         "printer":        "Imprimante : {mac} (port {port})",
         "polling":        "Interrogation toutes les {sec}s — Ctrl-C pour arrêter",
@@ -90,6 +94,8 @@ TRANSLATIONS = {
         "err_missing":    "ОШИБКА: отсутствует конфигурация: {keys}",
         "err_hint":       "Задайте переменные окружения или запустите интерактивно.",
         "started":        "Клиент печати Plantlog запущен",
+        "logged_in":      "Вход выполнен как {username}",
+        "login_failed":   "Не удалось проверить API-ключ — проверьте учётные данные",
         "server":         "Сервер  : {url}",
         "printer":        "Принтер : {mac} (порт {port})",
         "polling":        "Опрос каждые {sec} с — Ctrl-C для остановки",
@@ -253,6 +259,16 @@ class Printer:
 
 # ── API helpers ───────────────────────────────────────────────────────────────
 
+def fetch_username(base_url, headers):
+    """Resolve the account username from the API key. Returns None on failure."""
+    try:
+        r = requests.get(f"{base_url}/api/me", headers=headers, timeout=10)
+        r.raise_for_status()
+        return r.json().get("username")
+    except Exception:
+        return None
+
+
 def fetch_pending(base_url, headers):
     r = requests.get(f"{base_url}/api/print_queue/pending", headers=headers, timeout=10)
     r.raise_for_status()
@@ -295,6 +311,11 @@ def main():
     log = logging.getLogger("label_client")
 
     log.info(T["started"])
+    username = fetch_username(base_url, headers)
+    if username:
+        log.info(T["logged_in"].format(username=username))
+    else:
+        log.warning(T["login_failed"])
     log.info(T["server"].format(url=base_url))
     log.info(T["printer"].format(mac=mac, port=port))
     log.info(T["polling"].format(sec=interval))
