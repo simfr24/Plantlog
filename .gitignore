@@ -2,3 +2,4 @@ __pycache__/*
 plants.json
 plants.db
 *.pyc
+config.json

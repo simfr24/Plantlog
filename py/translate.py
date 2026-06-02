@@ -12,7 +12,11 @@ the original text and never blocks rendering.
 
 from __future__ import annotations
 
+import functools
 import hashlib
+import html
+import json
+import os
 from types import SimpleNamespace
 
 import flask
@@ -24,6 +28,55 @@ SUPPORTED_LANGS = {"en", "fr", "ru"}
 
 # Don't bother translating trivially short strings (numbers, single tokens).
 _MIN_LEN = 2
+
+_CONFIG_PATH = os.path.join(
+    os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "config.json"
+)
+
+
+@functools.lru_cache(maxsize=1)
+def _api_key():
+    """Google Cloud Translation API key from config.json, or None."""
+    try:
+        with open(_CONFIG_PATH, encoding="utf-8") as f:
+            return (json.load(f).get("google_translation") or {}).get("key") or None
+    except Exception:
+        return None
+
+
+def _machine_translate(text, source_lang, target_lang):
+    """Translate via the official Cloud Translation API when a key is set,
+    otherwise via the keyless deep-translator endpoint. Returns None on failure.
+
+    The official API uses Google's full, current model — it knows niche
+    botanical terms (e.g. "Asiminier" -> "Pawpaw") that the free endpoint, which
+    runs a smaller/older model, leaves untranslated.
+    """
+    key = _api_key()
+    if key:
+        try:
+            import requests
+
+            params = {"q": text, "target": target_lang, "format": "text", "key": key}
+            if source_lang:
+                params["source"] = source_lang
+            resp = requests.post(
+                "https://translation.googleapis.com/language/translate/v2",
+                data=params,
+                timeout=10,
+            )
+            resp.raise_for_status()
+            translated = resp.json()["data"]["translations"][0]["translatedText"]
+            return html.unescape(translated)
+        except Exception:
+            pass  # fall through to the keyless endpoint
+
+    try:
+        from deep_translator import GoogleTranslator
+
+        return GoogleTranslator(source=source_lang or "auto", target=target_lang).translate(text)
+    except Exception:
+        return None
 
 
 def _hash(text: str, target_lang: str) -> str:
@@ -74,15 +127,9 @@ def translate_content(text, target_lang: str, source_lang=None) -> str:
     if cached is not None:
         return cached
 
-    try:
-        from deep_translator import GoogleTranslator
-
-        result = GoogleTranslator(source="auto", target=target_lang).translate(text)
-    except Exception:
-        return text  # graceful degradation: show the original
-
+    result = _machine_translate(text, source_lang, target_lang)
     if not result:
-        return text
+        return text  # graceful degradation: show the original
 
     _cache_put(text, target_lang, result, source_lang=source_lang)
     return result
