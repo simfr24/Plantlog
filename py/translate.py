@@ -44,9 +44,14 @@ def _api_key():
         return None
 
 
-def _machine_translate(text, source_lang, target_lang):
+def _machine_translate(text, source_lang, target_lang, fmt="text"):
     """Translate via the official Cloud Translation API when a key is set,
     otherwise via the keyless deep-translator endpoint. Returns None on failure.
+
+    ``fmt`` is "text" or "html". In "html" mode the API preserves tags and only
+    translates text nodes, which keeps rendered-Markdown structure (tables,
+    lists) intact — translating raw Markdown garbles it. HTML mode requires the
+    official API; there is no keyless fallback for it.
 
     The official API uses Google's full, current model — it knows niche
     botanical terms (e.g. "Asiminier" -> "Pawpaw") that the free endpoint, which
@@ -57,7 +62,7 @@ def _machine_translate(text, source_lang, target_lang):
         try:
             import requests
 
-            params = {"q": text, "target": target_lang, "format": "text", "key": key}
+            params = {"q": text, "target": target_lang, "format": fmt, "key": key}
             if source_lang:
                 params["source"] = source_lang
             resp = requests.post(
@@ -67,9 +72,13 @@ def _machine_translate(text, source_lang, target_lang):
             )
             resp.raise_for_status()
             translated = resp.json()["data"]["translations"][0]["translatedText"]
-            return html.unescape(translated)
+            # In HTML mode the entities are meaningful markup; leave them be.
+            return translated if fmt == "html" else html.unescape(translated)
         except Exception:
             pass  # fall through to the keyless endpoint
+
+    if fmt == "html":
+        return None  # keyless endpoint can't safely translate HTML
 
     try:
         from deep_translator import GoogleTranslator
@@ -132,6 +141,29 @@ def translate_content(text, target_lang: str, source_lang=None) -> str:
         return text  # graceful degradation: show the original
 
     _cache_put(text, target_lang, result, source_lang=source_lang)
+    return result
+
+
+def translate_html(html_text, target_lang: str, source_lang=None):
+    """Translate already-rendered HTML, preserving its markup (cached).
+
+    Returns the translated HTML, or None when translation is unnecessary or
+    unavailable (caller should then show the original rendered HTML).
+    """
+    if not html_text or target_lang not in SUPPORTED_LANGS:
+        return None
+    if source_lang and source_lang == target_lang:
+        return None
+
+    cached = _cache_get(html_text, target_lang)
+    if cached is not None:
+        return cached
+
+    result = _machine_translate(html_text, source_lang, target_lang, fmt="html")
+    if not result:
+        return None
+
+    _cache_put(html_text, target_lang, result, source_lang=source_lang)
     return result
 
 

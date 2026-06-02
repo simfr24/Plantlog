@@ -109,7 +109,7 @@ def mdrender_filter(text):
     from markupsafe import Markup
     return Markup(_md.markdown(text, extensions=["nl2br", "fenced_code", "tables"]))
 
-from py.translate import translate_content, tr
+from py.translate import translate_content, translate_html, tr
 
 
 @app.template_filter("t_content")
@@ -126,6 +126,26 @@ def _tr_global(text):
         from types import SimpleNamespace
         return SimpleNamespace(text=text, translated=False)
     return tr(text)
+
+
+def _tr_md_global(text):
+    """Template global for Markdown content: render to HTML, then translate the
+    HTML (preserving tables/lists). Returns a namespace with ``.html`` (safe
+    Markup), ``.translated`` and ``.source`` for the indicator."""
+    from types import SimpleNamespace
+    from markupsafe import Markup
+
+    rendered = mdrender_filter(text)
+    source = getattr(g, "content_lang", None)
+    target = getattr(g, "lang", None)
+    if (not text or not target
+            or not CONFIG.get("features", {}).get("translate_content", True)):
+        return SimpleNamespace(html=rendered, translated=False, source=source)
+
+    translated = translate_html(str(rendered), target, source)
+    if translated and translated.strip() != str(rendered).strip():
+        return SimpleNamespace(html=Markup(translated), translated=True, source=source)
+    return SimpleNamespace(html=rendered, translated=False, source=source)
 
 init_db()
 app.register_blueprint(mcp_blueprint)
@@ -194,6 +214,7 @@ def todate(value):
 
 app.jinja_env.globals.update(
     tr=_tr_global,
+    tr_md=_tr_md_global,
     format_age=format_age,
     age_badge=age_badge,
     size_badge=size_badge,
