@@ -78,6 +78,7 @@
 
       <div class="collapse navbar-collapse" id="navbarContent">
         <ul class="navbar-nav me-auto mb-2 mb-lg-0 gap-1">
+          {% if g.user %}
           <li class="nav-item">
             <a class="nav-link {% if request.endpoint == 'index' %}nav-active{% endif %}" href="{{ url_for('index') }}">
               <i class="fa-solid fa-gauge-high me-1"></i>{{ t['Dashboard'] }}
@@ -93,6 +94,7 @@
               <i class="fa-solid fa-plus me-1"></i>{{ t['Add plant'] }}
             </a>
           </li>
+          {% endif %}
         </ul>
 
         <ul class="navbar-nav gap-1">
