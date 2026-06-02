@@ -47,10 +47,11 @@
     const first = points[0];
     const last = points[points.length - 1];
     const today = Date.now();
-    if (today <= last.x) return null;
+    if (today - last.x < 7 * DAY_MS) return null;
     const slope = (last.y - first.y) / (last.x - first.x);
     const projY = last.y + slope * (today - last.x);
     if (!isFinite(projY) || projY < 0) return null;
+    if (Math.round(projY) === Math.round(last.y)) return null;
     return [{ x: last.x, y: last.y }, { x: today, y: projY }];
   }
 
