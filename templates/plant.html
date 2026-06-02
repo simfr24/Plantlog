@@ -57,6 +57,25 @@
   </div>
 </div>
 
+  <!-- Growth chart fullscreen modal -->
+  <div class="modal fade" id="growthChartModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-fullscreen">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">
+            <i class="fas fa-chart-line me-2 text-muted"></i>{{ t['Growth'] }}
+          </h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{{ t['Close'] }}"></button>
+        </div>
+        <div class="modal-body d-flex">
+          <div style="position: relative; flex: 1 1 auto; min-height: 0; width: 100%;">
+            <canvas id="growthChartFullCanvas"></canvas>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- Print Label Modal -->
   <div class="modal fade" id="printLabelModal" tabindex="-1" aria-labelledby="printLabelModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">

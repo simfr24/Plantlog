@@ -4,9 +4,13 @@
 {% set sprout_date = sprout_events[0].start if sprout_events else None %}
 {% if measurements %}
 <div class="card shadow-sm mb-4">
-  <div class="card-header">
+  <div class="card-header d-flex align-items-center">
     <i class="fas fa-chart-line me-2 text-muted"></i>
     <span class="fw-semibold">{{ t['Growth'] }}</span>
+    <button type="button" class="btn btn-sm btn-link ms-auto p-0 growth-expand"
+            title="{{ t.get('Expand', 'Expand') }}">
+      <i class="fas fa-expand"></i>
+    </button>
   </div>
   <div class="card-body">
     <canvas class="growth-chart" height="200"></canvas>
@@ -16,57 +20,147 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
 <script>
 (function() {
+  if (window.__plantlogGrowthInit) return;
+  window.__plantlogGrowthInit = true;
+
   const points = [
     {% if sprout_date %}
-      { x: "{{ sprout_date }}", y: 0 },
+      { x: new Date("{{ sprout_date }}").getTime(), y: 0 },
     {% endif %}
     {% for m in measurements %}
       {% set v = m.size[0]|float %}
       {% set u = m.size[1] %}
       {% set cm = v / 10.0 if u == 'mm' else (v * 100.0 if u == 'm' else v) %}
-      { x: "{{ m.start }}", y: {{ cm }} },
+      { x: new Date("{{ m.start }}").getTime(), y: {{ cm }} },
     {% endfor %}
   ];
 
-  function render() {
-    if (typeof Chart === 'undefined') { setTimeout(render, 50); return; }
-    // The plant page renders both a mobile and a desktop layout in the DOM
-    // (one hidden via CSS), so there can be several canvases to draw.
+  const DAY_MS = 86400000;
+  function fmtDate(ms) {
+    const d = new Date(ms);
+    const p = n => String(n).padStart(2, '0');
+    return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate());
+  }
+
+  function projection() {
+    if (points.length < 2) return null;
+    const first = points[0];
+    const last = points[points.length - 1];
+    const today = Date.now();
+    if (today <= last.x) return null;
+    const slope = (last.y - first.y) / (last.x - first.x);
+    const projY = last.y + slope * (today - last.x);
+    if (!isFinite(projY) || projY < 0) return null;
+    return [{ x: last.x, y: last.y }, { x: today, y: projY }];
+  }
+
+  function buildChart(canvas) {
+    const existing = Chart.getChart(canvas);
+    if (existing) existing.destroy();
+    const proj = projection();
+    const datasets = [{
+      label: '{{ t["Height (cm)"] }}',
+      data: points,
+      showLine: true,
+      borderColor: '#28a745',
+      borderWidth: 2,
+      pointBackgroundColor: '#28a745',
+      pointRadius: 4,
+      tension: 0.25,
+      fill: false
+    }];
+    if (proj) {
+      datasets.push({
+        label: '{{ t.get("Projected", "Projected") }}',
+        data: proj,
+        showLine: true,
+        borderColor: '#28a745',
+        borderDash: [4, 4],
+        borderWidth: 2,
+        pointRadius: [0, 3],
+        pointHitRadius: [0, 6],
+        pointBackgroundColor: '#28a745',
+        fill: false
+      });
+    }
+    return new Chart(canvas.getContext('2d'), {
+      type: 'scatter',
+      data: { datasets: datasets },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        layout: { padding: { left: 12, right: 12, top: 12, bottom: 4 } },
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            callbacks: {
+              title: items => fmtDate(items[0].parsed.x),
+              label: ctx => '{{ t["Height (cm)"] }}: ' + Math.round(ctx.parsed.y)
+            }
+          }
+        },
+        scales: {
+          x: (function() {
+            const xs = points.map(p => p.x);
+            let lo = Math.min.apply(null, xs);
+            let hi = Math.max.apply(null, xs);
+            if (proj) hi = Math.max(hi, proj[1].x);
+            if (lo === hi) { lo -= DAY_MS; hi += DAY_MS; }
+            const pad = Math.max((hi - lo) * 0.03, DAY_MS);
+            return {
+              type: 'linear',
+              min: lo - pad,
+              max: hi + pad,
+              ticks: { maxRotation: 0, autoSkip: true, callback: v => fmtDate(v) }
+            };
+          })(),
+          y: {
+            beginAtZero: true,
+            title: { display: true, text: '{{ t["Height (cm)"] }}' },
+            ticks: { precision: 0 }
+          }
+        }
+      }
+    });
+  }
+
+  function renderCards() {
+    if (typeof Chart === 'undefined') { setTimeout(renderCards, 50); return; }
     document.querySelectorAll('.growth-chart').forEach(function(canvas) {
       if (canvas.dataset.rendered) return;
       canvas.dataset.rendered = '1';
-      new Chart(canvas.getContext('2d'), {
-        type: 'line',
-        data: {
-          labels: points.map(p => p.x),
-          datasets: [{
-            label: '{{ t["Height (cm)"] }}',
-            data: points.map(p => p.y),
-            borderColor: '#28a745',
-            backgroundColor: 'rgba(40, 167, 69, 0.12)',
-            borderWidth: 2,
-            pointBackgroundColor: '#28a745',
-            pointRadius: 4,
-            tension: 0.25,
-            fill: true
-          }]
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          plugins: { legend: { display: false } },
-          scales: {
-            y: {
-              beginAtZero: true,
-              title: { display: true, text: '{{ t["Height (cm)"] }}' },
-              ticks: { precision: 0 }
-            }
-          }
-        }
-      });
+      buildChart(canvas);
     });
   }
-  render();
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', renderCards);
+  } else {
+    renderCards();
+  }
+
+  let fullChart = null;
+  let modalBound = false;
+  function bindModal() {
+    if (modalBound) return;
+    const modalEl = document.getElementById('growthChartModal');
+    if (!modalEl) return;
+    modalBound = true;
+    modalEl.addEventListener('shown.bs.modal', function() {
+      const canvas = document.getElementById('growthChartFullCanvas');
+      if (canvas) fullChart = buildChart(canvas);
+    });
+    modalEl.addEventListener('hidden.bs.modal', function() {
+      if (fullChart) { fullChart.destroy(); fullChart = null; }
+    });
+  }
+  document.addEventListener('click', function(e) {
+    const btn = e.target.closest('.growth-expand');
+    if (!btn || typeof bootstrap === 'undefined') return;
+    const modalEl = document.getElementById('growthChartModal');
+    if (!modalEl) return;
+    bindModal();
+    bootstrap.Modal.getOrCreateInstance(modalEl).show();
+  });
 })();
 </script>
 {% endif %}
