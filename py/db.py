@@ -104,6 +104,15 @@ CREATE TABLE IF NOT EXISTS events (
   FOREIGN KEY(plant_id)      REFERENCES plants(id) ON DELETE CASCADE,
   FOREIGN KEY(event_type_id) REFERENCES event_types(id)
 );
+
+CREATE TABLE IF NOT EXISTS translations_cache (
+  source_hash TEXT NOT NULL,           -- sha256 of "<target_lang>:<original text>"
+  target_lang TEXT NOT NULL,
+  source_lang TEXT,                    -- optional, for "translated from X" labels
+  translated  TEXT NOT NULL,
+  created_at  TEXT NOT NULL DEFAULT (datetime('now')),
+  PRIMARY KEY (source_hash, target_lang)
+);
 """
 
 def upsert_state_types(conn, state_types):
@@ -184,6 +193,17 @@ def init_and_fill_db():
 
 def _migrate(conn):
     """Run any schema migrations needed for existing databases."""
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS translations_cache (
+          source_hash TEXT NOT NULL,
+          target_lang TEXT NOT NULL,
+          source_lang TEXT,
+          translated  TEXT NOT NULL,
+          created_at  TEXT NOT NULL DEFAULT (datetime('now')),
+          PRIMARY KEY (source_hash, target_lang)
+        )
+    """)
+
     plant_cols = {row[1] for row in conn.execute("PRAGMA table_info(plants)").fetchall()}
     if "variety" not in plant_cols:
         conn.execute("ALTER TABLE plants ADD COLUMN variety TEXT")

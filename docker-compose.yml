@@ -7,7 +7,7 @@ services:
       - .:/app
     command: >
       sh -c "apt-get update -qq && apt-get install -y -qq --no-install-recommends fonts-dejavu fonts-liberation &&
-             pip install -q flask werkzeug pillow qrcode markdown markupsafe gunicorn &&
+             pip install -q flask werkzeug pillow qrcode markdown markupsafe gunicorn deep-translator &&
              gunicorn -w 2 -b 0.0.0.0:5000 app:app"
     restart: unless-stopped
     networks:

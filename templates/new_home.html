@@ -558,7 +558,7 @@
 
   <div class="tile-body">
     <div class="tile-name">
-      {{ first.common }}
+      {{ first.common | t_content }}
       <span class="group-count">×{{ species_plants|length }}</span>
     </div>
     <div class="tile-latin">{{ species_latin }}</div>
@@ -601,7 +601,7 @@
       <div class="modal-header" style="border-bottom: 1px solid #edf0f4; padding: 0.9rem 1.1rem">
         <div>
           <h5 class="modal-title mb-0" style="font-size:1rem; font-weight:600; color:#1e2d3d">
-            {{ first.common }}
+            {{ first.common | t_content }}
             <small class="text-muted fst-italic fw-normal">({{ species_latin }})</small>
           </h5>
           <div style="font-size:0.78rem; color:#a0aec0; margin-top:0.1rem">
@@ -674,7 +674,7 @@
           <div class="modal-plant-info">
             <div class="modal-plant-name">
               {% if p.nickname %}<span class="nickname">{{ p.nickname }}</span> · {% endif %}
-              {{ p.common }}{% if p.variety %} <span style="color:#a0aec0;font-weight:400;font-style:italic">'{{ p.variety }}'</span>{% endif %}
+              {{ p.common | t_content }}{% if p.variety %} <span style="color:#a0aec0;font-weight:400;font-style:italic">'{{ p.variety }}'</span>{% endif %}
             </div>
             {% if p.location %}
             <div class="modal-plant-meta">
@@ -804,7 +804,7 @@
   <div class="tile-body">
     <div class="tile-name">
       {% if p.nickname %}<span class="nickname">{{ p.nickname }}</span> · {% endif %}
-      {{ p.common }}
+      {{ p.common | t_content }}
       {% if p.count and p.count > 1 %}&thinsp;<span class="badge bg-secondary" style="font-size:0.7rem">×{{ p.count }}</span>{% endif %}
     </div>
     <div class="tile-latin">

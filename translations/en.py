@@ -8,6 +8,7 @@ translations = {
     "My plants": "My plants",
     "{name}'s plants": "{name}'s plants",
     "Language": "Language",
+    "auto_translated": "auto-translated",
     "Log out": "Log out",
     "Back to dashboard": "Back to Dashboard",
 

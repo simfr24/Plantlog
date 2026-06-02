@@ -43,7 +43,7 @@
                     data-bs-toggle="collapse"
                     data-bs-target="#species-collapse-{{ species_latin|lower|replace(' ','_') }}-{{ state|lower }}">
               <i class="fas fa-layer-group me-2 text-muted" style="font-size:0.85rem"></i>
-              <span class="fw-semibold">{{ first.common }}</span>
+              <span class="fw-semibold">{{ first.common | t_content }}</span>
               <small class="text-muted fst-italic ms-1">({{ species_latin }})</small>
               <span class="badge bg-secondary ms-2">{{ species_plants|length }}</span>
             </button>
@@ -165,7 +165,7 @@
               <div class="accordion-body">
                 {% if p.notes %}
                 <div class="mb-3 text-muted md-notes">
-                  <i class="fas fa-sticky-note me-1"></i>{{ p.notes | mdrender }}
+                  <i class="fas fa-sticky-note me-1"></i>{{ p.notes | t_content | mdrender }}
                 </div>
                 {% endif %}
                 <ul class="timeline">
@@ -181,7 +181,7 @@
                           {% set label = h.custom_label or '?' %}
                           {% set label_text = t['{event} on'].replace('{event}', label) if '{event} on' in t else label ~ ' on' %}
                           <strong>{{ label_text }}</strong> – {{ h.start }}
-                          {% if h.custom_note %}<div class="text-muted small">{{ h.custom_note }}</div>{% endif %}
+                          {% if h.custom_note %}<div class="text-muted small">{{ h.custom_note | t_content }}</div>{% endif %}
                         {% else %}
                           <strong>{{ t[human_names[h.action]] if human_names[h.action] in t else human_names[h.action] }}</strong> – {{ h.start }}
                         {% endif %}
@@ -353,7 +353,7 @@
               <div class="flex-grow-1">
                 <div class="fw-semibold {{ 'text-muted' if is_dead_state else '' }}">
                   {% if p.nickname %}<span class="text-primary me-1">{{ p.nickname }}</span>{% endif %}
-                  {{ p.common }}{% if p.variety %} <small class="text-muted fw-normal fst-italic">'{{ p.variety }}'</small>{% endif %}
+                  {{ p.common | t_content }}{% if p.variety %} <small class="text-muted fw-normal fst-italic">'{{ p.variety }}'</small>{% endif %}
                   {% if p.count and p.count > 1 %}<span class="badge bg-secondary ms-1">×{{ p.count }}</span>{% endif %}
                   <small class="text-muted fst-italic">({{ p.latin }})</small>
                 </div>
@@ -389,7 +389,7 @@
                         {% set label_text = t['{event} on'].replace('{event}', label) if '{event} on' in t else label ~ ' on' %}
                         <strong>{{ label_text }}</strong> – {{ h.start }}
                         {% if h.custom_note %}
-                          <div class="text-muted small">{{ h.custom_note }}</div>
+                          <div class="text-muted small">{{ h.custom_note | t_content }}</div>
                         {% endif %}
                       {% else %}
                         <strong>{{ t[human_names[h.action]] if human_names[h.action] in t else human_names[h.action] }}</strong> – {{ h.start }}

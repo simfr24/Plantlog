@@ -61,7 +61,7 @@
                 {{ t['Ended flowering on'] if h.action == 'flower' else t['Ended fruiting on'] }} {{ h.ended_on }}
               </div>
             {% elif h.action == 'custom' %}
-              <div class="text-muted small mt-1">{{ h.custom_note }}</div>
+              <div class="text-muted small mt-1">{{ h.custom_note | t_content }}</div>
             {% endif %}
           </div>
           <a href="{{ url_for('edit_stage', action_id=h.id, lang=lang) }}" class="text-secondary ms-2 timeline-edit" title="{{ t['Edit stage'] }}">

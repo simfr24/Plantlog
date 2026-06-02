@@ -70,7 +70,9 @@
           <i class="fas fa-sticky-note me-2 text-muted mt-1"></i>
           <div class="flex-grow-1">
             <strong>{{ t['Notes'] }}:</strong>
-            <div class="mt-1 text-muted md-notes">{{ plant.notes | mdrender }}</div>
+            {% set _n = tr(plant.notes) %}
+            <div class="mt-1 text-muted md-notes">{{ _n.text | mdrender }}</div>
+            {% if _n.translated %}<small class="text-muted fst-italic"><i class="fas fa-language me-1"></i>{{ t.get('auto_translated', 'auto-translated') }}</small>{% endif %}
           </div>
         </div>
       </div>

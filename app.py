@@ -109,6 +109,24 @@ def mdrender_filter(text):
     from markupsafe import Markup
     return Markup(_md.markdown(text, extensions=["nl2br", "fenced_code", "tables"]))
 
+from py.translate import translate_content, tr
+
+
+@app.template_filter("t_content")
+def t_content_filter(text):
+    """Translate user-generated free text into the current UI language."""
+    if not text or not CONFIG.get("features", {}).get("translate_content", True):
+        return text
+    return translate_content(text, getattr(g, "lang", None))
+
+
+def _tr_global(text):
+    """Template global: translate + report whether it changed (for indicators)."""
+    if not CONFIG.get("features", {}).get("translate_content", True):
+        from types import SimpleNamespace
+        return SimpleNamespace(text=text, translated=False)
+    return tr(text)
+
 init_db()
 app.register_blueprint(mcp_blueprint)
 
@@ -119,7 +137,8 @@ def load_config():
     # Default configuration
     default_config = {
         "features": {
-            "public_profiles": True
+            "public_profiles": True,
+            "translate_content": True
         },
         "mcp": {
             "enabled": False,
@@ -174,6 +193,7 @@ def todate(value):
     return date.fromisoformat(value) if isinstance(value, str) else value
 
 app.jinja_env.globals.update(
+    tr=_tr_global,
     format_age=format_age,
     age_badge=age_badge,
     size_badge=size_badge,
@@ -201,32 +221,26 @@ def load_logged_in_user_and_language():
         record_user_login(g.user["id"])
 
     lang_param = request.args.get("lang")
-    should_detect_lang = (not g.user) or lang_param
 
-    # Determine preferred language
-    if should_detect_lang:
-        preferred_lang = None
-
-        if lang_param in AVAILABLE_LANGS:
-            preferred_lang = lang_param
-        else:
-            # Try to parse the best match from Accept-Language header
-            browser_langs: LanguageAccept = request.accept_languages
-            preferred_lang = browser_langs.best_match(AVAILABLE_LANGS)
-
-        if preferred_lang:
-            if g.user:
-                update_user_lang(g.user["id"], preferred_lang)
-                g.user = get_user_by_id(g.user["id"])
-            session["tmp_lang"] = preferred_lang
-
-    # Set g.lang and session["lang"]
-    if g.user:
+    # Resolve the active language with a clear precedence so an explicit choice
+    # sticks instead of being overwritten by browser detection on every request:
+    #   1. an explicit ?lang= choice always wins and is persisted,
+    #   2. logged-in users follow their saved account preference,
+    #   3. returning visitors keep their session choice (no re-detection),
+    #   4. first-time visitors are detected once from the browser, then remembered.
+    if lang_param in AVAILABLE_LANGS:
+        g.lang = lang_param
+        if g.user:
+            update_user_lang(g.user["id"], lang_param)
+            g.user = get_user_by_id(g.user["id"])
+    elif g.user:
         g.lang = g.user["lang"]
-    elif "tmp_lang" in session:
-        g.lang = session["tmp_lang"]
+    elif session.get("lang") in AVAILABLE_LANGS:
+        g.lang = session["lang"]
     else:
-        g.lang = "en"
+        browser_langs: LanguageAccept = request.accept_languages
+        g.lang = browser_langs.best_match(AVAILABLE_LANGS) or "en"
+
     session["lang"] = g.lang
 
 
