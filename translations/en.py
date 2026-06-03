@@ -170,6 +170,12 @@ translations = {
     "Username": "Username",
     "Created": "Created",
     "Last login": "Last login",
+    "admin_total_users": "Users",
+    "admin_total_plants": "Plants",
+    "admin_search": "Search users…",
+    "admin_no_results": "No users match your search.",
+    "admin_active_today": "Active today",
+    "admin_never": "Never",
 
     # ────────── help section ──────────
     "Help": "Help",

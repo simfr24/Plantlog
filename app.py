@@ -497,28 +497,34 @@ def admin_users():
     if g.user["id"] != 1:
         abort(403)
 
+    today = date.today().isoformat()                    # 'YYYY-MM-DD'
+
     # ── per-user rows ────────────────────────────────────────────────
     all_users = get_all_users()
     user_data = []
     for user in all_users:
         plants = load_data(user["id"])
+        last_login = user["last_login"]
         user_data.append({
             "id":          user["id"],
             "username":    user["username"],
             "plant_count": len(plants),
             "created_at":  user["created_at"],
-            "last_login":  user["last_login"],
+            "last_login":  last_login,
+            "active_today": bool(last_login) and last_login[:10] == today,
         })
 
-    # ── today’s unique-login count ───────────────────────────────────
-    today = date.today().isoformat()                    # 'YYYY-MM-DD'
-    row   = get_daily_unique_logins(today, today)       # [(day, cnt)] or []
+    # ── headline stats ───────────────────────────────────────────────
+    row          = get_daily_unique_logins(today, today)   # [(day, cnt)] or []
     today_logins = row[0][1] if row else 0
+    total_plants = sum(u["plant_count"] for u in user_data)
 
     return render_template(
         "admin_users.html",
         users=user_data,
-        today_logins=today_logins,       # ↰ pass to template
+        today_logins=today_logins,
+        total_users=len(user_data),
+        total_plants=total_plants,
         lang=g.lang,
         t=get_translations(g.lang),
     )

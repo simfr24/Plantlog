@@ -170,6 +170,12 @@ translations = {
     "Username": "Имя пользователя",
     "Created": "Создан",
     "Last login": "Последний вход",
+    "admin_total_users": "Пользователи",
+    "admin_total_plants": "Растения",
+    "admin_search": "Поиск пользователей…",
+    "admin_no_results": "Нет пользователей по вашему запросу.",
+    "admin_active_today": "Активны сегодня",
+    "admin_never": "Никогда",
 
     # ────────── help section ──────────
     "Help": "Помощь",

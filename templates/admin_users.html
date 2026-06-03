@@ -2,42 +2,228 @@
 {% block title %}{{ t['Admin'] }} – {{ t['Username'] }}s{% endblock %}
 
 {% block content %}
-<h1 class="mb-4">🌱 {{ t['Username'] }}s</h1>
+<style>
+  .admin-stats .stat-card {
+    border: none;
+    border-radius: 14px;
+    background: #fff;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+  }
+  .admin-stats .stat-icon {
+    width: 44px; height: 44px;
+    border-radius: 11px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.1rem;
+  }
+  .admin-stats .stat-value { font-size: 1.6rem; font-weight: 700; line-height: 1; }
+  .admin-stats .stat-label { font-size: 0.8rem; color: #6b7280; }
 
-<p class="mb-4">
-    <span class="badge bg-info">
-      {{ t.get('Logins today', 'Logins today') }}: {{ today_logins }}
-    </span>
-</p>
+  .admin-card { border: none; border-radius: 14px; box-shadow: 0 1px 3px rgba(0,0,0,0.06); }
 
-<table class="table table-striped">
-  <thead>
-    <tr>
-      <th>{{ t['ID'] }}</th>
-      <th>{{ t['Username'] }}</th>
-      <th>{{ t['Plants'] }}</th>
-      <th>{{ t.get('Created', 'Created') }}</th>
-      <th>{{ t.get('Last login', 'Last login') }}</th>
-      <th>🔗</th>
-    </tr>
-  </thead>
-  <tbody>
-    {% for user in users %}
-    <tr>
-      <td>{{ user.id }}</td>
-      <td>{{ user.username }}</td>
-      <td>{{ user.plant_count }}</td>
-      <td>{{ user.created_at[:10] }}</td>
-      <td>{{ user.last_login[:-9] if user.last_login else '—' }}</td>
-      <td>
-        <a href="{{ url_for('public_view', username=user.username) }}"
-           target="_blank"
-           class="btn btn-outline-primary btn-sm">
-          {{ t['Public page'] }}
-        </a>
-      </td>
-    </tr>
-    {% endfor %}
-  </tbody>
-</table>
+  #userTable thead th {
+    cursor: pointer;
+    user-select: none;
+    white-space: nowrap;
+    font-size: 0.78rem;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    color: #6b7280;
+    border-bottom: 2px solid #eef1f4;
+  }
+  #userTable thead th:hover { color: #2a6b4a; }
+  #userTable thead th .sort-ind { opacity: 0.35; font-size: 0.7rem; margin-left: 0.25rem; }
+  #userTable thead th.sort-asc .sort-ind,
+  #userTable thead th.sort-desc .sort-ind { opacity: 1; color: #2a6b4a; }
+  #userTable td { vertical-align: middle; }
+  #userTable tbody tr { transition: background 0.1s; }
+  #userTable tbody tr:hover { background: #f6faf8; }
+
+  .uname { font-weight: 600; color: #1e2d3d; }
+  .uid-badge { font-variant-numeric: tabular-nums; }
+
+  /* ── Mobile: turn rows into cards ── */
+  @media (max-width: 767.98px) {
+    #userTable thead { display: none; }
+    #userTable, #userTable tbody, #userTable tr, #userTable td { display: block; width: 100%; }
+    #userTable tr {
+      border: 1px solid #eef1f4;
+      border-radius: 12px;
+      padding: 0.5rem 0.85rem;
+      margin-bottom: 0.75rem;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+    }
+    #userTable tbody tr:hover { background: #fff; }
+    #userTable td {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 1rem;
+      padding: 0.35rem 0;
+      border: none;
+    }
+    #userTable td::before {
+      content: attr(data-label);
+      font-size: 0.72rem;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+      color: #9aa5b1;
+      font-weight: 600;
+    }
+    #userTable td.cell-actions { justify-content: flex-end; }
+    #userTable td.cell-actions::before { content: none; }
+  }
+</style>
+
+<div class="d-flex align-items-center flex-wrap gap-2 mb-4">
+  <h1 class="mb-0"><i class="fas fa-users-gear me-2 text-secondary"></i>{{ t['Admin'] }}</h1>
+</div>
+
+{# ── Stat cards ── #}
+<div class="row g-3 mb-4 admin-stats">
+  <div class="col-12 col-sm-4">
+    <div class="card stat-card h-100">
+      <div class="card-body d-flex align-items-center gap-3 py-3">
+        <div class="stat-icon" style="background:#e6f2ec;color:#2a6b4a;"><i class="fas fa-users"></i></div>
+        <div>
+          <div class="stat-value">{{ total_users }}</div>
+          <div class="stat-label">{{ t['admin_total_users'] }}</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-12 col-sm-4">
+    <div class="card stat-card h-100">
+      <div class="card-body d-flex align-items-center gap-3 py-3">
+        <div class="stat-icon" style="background:#eaf4ee;color:#4a8f68;"><i class="fas fa-seedling"></i></div>
+        <div>
+          <div class="stat-value">{{ total_plants }}</div>
+          <div class="stat-label">{{ t['admin_total_plants'] }}</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-12 col-sm-4">
+    <div class="card stat-card h-100">
+      <div class="card-body d-flex align-items-center gap-3 py-3">
+        <div class="stat-icon" style="background:#e7f1f6;color:#2e9dbf;"><i class="fas fa-right-to-bracket"></i></div>
+        <div>
+          <div class="stat-value">{{ today_logins }}</div>
+          <div class="stat-label">{{ t.get('Logins today', 'Logins today') }}</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+{# ── Users table ── #}
+<div class="card admin-card">
+  <div class="card-body">
+    <div class="input-group mb-3" style="max-width:360px;">
+      <span class="input-group-text bg-white"><i class="fas fa-search text-muted"></i></span>
+      <input type="search" id="userSearch" class="form-control" placeholder="{{ t['admin_search'] }}"
+             autocomplete="off" aria-label="{{ t['admin_search'] }}">
+    </div>
+
+    <div class="table-responsive">
+      <table class="table align-middle mb-0" id="userTable">
+        <thead>
+          <tr>
+            <th data-type="num">{{ t['ID'] }}<span class="sort-ind">↕</span></th>
+            <th data-type="text">{{ t['Username'] }}<span class="sort-ind">↕</span></th>
+            <th data-type="num">{{ t['Plants'] }}<span class="sort-ind">↕</span></th>
+            <th data-type="text">{{ t.get('Created', 'Created') }}<span class="sort-ind">↕</span></th>
+            <th data-type="text">{{ t.get('Last login', 'Last login') }}<span class="sort-ind">↕</span></th>
+            <th class="text-end"></th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for user in users %}
+          <tr>
+            <td data-label="{{ t['ID'] }}" data-sort="{{ user.id }}">
+              <span class="badge bg-light text-secondary uid-badge">#{{ user.id }}</span>
+            </td>
+            <td data-label="{{ t['Username'] }}" data-sort="{{ user.username|lower }}">
+              <span class="uname">{{ user.username }}</span>
+              {% if user.active_today %}
+              <span class="badge bg-success ms-1 fw-normal"><i class="fas fa-circle me-1" style="font-size:.5rem"></i>{{ t['admin_active_today'] }}</span>
+              {% endif %}
+            </td>
+            <td data-label="{{ t['Plants'] }}" data-sort="{{ user.plant_count }}">
+              <i class="fas fa-seedling text-muted me-1 d-none d-md-inline"></i>{{ user.plant_count }}
+            </td>
+            <td data-label="{{ t.get('Created', 'Created') }}" data-sort="{{ user.created_at }}">
+              {{ user.created_at[:10] }}
+            </td>
+            <td data-label="{{ t.get('Last login', 'Last login') }}" data-sort="{{ user.last_login or '' }}">
+              {{ user.last_login[:16] if user.last_login else t['admin_never'] }}
+            </td>
+            <td class="cell-actions text-end">
+              <a href="{{ url_for('public_view', username=user.username) }}"
+                 target="_blank" rel="noopener"
+                 class="btn btn-outline-primary btn-sm">
+                <i class="fas fa-up-right-from-square me-1"></i>{{ t['Public page'] }}
+              </a>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    <p id="noResults" class="text-muted text-center py-4 mb-0 d-none">{{ t['admin_no_results'] }}</p>
+  </div>
+</div>
+
+<script>
+(function() {
+  const table  = document.getElementById('userTable');
+  const tbody  = table.querySelector('tbody');
+  const search = document.getElementById('userSearch');
+  const noRes  = document.getElementById('noResults');
+  const headers = Array.from(table.querySelectorAll('thead th'));
+
+  // ── Search (filters by username + id) ──
+  function applyFilter() {
+    const q = search.value.trim().toLowerCase();
+    let visible = 0;
+    tbody.querySelectorAll('tr').forEach(function(tr) {
+      const uname = tr.children[1].getAttribute('data-sort') || '';
+      const uid   = tr.children[0].getAttribute('data-sort') || '';
+      const match = !q || uname.includes(q) || ('#' + uid).includes(q) || uid.includes(q);
+      tr.classList.toggle('d-none', !match);
+      if (match) visible++;
+    });
+    noRes.classList.toggle('d-none', visible !== 0);
+  }
+  search.addEventListener('input', applyFilter);
+
+  // ── Sorting ──
+  function sortBy(colIndex, type, asc) {
+    const rows = Array.from(tbody.querySelectorAll('tr'));
+    rows.sort(function(a, b) {
+      let av = a.children[colIndex].getAttribute('data-sort') || '';
+      let bv = b.children[colIndex].getAttribute('data-sort') || '';
+      if (type === 'num') { av = parseFloat(av) || 0; bv = parseFloat(bv) || 0; }
+      if (av < bv) return asc ? -1 : 1;
+      if (av > bv) return asc ? 1 : -1;
+      return 0;
+    });
+    rows.forEach(function(r) { tbody.appendChild(r); });
+  }
+
+  headers.forEach(function(th, i) {
+    if (!th.dataset.type) return;  // skip the actions column
+    th.addEventListener('click', function() {
+      const asc = !(th.classList.contains('sort-asc'));
+      headers.forEach(function(h) {
+        h.classList.remove('sort-asc', 'sort-desc');
+        const ind = h.querySelector('.sort-ind');
+        if (ind) ind.textContent = '↕';
+      });
+      th.classList.add(asc ? 'sort-asc' : 'sort-desc');
+      th.querySelector('.sort-ind').textContent = asc ? '↑' : '↓';
+      sortBy(i, th.dataset.type, asc);
+    });
+  });
+})();
+</script>
 {% endblock %}
