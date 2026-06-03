@@ -197,19 +197,46 @@
 
     // ── Share buttons: native share sheet where available, copy-link fallback ──
     var SHARE_COPIED_LABEL = {{ t['share_copied']|tojson }};
+    function flashCopied(btn) {
+      var original = btn.innerHTML;
+      btn.innerHTML = '<i class="fas fa-check me-1"></i>' + SHARE_COPIED_LABEL;
+      setTimeout(function() { btn.innerHTML = original; }, 2000);
+    }
+    function legacyCopy(text) {
+      // Works without a secure context (e.g. plain http on a LAN IP).
+      var ta = document.createElement('textarea');
+      ta.value = text;
+      ta.setAttribute('readonly', '');
+      ta.style.position = 'fixed';
+      ta.style.opacity = '0';
+      document.body.appendChild(ta);
+      ta.select();
+      var ok = false;
+      try { ok = document.execCommand('copy'); } catch (e) {}
+      document.body.removeChild(ta);
+      return ok;
+    }
     document.querySelectorAll('.share-btn').forEach(function(btn) {
       btn.addEventListener('click', function() {
-        var url = btn.dataset.shareUrl;
+        // Resolve against the URL the browser actually loaded, so the shared
+        // link uses the real public host even behind a reverse proxy (the
+        // server's own idea of its host can be wrong, e.g. localhost).
+        var url = new URL(btn.dataset.shareUrl, window.location.href).href;
         var title = btn.dataset.shareTitle || document.title;
+        // 1. Native share sheet (mobile, HTTPS) — the OS picker.
         if (navigator.share) {
           navigator.share({ title: title, url: url }).catch(function() {});
           return;
         }
-        navigator.clipboard.writeText(url).then(function() {
-          var original = btn.innerHTML;
-          btn.innerHTML = '<i class="fas fa-check me-1"></i>' + SHARE_COPIED_LABEL;
-          setTimeout(function() { btn.innerHTML = original; }, 2000);
-        });
+        // 2. Async clipboard (desktop, HTTPS).
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(url)
+            .then(function() { flashCopied(btn); })
+            .catch(function() { if (legacyCopy(url)) flashCopied(btn); else prompt('', url); });
+          return;
+        }
+        // 3. Legacy copy / last-resort prompt (insecure contexts).
+        if (legacyCopy(url)) flashCopied(btn); else prompt('', url);
       });
     });
   </script>

@@ -10,7 +10,7 @@
   <div class="d-flex gap-2">
     {% if app_config.features.public_profiles %}
     <button type="button" class="btn btn-outline-success btn-sm share-btn"
-            data-share-url="{{ url_for('public_view', username=g.user.username, _external=True) }}"
+            data-share-url="{{ url_for('public_view', username=g.user.username) }}"
             data-share-title="{{ g.user.username }} – Plantlog">
       <i class="fas fa-share-nodes me-1"></i>{{ t['share_public_profile'] }}
     </button>

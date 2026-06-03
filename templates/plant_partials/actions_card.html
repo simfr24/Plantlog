@@ -37,7 +37,7 @@
       </button>
       {% if app_config.features.public_profiles %}
       <button type="button" class="btn btn-outline-success share-btn"
-              data-share-url="{{ url_for('public_view_plant', idx=plant.id, _external=True) }}"
+              data-share-url="{{ url_for('public_view_plant', idx=plant.id) }}"
               data-share-title="{{ plant.common or plant.latin or t['share_plant'] }} – Plantlog">
         <i class="fas fa-share-nodes me-1"></i> {{ t['Share'] }}
       </button>

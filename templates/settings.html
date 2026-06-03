@@ -49,12 +49,12 @@
       <div id="collapseProfile" class="accordion-collapse collapse" data-bs-parent="#settingsAccordion">
         <div class="accordion-body">
           <p class="small text-muted mb-2">{{ t['settings_profile_desc'] }}</p>
-          {% set profile_url = url_for('public_view', username=g.user.username, _external=True) %}
+          {% set profile_path = url_for('public_view', username=g.user.username) %}
           <div class="input-group" style="max-width:480px;">
-            <input type="text" class="form-control font-monospace" id="profileShareUrl"
-                   value="{{ profile_url }}" readonly autocomplete="off">
+            <input type="text" class="form-control font-monospace profile-share-url"
+                   data-path="{{ profile_path }}" readonly autocomplete="off">
             <button class="btn btn-outline-primary share-btn" type="button"
-                    data-share-url="{{ profile_url }}"
+                    data-share-url="{{ profile_path }}"
                     data-share-title="{{ g.user.username }} – Plantlog">
               <i class="fas fa-share-nodes me-1"></i>{{ t['Share'] }}
             </button>
@@ -264,6 +264,11 @@ WantedBy=default.target</pre>
 
 <script>
 document.querySelectorAll('.host-url').forEach(el => { el.textContent = window.location.origin; });
+// Build the public-profile URL from the address the browser loaded, so it is
+// correct even behind a reverse proxy that hides the real host from Flask.
+document.querySelectorAll('.profile-share-url').forEach(el => {
+  el.value = new URL(el.dataset.path, window.location.href).href;
+});
 
 const copyBtn = document.getElementById('copyKeyBtn');
 if (copyBtn) {
