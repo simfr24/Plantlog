@@ -20,7 +20,7 @@
       </div>
       <div class="modal-footer border-0 pt-0">
         <form method="post"
-              action="{{ url_for('delete_stage', action_id=action_id, lang=lang) }}">
+              action="{{ url_for('delete_stage', action_id=action_id) }}">
           <button type="button" class="btn btn-sm btn-outline-secondary"
                   data-bs-dismiss="modal">{{ t['Cancel'] }}</button>
           <button type="submit" class="btn btn-sm btn-danger">{{ t['Delete'] }}</button>
@@ -137,7 +137,7 @@
       {{ t['Edit stage for'] }}
       <span class="plant-name">{{ form.common }}</span>
     </h1>
-    <a href="{{ url_for('index', lang=lang) }}" class="form-back">
+    <a href="{{ url_for('index') }}" class="form-back">
       <i class="fas fa-arrow-left me-1"></i>{{ t['Back to dashboard'] }}
     </a>
   </div>
@@ -149,7 +149,7 @@
   {% endif %}
 
   <form method="post"
-        action="{{ url_for('edit_stage', action_id=action_id, lang=lang) }}">
+        action="{{ url_for('edit_stage', action_id=action_id) }}">
     <input type="hidden" name="action_id" value="{{ action_id }}">
 
     <div class="form-section">

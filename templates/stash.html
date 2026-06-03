@@ -8,7 +8,7 @@
       {{ t['stash_title'] if 'stash_title' in t else 'Seed Stash' }}
     </h2>
     <span class="badge bg-secondary ms-2">{{ (ordered|length) + (stashed|length) }}</span>
-    <a href="{{ url_for('index', lang=lang) }}" class="btn btn-outline-secondary btn-sm ms-auto">
+    <a href="{{ url_for('index') }}" class="btn btn-outline-secondary btn-sm ms-auto">
       <i class="fas fa-arrow-left me-1"></i>{{ t['Back to dashboard'] }}
     </a>
   </div>
@@ -27,7 +27,7 @@
     <div class="list-group-item d-flex align-items-center gap-3 py-2">
       <i class="fas fa-truck text-warning"></i>
       <div class="flex-grow-1">
-        <a href="{{ url_for('view_plant', idx=p.id, lang=lang) }}"
+        <a href="{{ url_for('view_plant', idx=p.id) }}"
            class="fw-semibold text-decoration-none text-dark">{{ p.common | t_content }}</a>
         {% if p.variety %}<small class="text-muted fst-italic"> '{{ p.variety }}'</small>{% endif %}
         <small class="text-muted fst-italic ms-1">({{ p.latin }})</small>
@@ -48,7 +48,7 @@
         {% else %}
           <small class="text-muted text-nowrap">{{ (ev.start if ev else '?') }}</small>
         {% endif %}
-        <form method="post" action="{{ url_for('receive_plant', idx=p.id, lang=lang) }}" class="d-inline">
+        <form method="post" action="{{ url_for('receive_plant', idx=p.id) }}" class="d-inline">
           <button type="submit" class="btn btn-outline-warning btn-sm text-nowrap">
             <i class="fas fa-box me-1"></i>{{ t['stash_mark_received'] if 'stash_mark_received' in t else 'Mark as received' }}
           </button>
@@ -81,7 +81,7 @@
     <div class="list-group-item d-flex align-items-center gap-3 py-2">
       <i class="fas fa-box text-secondary"></i>
       <div class="flex-grow-1">
-        <a href="{{ url_for('view_plant', idx=p.id, lang=lang) }}"
+        <a href="{{ url_for('view_plant', idx=p.id) }}"
            class="fw-semibold text-decoration-none text-dark">{{ p.common | t_content }}</a>
         {% if p.variety %}<small class="text-muted fst-italic"> '{{ p.variety }}'</small>{% endif %}
         <small class="text-muted fst-italic ms-1">({{ p.latin }})</small>
@@ -94,7 +94,7 @@
       </div>
       <div class="d-flex align-items-center gap-2 flex-shrink-0">
         <small class="text-muted text-nowrap">{{ ev.start if ev else '?' }}</small>
-        <form method="post" action="{{ url_for('plant_from_stash', idx=p.id, lang=lang) }}" class="d-inline">
+        <form method="post" action="{{ url_for('plant_from_stash', idx=p.id) }}" class="d-inline">
           <button type="submit" class="btn btn-outline-success btn-sm text-nowrap">
             <i class="fas fa-seedling me-1"></i>{{ t['stash_sow_btn'] if 'stash_sow_btn' in t else 'Plant now' }}
           </button>
@@ -110,11 +110,11 @@
   {% endif %}
 
   <div class="mt-2 d-flex gap-2">
-    <a href="{{ url_for('add_plant', lang=lang, default_event='order') }}"
+    <a href="{{ url_for('add_plant', default_event='order') }}"
        class="btn btn-outline-warning btn-sm">
       <i class="fas fa-truck me-1"></i>{{ t['stash_order_btn'] if 'stash_order_btn' in t else 'New order' }}
     </a>
-    <a href="{{ url_for('add_plant', lang=lang, default_event='acquire') }}"
+    <a href="{{ url_for('add_plant', default_event='acquire') }}"
        class="btn btn-outline-secondary btn-sm">
       <i class="fas fa-plus me-1"></i>{{ t['stash_add_btn'] if 'stash_add_btn' in t else 'Add to stash' }}
     </a>

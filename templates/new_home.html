@@ -437,7 +437,7 @@
     {% endif %}
   </h1>
   <div class="view-switcher">
-    <a href="{{ url_for('list_view', lang=lang) }}">
+    <a href="{{ url_for('list_view') }}">
       <i class="fas fa-list me-1"></i>{{ t['List view'] }}
     </a>
   </div>
@@ -691,12 +691,12 @@
                     title="{{ t['Log watering'] }}"><i class="fas fa-droplet"></i></button>
             <button class="tile-action quick-log-btn" data-plant-id="{{ idx }}" data-event="fertilize"
                     title="{{ t['Log fertilization'] }}"><i class="fas fa-bottle-water"></i></button>
-            <a href="{{ url_for('add_stage', idx=idx, lang=lang) }}" class="tile-action"
+            <a href="{{ url_for('add_stage', idx=idx) }}" class="tile-action"
                title="{{ t['Add stage'] }}"><i class="fas fa-plus"></i></a>
-            <a href="{{ url_for('view_plant', idx=idx, lang=lang) }}" class="tile-action primary"
+            <a href="{{ url_for('view_plant', idx=idx) }}" class="tile-action primary"
                title="{{ t['Plant details'] }}"><i class="fas fa-leaf"></i></a>
             {% else %}
-            <a href="{{ url_for('public_view_plant', idx=idx, lang=lang) }}" class="tile-action primary"
+            <a href="{{ url_for('public_view_plant', idx=idx) }}" class="tile-action primary"
                title="{{ t['Plant details'] }}"><i class="fas fa-leaf"></i></a>
             {% endif %}
           </div>
@@ -797,9 +797,9 @@
   <div class="tile-bar" style="background: {{ bar_color }}"></div>
 
   {% if not public_view %}
-  <a href="{{ url_for('view_plant', idx=idx, lang=lang) }}" class="tile-body-link">
+  <a href="{{ url_for('view_plant', idx=idx) }}" class="tile-body-link">
   {% else %}
-  <a href="{{ url_for('public_view_plant', idx=idx, lang=lang) }}" class="tile-body-link">
+  <a href="{{ url_for('public_view_plant', idx=idx) }}" class="tile-body-link">
   {% endif %}
   <div class="tile-body">
     <div class="tile-name">
@@ -837,7 +837,7 @@
         <i class="fas fa-flag-checkered"></i>
       </button>
       {% endif %}
-      <a href="{{ url_for('add_stage', idx=idx, lang=lang) }}" class="tile-action"
+      <a href="{{ url_for('add_stage', idx=idx) }}" class="tile-action"
          title="{{ t['Add stage'] }}">
         <i class="fas fa-plus"></i>
       </a>
@@ -859,12 +859,12 @@
 {% if stash_count or dead_count %}
 <div class="graveyard-link" style="display:flex; justify-content:center; gap:1.5rem; flex-wrap:wrap;">
   {% if stash_count %}
-  <a href="{{ url_for('stash', lang=lang) }}">
+  <a href="{{ url_for('stash') }}">
     <i class="fas fa-box me-1"></i>{{ stash_count }} {{ t['stash_footer'] if 'stash_footer' in t else 'lots in the stash' }}
   </a>
   {% endif %}
   {% if dead_count %}
-  <a href="{{ url_for('graveyard', lang=lang) }}">
+  <a href="{{ url_for('graveyard') }}">
     <i class="fas fa-skull me-1"></i>{{ dead_count }} {{ t['dead_plants_footer'] }}
   </a>
   {% endif %}

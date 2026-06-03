@@ -49,6 +49,19 @@
     .progress-bar.bg-warning        { background-color: #c08a18 !important; }
     .progress-bar.bg-info           { background-color: #2e9dbf !important; }
 
+    /* ── Language flags ── */
+    /* Fixed box + object-fit so flags of differing aspect ratios (2:1 vs 3:2)
+       share the same footprint and the labels next to them line up. */
+    .lang-flag {
+      width: 1.33em;
+      height: 1em;
+      object-fit: cover;
+      border-radius: 2px;
+      box-shadow: 0 0 0 1px rgba(0,0,0,0.12);
+      flex: 0 0 auto;
+      vertical-align: -0.15em;
+    }
+
     /* Markdown notes rendering */
     .md-notes p { margin-bottom: 0.4rem; }
     .md-notes p:last-child { margin-bottom: 0; }
@@ -99,13 +112,14 @@
 
         <ul class="navbar-nav gap-1">
           <li class="nav-item dropdown">
-            <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
-              <i class="fa-solid fa-language me-1"></i>{{ t['Language'] }}
+            {% set _cur = (languages | selectattr('code', 'equalto', lang) | list | first) or languages[0] %}
+            <a class="nav-link dropdown-toggle d-flex align-items-center gap-2" href="#" role="button" data-bs-toggle="dropdown">
+              <img src="{{ url_for('static', filename='flags/' + _cur.flag) }}" alt="" class="lang-flag">{{ t['Language'] }}
             </a>
             <ul class="dropdown-menu dropdown-menu-end">
-              <li><a class="dropdown-item" href="{{ request.path }}?lang=en">English</a></li>
-              <li><a class="dropdown-item" href="{{ request.path }}?lang=fr">Français</a></li>
-              <li><a class="dropdown-item" href="{{ request.path }}?lang=ru">Русский</a></li>
+              {% for l in languages %}
+              <li><a class="dropdown-item d-flex align-items-center gap-2" href="{{ request.path }}?lang={{ l.code }}"><img src="{{ url_for('static', filename='flags/' + l.flag) }}" alt="" class="lang-flag"> {{ l.name }}</a></li>
+              {% endfor %}
             </ul>
           </li>
           <li class="nav-item">
@@ -179,6 +193,24 @@
         // unknown currency code — fall back to plain number + code
         el.textContent = new Intl.NumberFormat(undefined, {minimumFractionDigits: 0, maximumFractionDigits: 2}).format(amount) + (currency ? ' ' + currency : '');
       }
+    });
+
+    // ── Share buttons: native share sheet where available, copy-link fallback ──
+    var SHARE_COPIED_LABEL = {{ t['share_copied']|tojson }};
+    document.querySelectorAll('.share-btn').forEach(function(btn) {
+      btn.addEventListener('click', function() {
+        var url = btn.dataset.shareUrl;
+        var title = btn.dataset.shareTitle || document.title;
+        if (navigator.share) {
+          navigator.share({ title: title, url: url }).catch(function() {});
+          return;
+        }
+        navigator.clipboard.writeText(url).then(function() {
+          var original = btn.innerHTML;
+          btn.innerHTML = '<i class="fas fa-check me-1"></i>' + SHARE_COPIED_LABEL;
+          setTimeout(function() { btn.innerHTML = original; }, 2000);
+        });
+      });
     });
   </script>
 </body>

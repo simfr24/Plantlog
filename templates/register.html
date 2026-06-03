@@ -19,18 +19,15 @@
                 <input name="password" type="password" class="form-control" required>
             </div>
             <div class="mb-3">
-                <label class="form-label">{{ t['preferred_language'] }}</label>
-                <select name="lang" class="form-select">
-                    <option value="en" {% if lang == 'en' %}selected{% endif %}>
-                        English
-                    </option>
-                    <option value="fr" {% if lang == 'fr' %}selected{% endif %}>
-                        Français
-                    </option>
-                    <option value="ru" {% if lang == 'ru' %}selected{% endif %}>
-                        Русский
-                    </option>
-                </select>
+                <label class="form-label d-block">{{ t['preferred_language'] }}</label>
+                <div class="btn-group flex-wrap" role="group">
+                    {% for l in languages %}
+                    <input type="radio" class="btn-check" name="lang" id="lang-{{ l.code }}" value="{{ l.code }}" {% if lang == l.code %}checked{% endif %} autocomplete="off">
+                    <label class="btn btn-outline-secondary d-flex align-items-center gap-2" for="lang-{{ l.code }}">
+                        <img src="{{ url_for('static', filename='flags/' + l.flag) }}" alt="" class="lang-flag">{{ l.name }}
+                    </label>
+                    {% endfor %}
+                </div>
             </div>
             <button class="btn btn-success w-100">{{ t['create_account'] }}</button>
             <p class="mt-2 text-center"><a href="{{url_for('login')}}">{{ t['i_have_an_account'] }}</a></p>

@@ -720,7 +720,23 @@ def group_by_latin(plants: List[Dict[str, Any]]) -> List[Tuple[str, List[Dict[st
 # Ancillary helpers (translations, forms…) – unchanged from previous version
 ###############################################################################
 
-AVAILABLE_LANGS = ["en", "fr", "ru"]
+# ─────────────────────────────────────────────────────────────────────────────
+# Languages — single source of truth.
+# To add a language: drop translations/<code>.py, copy the flag SVG into
+# static/flags/, and add one entry here. Everything else (selectors, request
+# resolution, flag display) is derived from this list.
+# ─────────────────────────────────────────────────────────────────────────────
+LANGUAGES = [
+    {"code": "en", "name": "English",  "flag": "gb.svg"},
+    {"code": "fr", "name": "Français", "flag": "fr.svg"},
+    {"code": "ru", "name": "Русский",  "flag": "ru.svg"},
+    {"code": "no", "name": "Norsk",    "flag": "no.svg"},
+]
+
+AVAILABLE_LANGS = [lang["code"] for lang in LANGUAGES]
+
+# code -> flag filename, for quick lookups (e.g. the active language).
+LANG_FLAGS = {lang["code"]: lang["flag"] for lang in LANGUAGES}
 
 
 def duration_to_days(val: int, unit: str) -> int:

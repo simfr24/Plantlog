@@ -22,9 +22,11 @@ from types import SimpleNamespace
 import flask
 
 from py.db import get_conn
+from py.helpers import AVAILABLE_LANGS
 
-# Languages the UI (and therefore translation targets) supports.
-SUPPORTED_LANGS = {"en", "fr", "ru"}
+# Languages the UI (and therefore translation targets) supports. Derived from
+# the single language list so adding a language needs no change here.
+SUPPORTED_LANGS = set(AVAILABLE_LANGS)
 
 # Don't bother translating trivially short strings (numbers, single tokens).
 _MIN_LEN = 2

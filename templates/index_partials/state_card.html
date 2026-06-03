@@ -204,7 +204,7 @@
                         {% endif %}
                       </div>
                       {% if not public_view %}
-                      <a href="{{ url_for('edit_stage', action_id=h.id, lang=lang) }}"
+                      <a href="{{ url_for('edit_stage', action_id=h.id) }}"
                          class="text-secondary ms-2 align-top" title="{{ t['Edit stage'] }}">
                         <i class="fas fa-edit" style="font-size:0.9rem;"></i>
                       </a>
@@ -230,16 +230,16 @@
                     {{ t['End of flowering'] if p_state == 'Flowering' else t['End of fruiting'] }}
                   </button>
                   {% endif %}
-                  <a href="{{ url_for('add_stage', idx=idx, lang=lang) }}"
+                  <a href="{{ url_for('add_stage', idx=idx) }}"
                      class="btn btn-outline-secondary btn-sm">
                     <i class="fas fa-plus-circle me-1"></i> {{ t['Add stage'] }}
                   </a>
-                  <a href="{{ url_for('view_plant', idx=idx, lang=lang) }}"
+                  <a href="{{ url_for('view_plant', idx=idx) }}"
                      class="btn btn-outline-success btn-sm">
                     <i class="fas fa-leaf me-1"></i> {{ t['Plant details'] }}
                   </a>
                   {% else %}
-                  <a href="{{ url_for('public_view_plant', idx=idx, lang=lang) }}"
+                  <a href="{{ url_for('public_view_plant', idx=idx) }}"
                      class="btn btn-outline-success btn-sm">
                     <i class="fas fa-leaf me-1"></i> {{ t['Plant details'] }}
                   </a>
@@ -417,7 +417,7 @@
                       {% endif %}
                     </div>
                     {% if not public_view %}
-                    <a href="{{ url_for('edit_stage', action_id=h.id, lang=lang) }}"
+                    <a href="{{ url_for('edit_stage', action_id=h.id) }}"
                        class="text-secondary ms-2 align-top" title="{{ t['Edit stage'] }}">
                       <i class="fas fa-edit" style="font-size:0.9rem;"></i>
                     </a>
@@ -446,16 +446,16 @@
                   {{ t['End of flowering'] if p_state == 'Flowering' else t['End of fruiting'] }}
                 </button>
                 {% endif %}
-                <a href="{{ url_for('add_stage', idx=idx, lang=lang) }}"
+                <a href="{{ url_for('add_stage', idx=idx) }}"
                    class="btn btn-outline-secondary btn-sm">
                   <i class="fas fa-plus-circle me-1"></i> {{ t['Add stage'] }}
                 </a>
-                <a href="{{ url_for('view_plant', idx=idx, lang=lang) }}"
+                <a href="{{ url_for('view_plant', idx=idx) }}"
                    class="btn btn-outline-success btn-sm">
                   <i class="fas fa-leaf me-1"></i> {{ t['Plant details'] }}
                 </a>
                 {% else %}
-                <a href="{{ url_for('public_view_plant', idx=idx, lang=lang) }}"
+                <a href="{{ url_for('public_view_plant', idx=idx) }}"
                    class="btn btn-outline-success btn-sm">
                   <i class="fas fa-leaf me-1"></i> {{ t['Plant details'] }}
                 </a>

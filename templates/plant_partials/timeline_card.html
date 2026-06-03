@@ -65,7 +65,7 @@
             {% endif %}
           </div>
           {% if not public_view %}
-          <a href="{{ url_for('edit_stage', action_id=h.id, lang=lang) }}" class="text-secondary ms-2 timeline-edit" title="{{ t['Edit stage'] }}">
+          <a href="{{ url_for('edit_stage', action_id=h.id) }}" class="text-secondary ms-2 timeline-edit" title="{{ t['Edit stage'] }}">
             <i class="fas fa-edit"></i>
           </a>
           {% endif %}

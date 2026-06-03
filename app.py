@@ -14,6 +14,7 @@ import os
 from datetime import date
 from functools import wraps
 import json
+from urllib.parse import urlencode
 import markdown as _md
 import PIL.Image
 
@@ -65,6 +66,8 @@ from py.helpers import (
     process_delete_action,
     form_keys_for,
     # misc utilities
+    LANGUAGES,
+    AVAILABLE_LANGS,
     get_translations,
     duration_to_days,
     dateadd,
@@ -205,8 +208,10 @@ def inject_custom_config():
     """Make custom configuration available in templates."""
     return dict(app_config=CONFIG)
 
-AVAILABLE_LANGS = ["en", "fr", "ru"]
-
+@app.context_processor
+def inject_languages():
+    """Expose the language list so selectors can be rendered from one source."""
+    return dict(languages=LANGUAGES)
 
 @app.template_filter("todate")
 def todate(value):
@@ -243,17 +248,26 @@ def load_logged_in_user_and_language():
 
     lang_param = request.args.get("lang")
 
-    # Resolve the active language with a clear precedence so an explicit choice
-    # sticks instead of being overwritten by browser detection on every request:
-    #   1. an explicit ?lang= choice always wins and is persisted,
-    #   2. logged-in users follow their saved account preference,
-    #   3. returning visitors keep their session choice (no re-detection),
-    #   4. first-time visitors are detected once from the browser, then remembered.
+    # A ?lang= in the URL is a *temporary*, manual override: it is remembered for
+    # this browser session only and never touches the account preference. The
+    # permanent language lives on the account and is changed from Settings.
+    # We store the choice and immediately redirect to the same URL without the
+    # param, so it never lingers in the address bar.
     if lang_param in AVAILABLE_LANGS:
-        g.lang = lang_param
-        if g.user:
-            update_user_lang(g.user["id"], lang_param)
-            g.user = get_user_by_id(g.user["id"])
+        session["lang_override"] = lang_param
+        if request.method == "GET":
+            args = request.args.to_dict(flat=True)
+            args.pop("lang", None)
+            return redirect(request.path + ("?" + urlencode(args) if args else ""))
+
+    # Resolve the active language with a clear precedence:
+    #   1. a manual temporary override (the ?lang picker), for this session,
+    #   2. logged-in users follow their saved account preference,
+    #   3. returning visitors keep their detected session choice,
+    #   4. first-time visitors are detected once from the browser, then remembered.
+    override = session.get("lang_override")
+    if override in AVAILABLE_LANGS:
+        g.lang = override
     elif g.user:
         g.lang = g.user["lang"]
     elif session.get("lang") in AVAILABLE_LANGS:
@@ -404,7 +418,7 @@ def plant_from_stash(idx):
     plant_data = {k: plant.get(k) or "" for k in ("common", "latin", "location", "notes", "variety", "nickname", "rusticity")}
     plant_data["count"] = plant.get("count", 1)
     update_plant(plant["id"], plant_data, new_event=event)
-    return redirect(url_for("view_plant", idx=idx, lang=g.lang))
+    return redirect(url_for("view_plant", idx=idx))
 
 
 @app.route("/receive_plant/<int:idx>", methods=["POST"])
@@ -424,7 +438,7 @@ def receive_plant(idx):
     plant_data = {k: plant.get(k) or "" for k in ("common", "latin", "location", "notes", "variety", "nickname", "rusticity")}
     plant_data["count"] = plant.get("count", 1)
     update_plant(plant["id"], plant_data, new_event=event)
-    return redirect(url_for("stash", lang=g.lang))
+    return redirect(url_for("stash"))
 
 
 @app.route("/explode/<int:idx>", methods=["POST"])
@@ -435,14 +449,15 @@ def explode_plant_route(idx):
         abort(403)
     count = max(2, int(request.form.get("count", 2)))
     explode_plant(idx, count, g.user["id"])
-    return redirect(url_for("index", lang=g.lang))
+    return redirect(url_for("index"))
 
 
 @app.route("/u/<username>")
 def public_view(username):
     user = get_user_by_username(username) or abort(404)
-    lang = request.args.get("lang", user["lang"])
-    ctx  = build_dashboard_context(user, lang)
+    # Show the page in the viewer's resolved language; the owner's content is
+    # auto-translated (build_dashboard_context sets g.content_lang accordingly).
+    ctx  = build_dashboard_context(user, g.lang)
     return render_template("new_home.html", public_view=True, **ctx)
 
 @app.route("/plant/<int:idx>")
@@ -468,7 +483,7 @@ def public_view_plant(idx):
         abort(404)
 
     if g.user and plant.get("user_id") == g.user["id"]:
-        return redirect(url_for("view_plant", idx=idx, lang=g.lang))
+        return redirect(url_for("view_plant", idx=idx))
 
     # Content belongs to the plant's owner; use their language as the hint.
     owner = get_user_by_id(plant["user_id"])
@@ -537,7 +552,7 @@ def add_plant():
         errors, event = validate_form(form, translations, context="add")
         if not errors:
             new_id = save_new_plant(form, event, g.user["id"])
-            return redirect(url_for("view_plant", idx=new_id, lang=lang))
+            return redirect(url_for("view_plant", idx=new_id))
         # fall‑through: show form with errors
     else:
         form = get_empty_form()
@@ -576,7 +591,7 @@ def edit_plant(idx):
         errors, _ = validate_form(form, translations, context="edit")
         if not errors:
             update_plant(plant["id"], form, new_event=None)  # metadata‑only edit
-            return redirect(url_for("view_plant", idx=plant["id"], lang=lang))
+            return redirect(url_for("view_plant", idx=plant["id"]))
     else:
         form = get_form_from_plant(plant)
         errors = []
@@ -595,7 +610,7 @@ def edit_plant(idx):
 @login_required_for_plant
 def delete_plant(idx):
     process_delete_plant(idx, g.user["id"])
-    return redirect(url_for("index", lang=g.lang))
+    return redirect(url_for("index"))
 
 
 ###############################################################################
@@ -625,7 +640,7 @@ def add_stage(idx):
                 "count": plant.get("count", 1),
             }
             update_plant(plant["id"], plant_data, new_event=event)
-            return redirect(url_for("view_plant", idx=plant["id"], lang=lang))
+            return redirect(url_for("view_plant", idx=plant["id"]))
     else:
         form = get_empty_form()
         form.update({"common": plant["common"], "latin": plant["latin"]})
@@ -658,7 +673,7 @@ def edit_stage(action_id):
         errors, event = validate_form(form, translations, context="edit_stage")
         if not errors:
             update_action(action_id, event)
-            return redirect(url_for("view_plant", idx=ev["plant_id"], lang=lang))
+            return redirect(url_for("view_plant", idx=ev["plant_id"]))
     else:
         form = get_empty_form()
         form["status"] = ev["action"]
@@ -684,8 +699,8 @@ def delete_stage(action_id):
     plant_id = ev["plant_id"] if ev else None
     process_delete_action(action_id, g.user["id"])
     if plant_id:
-        return redirect(url_for("view_plant", idx=plant_id, lang=g.lang))
-    return redirect(url_for("index", lang=g.lang))
+        return redirect(url_for("view_plant", idx=plant_id))
+    return redirect(url_for("index"))
 
 
 ###############################################################################
@@ -717,6 +732,8 @@ def login():
         user = get_user_by_username(request.form["username"])
         if user and check_password_hash(user["pw_hash"], request.form["password"]):
             login_user(user)
+            # Drop any anonymous temporary override so the account preference wins.
+            session.pop("lang_override", None)
             return redirect(next_page)
         flash(t["Bad credentials"], "danger")
     return render_template("login.html", lang=g.lang, t=t)
@@ -953,7 +970,7 @@ def clone_plant(idx):
     errors, event = validate_form(form, translations, context="add")
     if not errors:
         save_new_plant(form, event, g.user["id"])
-    return redirect(url_for("index", lang=g.lang))
+    return redirect(url_for("index"))
 
 
 ###############################################################################
@@ -1015,7 +1032,7 @@ def settings():
 def settings_generate_key():
     raw = generate_api_key(g.user["id"])
     session["new_api_key"] = raw        # shown once via settings page
-    return redirect(url_for("settings", lang=g.lang))
+    return redirect(url_for("settings"))
 
 
 @app.route("/settings/revoke_key", methods=["POST"])
@@ -1023,7 +1040,7 @@ def settings_generate_key():
 def settings_revoke_key():
     revoke_api_key(g.user["id"])
     flash(get_translations(g.lang).get("settings_key_revoked", "API key revoked."), "info")
-    return redirect(url_for("settings", lang=g.lang))
+    return redirect(url_for("settings"))
 
 
 @app.route("/settings/reveal_key", methods=["POST"])
@@ -1039,7 +1056,23 @@ def settings_reveal_key():
             flash(t.get("settings_key_none", "No API key set."), "warning")
     else:
         flash(t.get("settings_wrong_password", "Wrong password."), "danger")
-    return redirect(url_for("settings", lang=g.lang))
+    return redirect(url_for("settings"))
+
+
+@app.route("/settings/language", methods=["POST"])
+@login_required
+def settings_language():
+    """Change the account's permanent language preference."""
+    lang = request.form.get("lang")
+    if lang in AVAILABLE_LANGS:
+        update_user_lang(g.user["id"], lang)
+        g.user = get_user_by_id(g.user["id"])
+        # A permanent choice supersedes any temporary ?lang override.
+        session.pop("lang_override", None)
+        session["lang"] = lang
+        g.lang = lang
+        flash(get_translations(lang).get("settings_lang_saved", "Language updated."), "success")
+    return redirect(url_for("settings"))
 
 
 ###############################################################################

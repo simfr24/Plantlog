@@ -19,7 +19,7 @@
     {% endif %}
   </h1>
   {% if not public_view %}
-  <a href="{{ url_for('index', lang=lang) }}" class="text-muted text-decoration-none small border rounded px-2 py-1 ms-auto">
+  <a href="{{ url_for('index') }}" class="text-muted text-decoration-none small border rounded px-2 py-1 ms-auto">
     <i class="fas fa-grip me-1"></i>{{ t['Garden view'] }}
   </a>
   {% endif %}
@@ -84,12 +84,12 @@
 {% if stash_count or dead_count %}
 <div class="text-center mt-4 mb-2 d-flex justify-content-center gap-4 flex-wrap">
   {% if stash_count %}
-  <a href="{{ url_for('stash', lang=lang) }}" class="text-muted text-decoration-none small">
+  <a href="{{ url_for('stash') }}" class="text-muted text-decoration-none small">
     <i class="fas fa-box me-1"></i>{{ stash_count }} {{ t['stash_footer'] if 'stash_footer' in t else 'lots in the stash' }}
   </a>
   {% endif %}
   {% if dead_count %}
-  <a href="{{ url_for('graveyard', lang=lang) }}" class="text-muted text-decoration-none small">
+  <a href="{{ url_for('graveyard') }}" class="text-muted text-decoration-none small">
     <i class="fas fa-skull me-1"></i>{{ dead_count }} {{ t['dead_plants_footer'] }}
   </a>
   {% endif %}

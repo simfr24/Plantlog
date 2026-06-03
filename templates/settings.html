@@ -14,18 +14,68 @@
 
   <div class="accordion shadow-sm" id="settingsAccordion">
 
-    {# ── API Key ── #}
+    {# ── Language (permanent account preference) ── #}
     <div class="accordion-item">
       <h2 class="accordion-header">
         <button class="accordion-button" type="button"
-                data-bs-toggle="collapse" data-bs-target="#collapseKey" aria-expanded="true">
+                data-bs-toggle="collapse" data-bs-target="#collapseLang" aria-expanded="true">
+          <i class="fas fa-language me-2 text-secondary"></i>{{ t['settings_language_title'] }}
+        </button>
+      </h2>
+      <div id="collapseLang" class="accordion-collapse collapse show" data-bs-parent="#settingsAccordion">
+        <div class="accordion-body">
+          <p class="small text-muted mb-2">{{ t['settings_language_desc'] }}</p>
+          <form method="post" action="{{ url_for('settings_language') }}" class="d-flex gap-2 flex-wrap">
+            {% for l in languages %}
+            <button type="submit" name="lang" value="{{ l.code }}"
+                    class="btn btn-sm d-flex align-items-center gap-2 {% if g.user.lang == l.code %}btn-primary{% else %}btn-outline-secondary{% endif %}">
+              <img src="{{ url_for('static', filename='flags/' + l.flag) }}" alt="" class="lang-flag">{{ l.name }}
+            </button>
+            {% endfor %}
+          </form>
+        </div>
+      </div>
+    </div>
+
+    {% if app_config.features.public_profiles %}
+    {# ── Public profile share ── #}
+    <div class="accordion-item">
+      <h2 class="accordion-header">
+        <button class="accordion-button collapsed" type="button"
+                data-bs-toggle="collapse" data-bs-target="#collapseProfile" aria-expanded="false">
+          <i class="fas fa-share-nodes me-2 text-secondary"></i>{{ t['settings_profile_title'] }}
+        </button>
+      </h2>
+      <div id="collapseProfile" class="accordion-collapse collapse" data-bs-parent="#settingsAccordion">
+        <div class="accordion-body">
+          <p class="small text-muted mb-2">{{ t['settings_profile_desc'] }}</p>
+          {% set profile_url = url_for('public_view', username=g.user.username, _external=True) %}
+          <div class="input-group" style="max-width:480px;">
+            <input type="text" class="form-control font-monospace" id="profileShareUrl"
+                   value="{{ profile_url }}" readonly autocomplete="off">
+            <button class="btn btn-outline-primary share-btn" type="button"
+                    data-share-url="{{ profile_url }}"
+                    data-share-title="{{ g.user.username }} – Plantlog">
+              <i class="fas fa-share-nodes me-1"></i>{{ t['Share'] }}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+    {% endif %}
+
+    {# ── API Key ── #}
+    <div class="accordion-item">
+      <h2 class="accordion-header">
+        <button class="accordion-button collapsed" type="button"
+                data-bs-toggle="collapse" data-bs-target="#collapseKey" aria-expanded="false">
           <i class="fas fa-key me-2 text-secondary"></i>{{ t['settings_api_key'] }}
           {% if has_key %}
             <span class="badge bg-success ms-2 fw-normal"><i class="fas fa-circle me-1" style="font-size:.6rem"></i>{{ t['settings_api_active'] }}</span>
           {% endif %}
         </button>
       </h2>
-      <div id="collapseKey" class="accordion-collapse collapse show" data-bs-parent="#settingsAccordion">
+      <div id="collapseKey" class="accordion-collapse collapse" data-bs-parent="#settingsAccordion">
         <div class="accordion-body">
 
           {% if new_key or revealed_key %}
@@ -47,7 +97,7 @@
           <p class="mb-3">
             <span class="badge bg-success me-2"><i class="fas fa-circle"></i> {{ t['settings_api_active'] }}</span>
           </p>
-          <form method="post" action="{{ url_for('settings_reveal_key', lang=lang) }}" class="mb-3">
+          <form method="post" action="{{ url_for('settings_reveal_key') }}" class="mb-3">
             <label class="form-label small text-muted">{{ t['settings_api_confirm_pw'] }}</label>
             <div class="input-group" style="max-width:360px;">
               <input type="password" name="password" class="form-control" required autocomplete="current-password">
@@ -64,19 +114,19 @@
 
           <div class="d-flex gap-2 flex-wrap">
             {% if has_key %}
-            <form method="post" action="{{ url_for('settings_generate_key', lang=lang) }}">
+            <form method="post" action="{{ url_for('settings_generate_key') }}">
               <button class="btn btn-warning btn-sm" type="submit">
                 <i class="fas fa-rotate-right me-1"></i> {{ t['settings_api_regenerate'] }}
               </button>
             </form>
-            <form method="post" action="{{ url_for('settings_revoke_key', lang=lang) }}">
+            <form method="post" action="{{ url_for('settings_revoke_key') }}">
               <button class="btn btn-outline-danger btn-sm" type="submit"
                       onclick="return confirm('{{ t['settings_api_revoke_confirm'] }}')">
                 <i class="fas fa-trash me-1"></i> {{ t['settings_api_revoke'] }}
               </button>
             </form>
             {% else %}
-            <form method="post" action="{{ url_for('settings_generate_key', lang=lang) }}">
+            <form method="post" action="{{ url_for('settings_generate_key') }}">
               <button class="btn btn-primary btn-sm" type="submit">
                 <i class="fas fa-key me-1"></i> {{ t['settings_api_generate'] }}
               </button>
@@ -143,7 +193,7 @@
             {{ t['settings_printer_warning'] | safe }}
           </div>
 
-          <a href="{{ url_for('freetext_label', lang=lang) }}" class="btn btn-outline-secondary btn-sm mb-3">
+          <a href="{{ url_for('freetext_label') }}" class="btn btn-outline-secondary btn-sm mb-3">
             <i class="fas fa-tag me-1"></i> {{ t.get('freetext_label_open', 'Print a free-text label') }}
           </a>
 
