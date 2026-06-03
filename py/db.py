@@ -60,7 +60,6 @@ CREATE TABLE IF NOT EXISTS plants (
   nickname         TEXT,
   rusticity        TEXT,
   count            INTEGER NOT NULL DEFAULT 1,
-  batch_id         INTEGER REFERENCES plants(id) ON DELETE SET NULL,
   user_id          INTEGER NOT NULL,
   current_state_id INTEGER REFERENCES state_types(id),
   FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
@@ -211,8 +210,6 @@ def _migrate(conn):
         conn.execute("ALTER TABLE plants ADD COLUMN nickname TEXT")
     if "count" not in plant_cols:
         conn.execute("ALTER TABLE plants ADD COLUMN count INTEGER NOT NULL DEFAULT 1")
-    if "batch_id" not in plant_cols:
-        conn.execute("ALTER TABLE plants ADD COLUMN batch_id INTEGER REFERENCES plants(id) ON DELETE SET NULL")
     if "rusticity" not in plant_cols:
         conn.execute("ALTER TABLE plants ADD COLUMN rusticity TEXT")
 

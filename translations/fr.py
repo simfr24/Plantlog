@@ -251,10 +251,8 @@ translations = {
     "optional": "optionnel",
     "plant_count": "Quantité",
     "plant_count_hint": "Nombre de plantes physiques représentées par cet enregistrement.",
-    "plant_explode": "Diviser en individus",
-    "plant_explode_confirm": "Diviser",
-    "plant_part_of_batch": "Fait partie d'un lot",
     "Duplicate plant": "Dupliquer la plante",
+    "duplicate_count_hint": "Nombre de copies à créer",
     "graveyard_title": "Cimetière",
     "graveyard_empty": "Aucune plante morte pour l'instant.",
     "dead_plants_footer": "plantes mortes dans le cimetière",
@@ -303,9 +301,9 @@ translations = {
     "price_label": "Prix",
     "price_currency_placeholder": "EUR",
 
-    # ────────── variety / batch field ──────────
-    "Variety / Batch": "Variété / Lot",
-    "e.g. variety": "ex. : Lot A, Jardinière…",
+    # ────────── variety field ──────────
+    "Variety": "Variété",
+    "e.g. variety": "ex. : doré, F1, nain…",
     "Rusticity": "Rusticité",
     "rusticity_placeholder": "ex. : −18 °C",
 

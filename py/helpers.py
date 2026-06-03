@@ -292,7 +292,6 @@ def load_one(plant_id: int) -> Optional[Dict[str, Any]]:
         "nickname": p["nickname"] if "nickname" in p.keys() else None,
         "rusticity": p["rusticity"] if "rusticity" in p.keys() else None,
         "count": p["count"] if "count" in p.keys() else 1,
-        "batch_id": p["batch_id"] if "batch_id" in p.keys() else None,
         "history": history,
         "current": history[-1] if history else None,
         "state": state,
@@ -323,7 +322,6 @@ def load_data(user_id: int) -> List[Dict[str, Any]]:
                 "nickname": p["nickname"] if "nickname" in p.keys() else None,
                 "rusticity": p["rusticity"] if "rusticity" in p.keys() else None,
                 "count": p["count"] if "count" in p.keys() else 1,
-                "batch_id": p["batch_id"] if "batch_id" in p.keys() else None,
                 "history": (hist := _events_for_plant(conn, p["id"])),
                 "current": hist[-1] if hist else None,
                 "state": _resolve_state(
@@ -431,7 +429,7 @@ def save_new_plant(plant_dict: Dict[str, Any], first_event: Dict[str, Any], user
     with get_conn() as conn:
         cur = conn.cursor()
         cur.execute(
-            "INSERT INTO plants (common, latin, location, notes, variety, nickname, rusticity, count, batch_id, user_id) VALUES (?,?,?,?,?,?,?,?,?,?)",
+            "INSERT INTO plants (common, latin, location, notes, variety, nickname, rusticity, count, user_id) VALUES (?,?,?,?,?,?,?,?,?)",
             (
                 plant_dict["common"],
                 plant_dict["latin"],
@@ -441,7 +439,6 @@ def save_new_plant(plant_dict: Dict[str, Any], first_event: Dict[str, Any], user
                 plant_dict.get("nickname") or None,
                 plant_dict.get("rusticity") or None,
                 plant_dict.get("count", 1) or 1,
-                plant_dict.get("batch_id") or None,
                 user_id,
             ),
         )
@@ -628,71 +625,44 @@ def process_delete_plant(plant_id: int, user_id: int) -> None:
             conn.commit()
 
 
-def explode_plant(plant_id: int, count: int, user_id: int) -> List[int]:
-    """
-    Split a plant record into `count` individual plant records.
-    The original becomes member #1; count-1 new records are created.
-    All members share the same batch_id (= the original plant's id).
-    Returns list of all member IDs (including original).
-    """
+def _clone_plant_row(conn, src_id: int) -> int:
+    """Insert an independent copy of plant `src_id` (metadata + full event
+    history) on an open connection and return the new plant id."""
+    cur = conn.cursor()
+    cur.execute(
+        "INSERT INTO plants (common, latin, location, notes, variety, nickname, rusticity, count, user_id, current_state_id) "
+        "SELECT common, latin, location, notes, variety, nickname, rusticity, count, user_id, current_state_id "
+        "FROM plants WHERE id = ?",
+        (src_id,),
+    )
+    new_id = cur.lastrowid
+    events = conn.execute(
+        "SELECT event_type_id, happened_on, range_min, range_min_u, range_max, range_max_u, "
+        "dur_val, dur_unit, measure_val, measure_unit, custom_label, custom_note, source, acquire_type, price, price_currency "
+        "FROM events WHERE plant_id = ? ORDER BY happened_on, id",
+        (src_id,),
+    ).fetchall()
+    for ev in events:
+        cur.execute(
+            "INSERT INTO events (plant_id, event_type_id, happened_on, range_min, range_min_u, "
+            "range_max, range_max_u, dur_val, dur_unit, measure_val, measure_unit, custom_label, custom_note, source, acquire_type, price, price_currency) "
+            "VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+            (new_id,) + tuple(ev),
+        )
+    return new_id
+
+
+def duplicate_plant(plant_id: int, user_id: int, count: int = 1) -> List[int]:
+    """Create `count` independent copies of a plant (metadata + full event
+    history). The original is left untouched. Returns the new plant ids."""
     plant = load_one(plant_id)
     if plant is None or plant["user_id"] != user_id:
         return []
-    count = max(2, count)
+    count = max(1, count)
     with get_conn() as conn:
-        cur = conn.cursor()
-        # Mark original as member #1 of its own batch
-        cur.execute(
-            "UPDATE plants SET count = 1, batch_id = ? WHERE id = ?",
-            (plant_id, plant_id),
-        )
-        new_ids = [plant_id]
-        for _ in range(count - 1):
-            cur.execute(
-                "INSERT INTO plants (common, latin, location, notes, variety, nickname, rusticity, count, batch_id, user_id, current_state_id) "
-                "SELECT common, latin, location, notes, variety, nickname, rusticity, 1, ?, user_id, current_state_id "
-                "FROM plants WHERE id = ?",
-                (plant_id, plant_id),
-            )
-            new_plant_id = cur.lastrowid
-            new_ids.append(new_plant_id)
-            # Copy all events to the new plant
-            events = conn.execute(
-                "SELECT event_type_id, happened_on, range_min, range_min_u, range_max, range_max_u, "
-                "dur_val, dur_unit, measure_val, measure_unit, custom_label, custom_note, source, acquire_type, price, price_currency "
-                "FROM events WHERE plant_id = ? ORDER BY happened_on, id",
-                (plant_id,),
-            ).fetchall()
-            for ev in events:
-                cur.execute(
-                    "INSERT INTO events (plant_id, event_type_id, happened_on, range_min, range_min_u, "
-                    "range_max, range_max_u, dur_val, dur_unit, measure_val, measure_unit, custom_label, custom_note, source, acquire_type, price, price_currency) "
-                    "VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
-                    (new_plant_id,) + tuple(ev),
-                )
+        new_ids = [_clone_plant_row(conn, plant_id) for _ in range(count)]
         conn.commit()
     return new_ids
-
-
-def group_by_batch(plants: List[Dict[str, Any]]) -> List[Tuple[Optional[int], List[Dict[str, Any]]]]:
-    """
-    Group a list of plants into batches.
-    Returns list of (batch_id_or_None, [plants]).
-    Unbatched plants each get their own singleton group.
-    Batched plants are grouped together, ordered by batch_id.
-    """
-    batches: dict = {}
-    result = []
-    for p in plants:
-        bid = p.get("batch_id")
-        if bid is None:
-            result.append((None, [p]))
-        else:
-            if bid not in batches:
-                batches[bid] = []
-                result.append((bid, batches[bid]))
-            batches[bid].append(p)
-    return result
 
 
 def group_by_latin(plants: List[Dict[str, Any]]) -> List[Tuple[str, List[Dict[str, Any]]]]:

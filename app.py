@@ -82,9 +82,8 @@ from py.helpers import (
     get_daily_unique_logins,
     group_plants_by_state,
     build_state_cards,
-    group_by_batch,
     group_by_latin,
-    explode_plant,
+    duplicate_plant,
     build_location_tree,
     compute_attention,
 )
@@ -352,7 +351,6 @@ def build_dashboard_context(user_obj, lang):
         right_col = right_col,
         dead_count = dead_count,
         stash_count = stash_count,
-        group_by_batch = group_by_batch,
         group_by_latin = group_by_latin,
         location_tree = build_location_tree(alive_plants),
         attention     = compute_attention(alive_plants),
@@ -439,17 +437,6 @@ def receive_plant(idx):
     plant_data["count"] = plant.get("count", 1)
     update_plant(plant["id"], plant_data, new_event=event)
     return redirect(url_for("stash"))
-
-
-@app.route("/explode/<int:idx>", methods=["POST"])
-@login_required
-def explode_plant_route(idx):
-    plant = load_one(idx) or abort(404)
-    if plant["user_id"] != g.user["id"]:
-        abort(403)
-    count = max(2, int(request.form.get("count", 2)))
-    explode_plant(idx, count, g.user["id"])
-    return redirect(url_for("index"))
 
 
 @app.route("/u/<username>")
@@ -952,24 +939,15 @@ def end_phase(idx):
 # Clone Plant Route
 ###############################################################################
 
-@app.route("/clone_plant/<int:idx>", methods=["POST"])
+@app.route("/duplicate_plant/<int:idx>", methods=["POST"])
 @login_required_for_plant
-def clone_plant(idx):
-    """Duplicate a plant's metadata (no event history) and redirect to the new plant."""
-    plant = load_one(idx) or abort(404)
-    form = {
-        "common":   plant["common"],
-        "latin":    plant["latin"],
-        "location": plant.get("location") or "",
-        "notes":    plant.get("notes") or "",
-        "variety":  plant.get("variety") or "",
-        "status":   "sow",
-        "date_happened": date.today().isoformat(),
-    }
-    translations = get_translations(g.lang)
-    errors, event = validate_form(form, translations, context="add")
-    if not errors:
-        save_new_plant(form, event, g.user["id"])
+def duplicate_plant_route(idx):
+    """Create one or more full copies of a plant and go to the result."""
+    count   = max(1, min(int(request.form.get("count", 1) or 1), 50))
+    new_ids = duplicate_plant(idx, g.user["id"], count)
+    # A single copy lands on the new plant; several land back on the dashboard.
+    if len(new_ids) == 1:
+        return redirect(url_for("view_plant", idx=new_ids[0]))
     return redirect(url_for("index"))
 
 
@@ -1207,15 +1185,15 @@ def api_update_plant(idx):
     return jsonify({"ok": True})
 
 
-@app.route("/api/plants/<int:idx>/explode", methods=["POST"])
+@app.route("/api/plants/<int:idx>/duplicate", methods=["POST"])
 @_api_auth_required
-def api_explode_plant(idx):
+def api_duplicate_plant(idx):
     p = load_one(idx)
     if p is None or p.get("user_id") != g.api_user["id"]:
         return jsonify({"error": "Not found"}), 404
     data  = request.get_json(silent=True) or {}
-    count = max(2, int(data.get("count", 2)))
-    ids   = explode_plant(idx, count, g.api_user["id"])
+    count = max(1, int(data.get("count", 1)))
+    ids   = duplicate_plant(idx, g.api_user["id"], count)
     return jsonify({"ok": True, "plant_ids": ids})
 
 

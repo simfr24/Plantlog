@@ -251,10 +251,8 @@ translations = {
     "optional": "необязательно",
     "plant_count": "Количество",
     "plant_count_hint": "Количество физических растений, представленных этой записью.",
-    "plant_explode": "Разделить на отдельные",
-    "plant_explode_confirm": "Разделить",
-    "plant_part_of_batch": "Часть партии",
     "Duplicate plant": "Дублировать растение",
+    "duplicate_count_hint": "Сколько копий создать",
     "graveyard_title": "Кладбище",
     "graveyard_empty": "Мёртвых растений пока нет.",
     "dead_plants_footer": "мёртвых растений на кладбище",
@@ -303,9 +301,9 @@ translations = {
     "price_label": "Цена",
     "price_currency_placeholder": "EUR",
 
-    # ────────── variety / batch field ──────────
-    "Variety / Batch": "Разновидность / Партия",
-    "e.g. variety": "напр. Партия А, Ящик у окна…",
+    # ────────── variety field ──────────
+    "Variety": "Разновидность",
+    "e.g. variety": "напр. золотистый, F1, карликовый…",
     "Rusticity": "Морозостойкость",
     "rusticity_placeholder": "напр. −18 °C",
 

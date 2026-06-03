@@ -251,10 +251,8 @@ translations = {
     "optional": "optional",
     "plant_count": "Count",
     "plant_count_hint": "Number of physical plants this record represents.",
-    "plant_explode": "Split into individuals",
-    "plant_explode_confirm": "Split",
-    "plant_part_of_batch": "Part of a batch",
     "Duplicate plant": "Duplicate plant",
+    "duplicate_count_hint": "Number of copies to make",
     "graveyard_title": "Graveyard",
     "graveyard_empty": "No dead plants yet.",
     "dead_plants_footer": "dead plants in the graveyard",
@@ -303,9 +301,9 @@ translations = {
     "price_label": "Price",
     "price_currency_placeholder": "EUR",
 
-    # ────────── variety / batch field ──────────
-    "Variety / Batch": "Variety / Batch",
-    "e.g. variety": "e.g. Batch A, Window box…",
+    # ────────── variety field ──────────
+    "Variety": "Variety",
+    "e.g. variety": "e.g. golden, F1, dwarf…",
     "Rusticity": "Hardiness",
     "rusticity_placeholder": "e.g. −18 °C",
 

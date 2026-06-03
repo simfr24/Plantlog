@@ -148,7 +148,7 @@
     </div>
 
     <div class="form-section">
-      <div class="form-section-label">{{ t['Location'] }} &amp; {{ t['Variety / Batch'] }}</div>
+      <div class="form-section-label">{{ t['Location'] }} &amp; {{ t['Variety'] }}</div>
       <div class="field-grid">
         <div>
           <label class="field-lbl" for="location">{{ t['Location'] }}</label>
@@ -162,7 +162,7 @@
         </div>
         <div>
           <label class="field-lbl" for="variety">
-            {{ t['Variety / Batch'] }} <span class="opt">({{ t['optional'] }})</span>
+            {{ t['Variety'] }} <span class="opt">({{ t['optional'] }})</span>
           </label>
           <input class="form-control" name="variety" id="variety"
                  value="{{ form.variety }}" placeholder="{{ t['e.g. variety'] }}">

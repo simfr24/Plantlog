@@ -35,7 +35,7 @@ from py.helpers import (
     get_event_specs,
     get_translations,
     process_delete_plant,
-    explode_plant as _explode_plant,
+    duplicate_plant as _duplicate_plant,
 )
 from py.users import get_user_by_api_key
 
@@ -269,15 +269,15 @@ def _TOOLS_TEMPLATE(NOTES_FORMAT_GUIDE, LANG_HINT):
         },
     },
     {
-        "name": "explode_plant",
-        "description": "Split a batch plant record into individual plant records sharing a batch.",
+        "name": "duplicate_plant",
+        "description": "Create one or more independent copies of a plant, including its full event history. The original is left unchanged.",
         "inputSchema": {
             "type": "object",
             "properties": {
                 "plant_id": {"type": "integer"},
-                "count":    {"type": "integer", "description": "Total individuals to create (min 2)."},
+                "count":    {"type": "integer", "description": "Number of copies to create (min 1, default 1)."},
             },
-            "required": ["plant_id", "count"],
+            "required": ["plant_id"],
         },
     },
     {
@@ -576,8 +576,8 @@ def _call_tool(name: str, args: dict, user: dict) -> str:
         process_delete_plant(plant_id, uid)
         return json.dumps({"ok": True})
 
-    if name == "explode_plant":
-        ids = _explode_plant(args["plant_id"], max(2, int(args.get("count", 2))), uid)
+    if name == "duplicate_plant":
+        ids = _duplicate_plant(args["plant_id"], uid, max(1, int(args.get("count", 1))))
         if not ids:
             raise ValueError("Plant not found or not authorized.")
         return json.dumps({"ok": True, "plant_ids": ids})
