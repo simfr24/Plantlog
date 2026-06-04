@@ -769,13 +769,29 @@ def _format_date(iso_date):
     return date.today().strftime("%d-%m-%Y")
 
 
-def _make_label_image(plant, style, extra_notes=None, base_url=None):
-    common      = plant.get("common", "")
+def _tr_label(text, target_lang, source_lang):
+    """Translate a free-text label field into ``target_lang`` (the display
+    language chosen via the selector). Returns the original when translation is
+    disabled, unneeded, or the field is empty. Never raises."""
+    if not text or not target_lang or target_lang == source_lang:
+        return text
+    if not CONFIG.get("features", {}).get("translate_content", True):
+        return text
+    return translate_content(text, target_lang, source_lang)
+
+
+def _make_label_image(plant, style, extra_notes=None, base_url=None,
+                      target_lang=None, source_lang=None):
+    # Descriptive free-text is translated into the display language; the Latin
+    # (scientific) name, variety and nickname are proper names shown verbatim —
+    # the same split the plant page uses (common + notes translate, rest don't).
+    common      = _tr_label(plant.get("common", ""), target_lang, source_lang)
     latin       = plant.get("latin",  "")
     variety     = plant.get("variety") or None
     nickname    = plant.get("nickname") or None
-    location    = plant.get("location") or None
-    notes       = plant.get("notes") or None
+    location    = _tr_label(plant.get("location"), target_lang, source_lang) or None
+    notes       = _tr_label(plant.get("notes"), target_lang, source_lang) or None
+    extra_notes = _tr_label(extra_notes, target_lang, source_lang) or None
     history     = plant.get("history") or []
     date_str    = _format_date(history[0]["start"] if history else None)
 
@@ -805,12 +821,16 @@ def label_preview(idx):
     style       = request.args.get("style", "classic")
     extra_notes = request.args.get("extra") or None
     base_url    = request.args.get("base_url") or None
-    img = _make_label_image(plant, style, extra_notes, base_url=base_url)
+    img = _make_label_image(plant, style, extra_notes, base_url=base_url,
+                            target_lang=g.lang, source_lang=g.content_lang)
     # Rotate the preview into reading orientation for sideways-printed labels.
     # The bytes sent to the printer are unchanged; this only affects the preview.
     if style in ("detailed_h", "stake_wrap"):
         img = img.transpose(PIL.Image.ROTATE_90)
-    return Response(label_to_png_bytes(img), mimetype="image/png")
+    # The preview depends on the session display language, so it must never be
+    # served from the browser cache after a language switch.
+    return Response(label_to_png_bytes(img), mimetype="image/png",
+                    headers={"Cache-Control": "no-store"})
 
 
 @app.route("/print_label/<int:idx>", methods=["POST"])
@@ -826,8 +846,8 @@ def print_label_route(idx):
     base_url    = data.get("base_url") or None
     with get_conn() as conn:
         cur = conn.execute(
-            "INSERT INTO print_jobs (user_id, plant_id, style, extra_notes, base_url) VALUES (?,?,?,?,?)",
-            (g.user["id"], idx, style, extra_notes, base_url),
+            "INSERT INTO print_jobs (user_id, plant_id, style, extra_notes, base_url, lang) VALUES (?,?,?,?,?,?)",
+            (g.user["id"], idx, style, extra_notes, base_url, g.lang),
         )
         job_id = cur.lastrowid
         conn.commit()
@@ -1311,7 +1331,7 @@ def api_print_job_bytes(job_id):
     """Render the label and return raw ESC/POS bytes for the printer."""
     with get_conn() as conn:
         row = conn.execute(
-            """SELECT j.style, j.kind, j.extra_notes, j.base_url,
+            """SELECT j.style, j.kind, j.extra_notes, j.base_url, j.lang,
                       j.title, j.subtitle, j.body,
                       p.id AS plant_id,
                       p.common, p.latin, p.variety, p.nickname, p.location, p.notes,
@@ -1332,31 +1352,38 @@ def api_print_job_bytes(job_id):
         img = create_label_freetext(row["title"], row["subtitle"], row["body"])
         return Response(label_to_printer_bytes(img), mimetype="application/octet-stream")
     date_str    = _format_date(row["earliest_date"])
+    # Translate descriptive fields into the language chosen when the job was
+    # queued. Source is the plant owner's account language. Latin name, variety
+    # and nickname stay verbatim — see _make_label_image.
+    target_lang = row["lang"]
+    source_lang = g.api_user["lang"]
+    common      = _tr_label(row["common"], target_lang, source_lang)
     variety     = row["variety"]  or None
     nickname    = row["nickname"] or None
-    location    = row["location"] or None
-    notes       = row["notes"]    or None
-    extra_notes = row["extra_notes"] or None
+    location    = _tr_label(row["location"], target_lang, source_lang) or None
+    notes       = _tr_label(row["notes"], target_lang, source_lang) or None
+    extra_notes = _tr_label(row["extra_notes"], target_lang, source_lang) or None
     style       = row["style"]
+    latin       = row["latin"]
 
     if style == "circular":
-        img = create_label_circular(row["common"], row["latin"], date_str, variety, nickname, extra_notes)
+        img = create_label_circular(common, latin, date_str, variety, nickname, extra_notes)
     elif style == "minimal":
-        img = create_label_minimal(row["common"], row["latin"], date_str, variety, nickname, extra_notes)
+        img = create_label_minimal(common, latin, date_str, variety, nickname, extra_notes)
     elif style == "detailed_v":
-        img = create_label_detailed_v(row["common"], row["latin"], date_str, variety, nickname, location, notes, extra_notes)
+        img = create_label_detailed_v(common, latin, date_str, variety, nickname, location, notes, extra_notes)
     elif style == "detailed_h":
         base_url  = (row["base_url"] or request.url_root).rstrip("/")
         plant_url = base_url + "/p/" + str(row["plant_id"])
-        img = create_label_detailed_h(row["common"], row["latin"], date_str, variety, nickname, location, notes, extra_notes, plant_url=plant_url)
+        img = create_label_detailed_h(common, latin, date_str, variety, nickname, location, notes, extra_notes, plant_url=plant_url)
     elif style == "qr":
         base_url  = (row["base_url"] or request.url_root).rstrip("/")
         plant_url = base_url + "/p/" + str(row["plant_id"])
-        img = create_label_qr(row["common"], row["latin"], date_str, plant_url, variety, nickname, extra_notes)
+        img = create_label_qr(common, latin, date_str, plant_url, variety, nickname, extra_notes)
     elif style == "stake_wrap":
-        img = create_label_stake_wrap(row["common"], row["latin"], date_str, variety, nickname, extra_notes)
+        img = create_label_stake_wrap(common, latin, date_str, variety, nickname, extra_notes)
     else:
-        img = create_label_classic(row["common"], row["latin"], date_str, variety, nickname, extra_notes)
+        img = create_label_classic(common, latin, date_str, variety, nickname, extra_notes)
     return Response(label_to_printer_bytes(img), mimetype="application/octet-stream")
 
 

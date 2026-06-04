@@ -72,6 +72,7 @@ CREATE TABLE IF NOT EXISTS print_jobs (
   style       TEXT    NOT NULL DEFAULT 'classic',
   extra_notes TEXT,
   base_url    TEXT,
+  lang        TEXT,                                -- target language for label text
   status      TEXT    NOT NULL DEFAULT 'pending',  -- pending | done | error
   error_msg   TEXT,
   created_at  TEXT    NOT NULL DEFAULT (datetime('now')),
@@ -260,6 +261,8 @@ def _migrate(conn):
         conn.execute("ALTER TABLE print_jobs ADD COLUMN subtitle TEXT")
     if "body" not in pj_cols:
         conn.execute("ALTER TABLE print_jobs ADD COLUMN body TEXT")
+    if "lang" not in pj_cols:
+        conn.execute("ALTER TABLE print_jobs ADD COLUMN lang TEXT")
 
     # Drop the NOT NULL constraint on plant_id so freetext jobs can omit it.
     pj_info = conn.execute("PRAGMA table_info(print_jobs)").fetchall()

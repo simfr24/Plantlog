@@ -279,6 +279,10 @@
       updateNotesVisibility();
       updatePreview();
     });
+
+    // Always refetch on open so the preview reflects the current display
+    // language (the initial <img> src can otherwise be served from cache).
+    document.getElementById('printLabelModal').addEventListener('shown.bs.modal', updatePreview);
   })();
   </script>
 
