@@ -216,6 +216,31 @@ def list_cached_translations(query=None, target_lang=None, limit=500):
     return [dict(r) for r in rows]
 
 
+def backfill_source_text(candidates) -> int:
+    """Fill in ``source_text`` for cache rows created before that column existed.
+
+    The cache is keyed by a one-way hash of the source text, so the original
+    can't be recovered from the row itself. Instead we take ``candidates`` (every
+    string the app might have translated — plant names, notes, rendered note
+    HTML, event notes…), hash each against every target language, and stamp the
+    source text onto any matching row that is still missing it. Returns the number
+    of rows updated."""
+    updated = 0
+    with get_conn() as conn:
+        for text in candidates:
+            if not text:
+                continue
+            for lang in SUPPORTED_LANGS:
+                cur = conn.execute(
+                    "UPDATE translations_cache SET source_text = ? "
+                    "WHERE source_hash = ? AND target_lang = ? AND source_text IS NULL",
+                    (text, _hash(text, lang), lang),
+                )
+                updated += cur.rowcount
+        conn.commit()
+    return updated
+
+
 def update_cached_translation(source_hash: str, target_lang: str, translated: str) -> bool:
     """Overwrite a cached translation with an admin-supplied value and mark it
     edited so future machine runs won't clobber it. Returns True if a row matched."""

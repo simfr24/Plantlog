@@ -114,6 +114,7 @@ def mdrender_filter(text):
 from py.translate import (
     translate_content, translate_html, tr,
     list_cached_translations, update_cached_translation, delete_cached_translation,
+    backfill_source_text,
 )
 
 
@@ -533,12 +534,36 @@ def admin_users():
     )
 
 
+def _translation_source_candidates():
+    """Every stored string the app may have machine-translated, used to recover
+    the source text of cache rows that predate the source_text column."""
+    candidates = set()
+    with get_conn() as conn:
+        for r in conn.execute(
+                "SELECT common, location, notes FROM plants").fetchall():
+            for col in ("common", "location", "notes"):
+                if r[col]:
+                    candidates.add(r[col])
+            if r["notes"]:
+                # Notes are also cached as rendered-Markdown HTML (tr_md).
+                candidates.add(str(mdrender_filter(r["notes"])))
+        for r in conn.execute(
+                "SELECT custom_label, custom_note FROM events").fetchall():
+            for col in ("custom_label", "custom_note"):
+                if r[col]:
+                    candidates.add(r[col])
+    return candidates
+
+
 @app.route("/admin/translations")
 @login_required
 def admin_translations():
     """Browse and correct the machine-translation cache for user content."""
     if g.user["id"] != 1:
         abort(403)
+    # Recover source text for entries cached before that column existed, so they
+    # become visible/editable here. A no-op once every row has it.
+    backfill_source_text(_translation_source_candidates())
     query       = (request.args.get("q") or "").strip() or None
     target_lang = request.args.get("lang_filter") or None
     if target_lang not in AVAILABLE_LANGS:
