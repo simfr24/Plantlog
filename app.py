@@ -949,8 +949,10 @@ def freetext_label_preview():
     title    = request.args.get("title", "")
     subtitle = request.args.get("subtitle") or None
     body     = request.args.get("body") or None
-    img = create_label_freetext(title, subtitle, body)
-    return Response(label_to_png_bytes(img), mimetype="image/png")
+    qr       = request.args.get("qr") or None
+    img = create_label_freetext(title, subtitle, body, qr_data=qr)
+    return Response(label_to_png_bytes(img), mimetype="image/png",
+                    headers={"Cache-Control": "no-store"})
 
 
 @app.route("/freetext_label/print", methods=["POST"])
@@ -960,13 +962,14 @@ def freetext_label_print():
     title    = (data.get("title") or "").strip()
     subtitle = (data.get("subtitle") or "").strip() or None
     body     = (data.get("body") or "").strip() or None
+    qr       = (data.get("qr") or "").strip() or None
     if not title:
         return jsonify({"error": "title required"}), 400
     with get_conn() as conn:
         cur = conn.execute(
-            """INSERT INTO print_jobs (user_id, kind, style, title, subtitle, body)
-               VALUES (?, 'freetext', 'freetext', ?, ?, ?)""",
-            (g.user["id"], title, subtitle, body),
+            """INSERT INTO print_jobs (user_id, kind, style, title, subtitle, body, qr)
+               VALUES (?, 'freetext', 'freetext', ?, ?, ?, ?)""",
+            (g.user["id"], title, subtitle, body, qr),
         )
         job_id = cur.lastrowid
         conn.commit()
@@ -1411,7 +1414,7 @@ def api_print_job_bytes(job_id):
     with get_conn() as conn:
         row = conn.execute(
             """SELECT j.style, j.kind, j.extra_notes, j.base_url, j.lang,
-                      j.title, j.subtitle, j.body,
+                      j.title, j.subtitle, j.body, j.qr,
                       p.id AS plant_id,
                       p.common, p.latin, p.variety, p.nickname, p.location, p.notes,
                       COALESCE(
@@ -1428,7 +1431,7 @@ def api_print_job_bytes(job_id):
     if not row:
         abort(404)
     if row["kind"] == "freetext":
-        img = create_label_freetext(row["title"], row["subtitle"], row["body"])
+        img = create_label_freetext(row["title"], row["subtitle"], row["body"], qr_data=row["qr"])
         return Response(label_to_printer_bytes(img), mimetype="application/octet-stream")
     date_str    = _format_date(row["earliest_date"])
     # Translate descriptive fields into the language chosen when the job was

@@ -1073,8 +1073,9 @@ def create_label_qr(common_name, latin_name, date_str, plant_url,
 # Free-text label (non-plant)
 # ---------------------------------------------------------------------------
 
-def create_label_freetext(title, subtitle=None, body_md=None):
-    """Classic double-border label with a title, optional subtitle, and MD body.
+def create_label_freetext(title, subtitle=None, body_md=None, qr_data=None):
+    """Classic double-border label with a title, optional subtitle, MD body, and
+    an optional QR code.
 
     Intended for non-plant uses (gift tags, jar labels, notes, etc.)."""
     W = PRINTER_WIDTH
@@ -1108,7 +1109,11 @@ def create_label_freetext(title, subtitle=None, body_md=None):
 
     rule_h = 14 if md_segs else 0
 
-    total_h = pad_t + title_h + (10 + sub_h_px if sub else 0) + rule_h + body_h + pad_b
+    qr_data = (qr_data or "").strip() or None
+    qr_size = ((int(W * 0.5) // 4) * 4) if qr_data else 0
+    qr_h    = (18 + qr_size) if qr_data else 0
+
+    total_h = pad_t + title_h + (10 + sub_h_px if sub else 0) + rule_h + body_h + qr_h + pad_b
     img = PIL.Image.new("1", (W, total_h), 1)
     d   = PIL.ImageDraw.Draw(img)
 
@@ -1134,7 +1139,12 @@ def create_label_freetext(title, subtitle=None, body_md=None):
         d.line([(div_m, y), (W - div_m, y)], fill=0, width=1)
         d.line([(div_m, y + 2), (W - div_m, y + 2)], fill=0, width=1)
         y += 8
-        _render_md(d, md_segs, md_fonts, margin + 15, y, inner_w)
+        y = _render_md(d, md_segs, md_fonts, margin + 15, y, inner_w)
+
+    if qr_data:
+        y += 18
+        qr_img = _make_qr_image(qr_data, qr_size)
+        img.paste(qr_img, ((W - qr_size) // 2, y))
 
     return img
 

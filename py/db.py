@@ -73,6 +73,7 @@ CREATE TABLE IF NOT EXISTS print_jobs (
   extra_notes TEXT,
   base_url    TEXT,
   lang        TEXT,                                -- target language for label text
+  qr          TEXT,                                -- QR payload for free-text labels
   status      TEXT    NOT NULL DEFAULT 'pending',  -- pending | done | error
   error_msg   TEXT,
   created_at  TEXT    NOT NULL DEFAULT (datetime('now')),
@@ -270,6 +271,8 @@ def _migrate(conn):
         conn.execute("ALTER TABLE print_jobs ADD COLUMN body TEXT")
     if "lang" not in pj_cols:
         conn.execute("ALTER TABLE print_jobs ADD COLUMN lang TEXT")
+    if "qr" not in pj_cols:
+        conn.execute("ALTER TABLE print_jobs ADD COLUMN qr TEXT")
 
     # Drop the NOT NULL constraint on plant_id so freetext jobs can omit it.
     pj_info = conn.execute("PRAGMA table_info(print_jobs)").fetchall()
