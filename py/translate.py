@@ -108,10 +108,19 @@ def _cache_get(text: str, target_lang: str) -> str | None:
 def _cache_put(text: str, target_lang: str, translated: str, source_lang=None) -> None:
     h = _hash(text, target_lang)
     with get_conn() as conn:
+        # Never clobber an admin-corrected entry with a fresh machine result.
+        existing = conn.execute(
+            "SELECT edited FROM translations_cache "
+            "WHERE source_hash = ? AND target_lang = ?",
+            (h, target_lang),
+        ).fetchone()
+        if existing and existing["edited"]:
+            return
         conn.execute(
             "INSERT OR REPLACE INTO translations_cache "
-            "(source_hash, target_lang, source_lang, translated) VALUES (?, ?, ?, ?)",
-            (h, target_lang, source_lang, translated),
+            "(source_hash, target_lang, source_lang, source_text, translated, edited) "
+            "VALUES (?, ?, ?, ?, ?, 0)",
+            (h, target_lang, source_lang, text, translated),
         )
         conn.commit()
 
@@ -176,6 +185,59 @@ def translate_html(html_text, target_lang: str, source_lang=None):
 
     _cache_put(html_text, target_lang, result, source_lang=source_lang)
     return result
+
+
+# ---------------------------------------------------------------------------
+# Admin: browse / correct cached content translations
+# ---------------------------------------------------------------------------
+
+def list_cached_translations(query=None, target_lang=None, limit=500):
+    """Return cached content translations for the admin editor, newest first.
+
+    Filters: ``query`` (substring match on source or translated text) and
+    ``target_lang``. Rows missing a stored source text (cached before that
+    column existed) can't be meaningfully edited and are skipped."""
+    sql = [
+        "SELECT source_hash, target_lang, source_lang, source_text, translated, "
+        "edited, created_at FROM translations_cache WHERE source_text IS NOT NULL"
+    ]
+    params = []
+    if target_lang:
+        sql.append("AND target_lang = ?")
+        params.append(target_lang)
+    if query:
+        sql.append("AND (source_text LIKE ? OR translated LIKE ?)")
+        like = f"%{query}%"
+        params += [like, like]
+    sql.append("ORDER BY edited DESC, created_at DESC LIMIT ?")
+    params.append(limit)
+    with get_conn() as conn:
+        rows = conn.execute(" ".join(sql), params).fetchall()
+    return [dict(r) for r in rows]
+
+
+def update_cached_translation(source_hash: str, target_lang: str, translated: str) -> bool:
+    """Overwrite a cached translation with an admin-supplied value and mark it
+    edited so future machine runs won't clobber it. Returns True if a row matched."""
+    with get_conn() as conn:
+        cur = conn.execute(
+            "UPDATE translations_cache SET translated = ?, edited = 1 "
+            "WHERE source_hash = ? AND target_lang = ?",
+            (translated, source_hash, target_lang),
+        )
+        conn.commit()
+        return cur.rowcount > 0
+
+
+def delete_cached_translation(source_hash: str, target_lang: str) -> bool:
+    """Drop a cached entry so it is re-translated from scratch next time."""
+    with get_conn() as conn:
+        cur = conn.execute(
+            "DELETE FROM translations_cache WHERE source_hash = ? AND target_lang = ?",
+            (source_hash, target_lang),
+        )
+        conn.commit()
+        return cur.rowcount > 0
 
 
 def tr(text):

@@ -176,6 +176,18 @@ translations = {
     "admin_no_results": "Aucun utilisateur ne correspond à votre recherche.",
     "admin_active_today": "Actif aujourd'hui",
     "admin_never": "Jamais",
+    "admin_translations": "Traductions",
+    "admin_tr_intro": "Traductions automatiques en cache du contenu des plantes (noms, notes, étiquettes). Corrigez ici celles qui sont erronées — vos modifications sont conservées et ne seront pas écrasées.",
+    "admin_tr_search": "Rechercher dans l'original ou la traduction…",
+    "admin_tr_all_langs": "Toutes les langues",
+    "admin_tr_filter": "Filtrer",
+    "admin_tr_source": "Original",
+    "admin_tr_lang": "Langue",
+    "admin_tr_translation": "Traduction",
+    "admin_tr_edited": "Modifiée",
+    "admin_tr_empty": "Aucune traduction en cache pour l'instant.",
+    "admin_tr_reset_hint": "Supprimer cette traduction et la régénérer automatiquement",
+    "admin_tr_reset_confirm": "Supprimer cette traduction et la régénérer automatiquement la prochaine fois ?",
 
     # ────────── help section ──────────
     "Help": "Aide",

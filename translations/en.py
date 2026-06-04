@@ -176,6 +176,18 @@ translations = {
     "admin_no_results": "No users match your search.",
     "admin_active_today": "Active today",
     "admin_never": "Never",
+    "admin_translations": "Translations",
+    "admin_tr_intro": "Cached automatic translations of plant content (names, notes, labels). Fix any wrong ones here — edits are kept and won't be overwritten.",
+    "admin_tr_search": "Search source or translation…",
+    "admin_tr_all_langs": "All languages",
+    "admin_tr_filter": "Filter",
+    "admin_tr_source": "Original",
+    "admin_tr_lang": "Language",
+    "admin_tr_translation": "Translation",
+    "admin_tr_edited": "Edited",
+    "admin_tr_empty": "No cached translations yet.",
+    "admin_tr_reset_hint": "Discard this translation and let it auto-translate again",
+    "admin_tr_reset_confirm": "Discard this translation and re-translate it automatically next time?",
 
     # ────────── help section ──────────
     "Help": "Help",

@@ -1,0 +1,185 @@
+{% extends "base.html" %}
+{% block title %}{{ t['Admin'] }} – {{ t['admin_translations'] }}{% endblock %}
+
+{% block content %}
+<style>
+  .admin-card { border: none; border-radius: 14px; box-shadow: 0 1px 3px rgba(0,0,0,0.06); }
+
+  .admin-tabs .nav-link { color: #6b7280; font-weight: 600; }
+  .admin-tabs .nav-link.active { color: #2a6b4a; }
+
+  #trTable thead th {
+    white-space: nowrap;
+    font-size: 0.78rem;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    color: #6b7280;
+    border-bottom: 2px solid #eef1f4;
+  }
+  #trTable td { vertical-align: top; }
+  #trTable tbody tr:hover { background: #f6faf8; }
+  .src-text { color: #1e2d3d; white-space: pre-wrap; }
+  .tr-edit { font-size: .92rem; resize: vertical; }
+  .lang-chip {
+    font-variant: small-caps;
+    font-weight: 700;
+    text-transform: uppercase;
+    font-size: .72rem;
+    letter-spacing: .03em;
+  }
+  .row-actions { white-space: nowrap; }
+  .edited-badge { font-size: .68rem; }
+
+  @media (max-width: 767.98px) {
+    #trTable thead { display: none; }
+    #trTable, #trTable tbody, #trTable tr, #trTable td { display: block; width: 100%; }
+    #trTable tr { border: 1px solid #eef1f4; border-radius: 12px; padding: .6rem .85rem; margin-bottom: .75rem; }
+    #trTable td { padding: .35rem 0; border: none; }
+  }
+</style>
+
+<div class="d-flex align-items-center flex-wrap gap-2 mb-3">
+  <h1 class="mb-0"><i class="fas fa-language me-2 text-secondary"></i>{{ t['Admin'] }}</h1>
+</div>
+
+{# ── Sub-navigation between admin pages ── #}
+<ul class="nav nav-pills admin-tabs gap-1 mb-4">
+  <li class="nav-item">
+    <a class="nav-link" href="{{ url_for('admin_users') }}"><i class="fas fa-users me-1"></i>{{ t['admin_total_users'] }}</a>
+  </li>
+  <li class="nav-item">
+    <a class="nav-link active" href="{{ url_for('admin_translations') }}"><i class="fas fa-language me-1"></i>{{ t['admin_translations'] }}</a>
+  </li>
+</ul>
+
+<div class="card admin-card">
+  <div class="card-body">
+    <p class="text-muted small mb-3">{{ t['admin_tr_intro'] }}</p>
+
+    {# ── Filters ── #}
+    <form method="get" class="row g-2 align-items-center mb-3">
+      <div class="col-12 col-md-auto flex-grow-1" style="max-width:420px;">
+        <div class="input-group">
+          <span class="input-group-text bg-white"><i class="fas fa-search text-muted"></i></span>
+          <input type="search" name="q" value="{{ query }}" class="form-control"
+                 placeholder="{{ t['admin_tr_search'] }}" autocomplete="off">
+        </div>
+      </div>
+      <div class="col-6 col-md-auto">
+        <select name="lang_filter" class="form-select">
+          <option value="">{{ t['admin_tr_all_langs'] }}</option>
+          {% for l in languages %}
+          <option value="{{ l.code }}" {{ 'selected' if lang_filter == l.code else '' }}>{{ l.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-6 col-md-auto">
+        <button type="submit" class="btn btn-outline-secondary w-100">{{ t['admin_tr_filter'] }}</button>
+      </div>
+    </form>
+
+    <div class="table-responsive">
+      <table class="table align-middle mb-0" id="trTable">
+        <thead>
+          <tr>
+            <th style="width:38%">{{ t['admin_tr_source'] }}</th>
+            <th style="width:8%">{{ t['admin_tr_lang'] }}</th>
+            <th style="width:38%">{{ t['admin_tr_translation'] }}</th>
+            <th class="text-end" style="width:16%"></th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for r in rows %}
+          <tr data-hash="{{ r.source_hash }}" data-lang="{{ r.target_lang }}">
+            <td data-label="{{ t['admin_tr_source'] }}">
+              <div class="src-text">{{ r.source_text }}</div>
+              {% if r.source_lang %}<div class="text-muted small mt-1">{{ r.source_lang|upper }} →</div>{% endif %}
+            </td>
+            <td data-label="{{ t['admin_tr_lang'] }}">
+              <span class="badge bg-light text-secondary lang-chip">{{ r.target_lang }}</span>
+              {% if r.edited %}<span class="badge bg-success edited-badge mt-1 d-block d-md-inline">{{ t['admin_tr_edited'] }}</span>{% endif %}
+            </td>
+            <td data-label="{{ t['admin_tr_translation'] }}">
+              <textarea class="form-control tr-edit" rows="2">{{ r.translated }}</textarea>
+            </td>
+            <td class="text-end row-actions" data-label="">
+              <button type="button" class="btn btn-sm btn-primary btn-save">
+                <i class="fas fa-floppy-disk"></i>
+              </button>
+              <button type="button" class="btn btn-sm btn-outline-danger btn-reset" title="{{ t['admin_tr_reset_hint'] }}">
+                <i class="fas fa-rotate-left"></i>
+              </button>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% if not rows %}
+    <p class="text-muted text-center py-4 mb-0">{{ t['admin_tr_empty'] }}</p>
+    {% endif %}
+  </div>
+</div>
+
+<script>
+(function() {
+  function flash(btn, ok) {
+    const orig = btn.innerHTML;
+    btn.innerHTML = ok ? '<i class="fas fa-check"></i>' : '<i class="fas fa-xmark"></i>';
+    btn.classList.toggle('btn-success', ok);
+    btn.classList.toggle('btn-danger', !ok);
+    setTimeout(function() {
+      btn.innerHTML = orig;
+      btn.classList.remove('btn-success', 'btn-danger');
+    }, 1200);
+  }
+
+  document.querySelectorAll('#trTable tbody tr').forEach(function(tr) {
+    const hash = tr.dataset.hash;
+    const lang = tr.dataset.lang;
+    const ta   = tr.querySelector('.tr-edit');
+
+    tr.querySelector('.btn-save').addEventListener('click', function() {
+      const btn = this;
+      btn.disabled = true;
+      fetch('{{ url_for("admin_translations_update") }}', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({source_hash: hash, target_lang: lang, translated: ta.value})
+      })
+      .then(function(r) { return r.json().then(function(d){ return {ok: r.ok && d.ok, d: d}; }); })
+      .then(function(res) {
+        flash(btn, res.ok);
+        if (res.ok) {
+          let badge = tr.querySelector('.edited-badge');
+          if (!badge) {
+            badge = document.createElement('span');
+            badge.className = 'badge bg-success edited-badge mt-1 d-block d-md-inline';
+            badge.textContent = '{{ t["admin_tr_edited"] }}';
+            tr.querySelector('.lang-chip').after(badge);
+          }
+        }
+      })
+      .catch(function() { flash(btn, false); })
+      .finally(function() { btn.disabled = false; });
+    });
+
+    tr.querySelector('.btn-reset').addEventListener('click', function() {
+      if (!confirm('{{ t["admin_tr_reset_confirm"] }}')) return;
+      const btn = this;
+      btn.disabled = true;
+      fetch('{{ url_for("admin_translations_delete") }}', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({source_hash: hash, target_lang: lang})
+      })
+      .then(function(r) { return r.json().then(function(d){ return r.ok && d.ok; }); })
+      .then(function(ok) {
+        if (ok) { tr.remove(); } else { flash(btn, false); btn.disabled = false; }
+      })
+      .catch(function() { flash(btn, false); btn.disabled = false; });
+    });
+  });
+})();
+</script>
+{% endblock %}

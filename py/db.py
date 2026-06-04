@@ -109,7 +109,9 @@ CREATE TABLE IF NOT EXISTS translations_cache (
   source_hash TEXT NOT NULL,           -- sha256 of "<target_lang>:<original text>"
   target_lang TEXT NOT NULL,
   source_lang TEXT,                    -- optional, for "translated from X" labels
+  source_text TEXT,                    -- original text (for the admin editor)
   translated  TEXT NOT NULL,
+  edited      INTEGER NOT NULL DEFAULT 0,  -- 1 = manually corrected by an admin
   created_at  TEXT NOT NULL DEFAULT (datetime('now')),
   PRIMARY KEY (source_hash, target_lang)
 );
@@ -203,6 +205,11 @@ def _migrate(conn):
           PRIMARY KEY (source_hash, target_lang)
         )
     """)
+    tc_cols = {row[1] for row in conn.execute("PRAGMA table_info(translations_cache)").fetchall()}
+    if "source_text" not in tc_cols:
+        conn.execute("ALTER TABLE translations_cache ADD COLUMN source_text TEXT")
+    if "edited" not in tc_cols:
+        conn.execute("ALTER TABLE translations_cache ADD COLUMN edited INTEGER NOT NULL DEFAULT 0")
 
     plant_cols = {row[1] for row in conn.execute("PRAGMA table_info(plants)").fetchall()}
     if "variety" not in plant_cols:

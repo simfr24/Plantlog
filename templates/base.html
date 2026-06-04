@@ -146,6 +146,11 @@
                     <i class="fa-solid fa-users-gear"></i> {{ t['Admin'] }}
                   </a>
                 </li>
+                <li>
+                  <a class="dropdown-item" href="{{ url_for('admin_translations') }}">
+                    <i class="fa-solid fa-language"></i> {{ t['admin_translations'] }}
+                  </a>
+                </li>
                 {% endif %}
                 <li><hr class="dropdown-divider"></li>
                 <li>

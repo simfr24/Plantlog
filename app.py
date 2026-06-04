@@ -111,7 +111,10 @@ def mdrender_filter(text):
     from markupsafe import Markup
     return Markup(_md.markdown(text, extensions=["nl2br", "fenced_code", "tables"]))
 
-from py.translate import translate_content, translate_html, tr
+from py.translate import (
+    translate_content, translate_html, tr,
+    list_cached_translations, update_cached_translation, delete_cached_translation,
+)
 
 
 @app.template_filter("t_content")
@@ -528,6 +531,57 @@ def admin_users():
         lang=g.lang,
         t=get_translations(g.lang),
     )
+
+
+@app.route("/admin/translations")
+@login_required
+def admin_translations():
+    """Browse and correct the machine-translation cache for user content."""
+    if g.user["id"] != 1:
+        abort(403)
+    query       = (request.args.get("q") or "").strip() or None
+    target_lang = request.args.get("lang_filter") or None
+    if target_lang not in AVAILABLE_LANGS:
+        target_lang = None
+    rows = list_cached_translations(query=query, target_lang=target_lang)
+    return render_template(
+        "admin_translations.html",
+        rows=rows,
+        query=query or "",
+        lang_filter=target_lang or "",
+        lang=g.lang,
+        t=get_translations(g.lang),
+    )
+
+
+@app.route("/admin/translations/update", methods=["POST"])
+@login_required
+def admin_translations_update():
+    if g.user["id"] != 1:
+        abort(403)
+    data        = request.get_json(silent=True) or {}
+    source_hash = data.get("source_hash")
+    target_lang = data.get("target_lang")
+    translated  = (data.get("translated") or "").strip()
+    if not source_hash or not target_lang or not translated:
+        return jsonify({"error": "source_hash, target_lang and translated are required"}), 400
+    ok = update_cached_translation(source_hash, target_lang, translated)
+    return jsonify({"ok": ok}) if ok else (jsonify({"error": "not found"}), 404)
+
+
+@app.route("/admin/translations/delete", methods=["POST"])
+@login_required
+def admin_translations_delete():
+    """Drop a cached entry so it is re-translated automatically next time."""
+    if g.user["id"] != 1:
+        abort(403)
+    data        = request.get_json(silent=True) or {}
+    source_hash = data.get("source_hash")
+    target_lang = data.get("target_lang")
+    if not source_hash or not target_lang:
+        return jsonify({"error": "source_hash and target_lang are required"}), 400
+    ok = delete_cached_translation(source_hash, target_lang)
+    return jsonify({"ok": ok}) if ok else (jsonify({"error": "not found"}), 404)
 
 ###############################################################################
 # Routes – plant CRUD

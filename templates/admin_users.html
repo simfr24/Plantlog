@@ -74,9 +74,19 @@
   }
 </style>
 
-<div class="d-flex align-items-center flex-wrap gap-2 mb-4">
+<div class="d-flex align-items-center flex-wrap gap-2 mb-3">
   <h1 class="mb-0"><i class="fas fa-users-gear me-2 text-secondary"></i>{{ t['Admin'] }}</h1>
 </div>
+
+{# ── Sub-navigation between admin pages ── #}
+<ul class="nav nav-pills gap-1 mb-4">
+  <li class="nav-item">
+    <a class="nav-link active" href="{{ url_for('admin_users') }}"><i class="fas fa-users me-1"></i>{{ t['admin_total_users'] }}</a>
+  </li>
+  <li class="nav-item">
+    <a class="nav-link" href="{{ url_for('admin_translations') }}" style="color:#6b7280;"><i class="fas fa-language me-1"></i>{{ t['admin_translations'] }}</a>
+  </li>
+</ul>
 
 {# ── Stat cards ── #}
 <div class="row g-3 mb-4 admin-stats">
