@@ -463,7 +463,22 @@ def _resolve_batch_refs(value, prior_results):
 
 # ── tool implementations ──────────────────────────────────────────────────────
 
+def _normalize_tool_name(name: str) -> str:
+    """Strip any server-name prefix a client may prepend to a tool name,
+    e.g. 'Plantlog:add_plant' or 'mcp__claude_ai_Plantlog__add_plant' -> 'add_plant'.
+    Tools are dispatched by bare name; batch ops sometimes arrive prefixed."""
+    if not isinstance(name, str):
+        return name
+    name = name.strip()
+    if "__" in name:
+        name = name.rsplit("__", 1)[-1]
+    if ":" in name:
+        name = name.rsplit(":", 1)[-1]
+    return name.strip()
+
+
 def _call_tool(name: str, args: dict, user: dict) -> str:
+    name = _normalize_tool_name(name)
     uid = user["id"]
     lang = user.get("lang", "en")
 
@@ -632,7 +647,7 @@ def _call_tool(name: str, args: dict, user: dict) -> str:
                     break
                 continue
             tool_name = op.get("tool")
-            if not tool_name or tool_name == "batch":
+            if not tool_name or _normalize_tool_name(tool_name) == "batch":
                 results.append({"index": i, "tool": tool_name, "ok": False,
                                 "error": "Tool name missing or nested 'batch' is not allowed."})
                 if stop_on_error:
