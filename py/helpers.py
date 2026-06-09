@@ -302,6 +302,7 @@ def load_data(user_id: int) -> List[Dict[str, Any]]:
     with get_conn() as conn:
         plants = conn.execute("""
             SELECT p.*,
+                   st.code        AS state_code,
                    st.label       AS state_label,
                    st.icon_class  AS state_icon,
                    st.color_class AS state_color,
@@ -326,6 +327,7 @@ def load_data(user_id: int) -> List[Dict[str, Any]]:
                 "current": hist[-1] if hist else None,
                 "state": _resolve_state(
                     None if p["state_label"] is None else {
+                        "code":        p["state_code"],
                         "label":       p["state_label"],
                         "icon_class":  p["state_icon"],
                         "color_class": p["state_color"],

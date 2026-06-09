@@ -387,7 +387,6 @@ def _plant_summary(p: dict) -> dict:
         "nickname": p.get("nickname"),
         "rusticity": p.get("rusticity"),
         "location": p.get("location"),
-        "notes":    p.get("notes"),
         "count":    p.get("count", 1),
         "state":    state.get("label"),
         "state_code": state.get("code"),
@@ -494,6 +493,7 @@ def _call_tool(name: str, args: dict, user: dict) -> str:
         if p is None or p["user_id"] != uid:
             raise ValueError("Plant not found.")
         result = _plant_summary(p)
+        result["notes"] = p.get("notes")
         result["history"] = [_event_detail(h) for h in p.get("history", [])]
         return json.dumps(result, indent=2)
 
