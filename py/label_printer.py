@@ -165,19 +165,22 @@ def _parse_md(text):
             i += 1
             continue
 
-        # Tables → flattened to compact "**Key** : Value" paragraphs (skip header row)
+        # Tables → flattened to compact "**Key** : Value" paragraphs
         if line.lstrip().startswith("|") and "|" in line.lstrip()[1:]:
             rows = []
+            had_separator = False
             while i < len(lines) and lines[i].lstrip().startswith("|"):
                 raw = lines[i].strip().strip("|")
                 cells = [c.strip() for c in raw.split("|")]
                 if all(re.fullmatch(r'[-:\s]+', c) for c in cells):
+                    had_separator = True
                     i += 1
                     continue
                 rows.append(cells)
                 i += 1
-            # Drop the header row if there are at least two rows
-            data_rows = rows[1:] if len(rows) >= 2 else rows
+            # Only drop the first row as a header if the table actually had a
+            # `| --- |` separator; otherwise every row is data (key/value pairs).
+            data_rows = rows[1:] if (had_separator and len(rows) >= 2) else rows
             for row in data_rows:
                 if not row:
                     continue
@@ -1092,14 +1095,19 @@ def create_label_freetext(title, subtitle=None, body_md=None, qr_data=None):
 
     title       = (title or "").strip() or " "
     title_lines = _wrap(title, title_font, inner_w)
-    title_w     = _ml_w(td, title_lines, title_font)
-    title_h     = _ml_h(td, title_lines, title_font)
+    title_bb    = td.multiline_textbbox((0, 0), title_lines, font=title_font, align="center")
+    title_w     = title_bb[2] - title_bb[0]
+    # multiline_text() anchors at the ascender top, so glyphs reach down to
+    # bbox[3]; advance by the full bottom (not bbox[3]-bbox[1]) or the divider
+    # rule ends up drawn inside the title.
+    title_h     = title_bb[3]
 
     sub = (subtitle or "").strip() or None
     if sub:
         sub_wrapped = _wrap(sub, sub_font, inner_w)
-        sub_w_px    = _ml_w(td, sub_wrapped, sub_font)
-        sub_h_px    = _ml_h(td, sub_wrapped, sub_font)
+        sub_bb      = td.multiline_textbbox((0, 0), sub_wrapped, font=sub_font, align="center")
+        sub_w_px    = sub_bb[2] - sub_bb[0]
+        sub_h_px    = sub_bb[3]
     else:
         sub_wrapped = None
         sub_w_px = sub_h_px = 0
