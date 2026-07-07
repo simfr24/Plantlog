@@ -199,8 +199,14 @@ def _parse_md(text):
                 r'^(\s*#{1,3}\s|\s*[-*]\s|\s*\||\s*>)', lines[i]):
             para.append(lines[i].rstrip())
             i += 1
-        joined = " ".join(s.strip() for s in para)
-        blocks.append({"type": "para", "runs": _parse_inline(joined)})
+        # Honour single newlines as hard line breaks (a ("", "break") run tells
+        # the wrapper to start a new line) rather than collapsing them to spaces.
+        runs = []
+        for idx, pl in enumerate(para):
+            if idx:
+                runs.append(("", "break"))
+            runs.extend(_parse_inline(pl.strip()))
+        blocks.append({"type": "para", "runs": runs})
 
     return blocks
 
@@ -225,6 +231,10 @@ def _wrap_runs(runs, fonts, max_w, default_style="regular"):
     lines = [[]]
     cur_w = 0
     for text, style in runs:
+        if style == "break":
+            lines.append([])
+            cur_w = 0
+            continue
         font = fonts.get(style, fonts[default_style])
         for tok in _TOKEN_RE.findall(text):
             tw = font.getlength(tok)
@@ -262,7 +272,7 @@ def _runs_height(d, runs, fonts, max_w, default_style="regular", line_gap=2):
     return h
 
 
-def _draw_runs(d, runs, fonts, x, y, max_w, default_style="regular", line_gap=2):
+def _draw_runs(d, runs, fonts, x, y, max_w, default_style="regular", line_gap=2, align="left"):
     lines = _wrap_runs(runs, fonts, max_w, default_style)
     for i, line in enumerate(lines):
         # Coalesce adjacent same-style tokens into one segment so PIL can shape
@@ -276,7 +286,11 @@ def _draw_runs(d, runs, fonts, x, y, max_w, default_style="regular", line_gap=2)
             else:
                 segments.append([t, s])
         h = _line_h(d, line, fonts, default_style)
-        cx = x
+        if align == "center":
+            line_w = sum(fonts.get(s, fonts[default_style]).getlength(t) for t, s in segments)
+            cx = x + max(0, (max_w - line_w) / 2)
+        else:
+            cx = x
         for text, style in segments:
             font = fonts.get(style, fonts[default_style])
             d.text((cx, y), text, font=font, fill=0)
@@ -318,16 +332,16 @@ def _block_height(d, block, fonts, max_w, line_gap=2):
     return 0
 
 
-def _render_block(d, block, fonts, x, y, max_w, line_gap=2):
+def _render_block(d, block, fonts, x, y, max_w, line_gap=2, align="left"):
     t = block["type"]
     if t in ("h1", "h2", "h3"):
-        return _draw_runs(d, block["runs"], _heading_fonts(fonts, int(t[1])), x, y, max_w, line_gap=line_gap)
+        return _draw_runs(d, block["runs"], _heading_fonts(fonts, int(t[1])), x, y, max_w, line_gap=line_gap, align=align)
     if t == "para":
-        return _draw_runs(d, block["runs"], fonts, x, y, max_w, line_gap=line_gap)
+        return _draw_runs(d, block["runs"], fonts, x, y, max_w, line_gap=line_gap, align=align)
     if t == "bullet":
         bw = _text_w(d, "• ", fonts["regular"])
         d.text((x, y), "• ", font=fonts["regular"], fill=0)
-        return _draw_runs(d, block["runs"], fonts, x + bw, y, max_w - bw, line_gap=line_gap)
+        return _draw_runs(d, block["runs"], fonts, x + bw, y, max_w - bw, line_gap=line_gap, align=align)
     if t == "table":
         col1_w = max(40, int(max_w * 0.42))
         col2_w = max_w - col1_w - 10
@@ -359,17 +373,17 @@ def _md_height(d, blocks, fonts, max_w, block_gap=8):
     return total
 
 
-def _md_render(d, blocks, fonts, x, y, max_w, block_gap=8):
+def _md_render(d, blocks, fonts, x, y, max_w, block_gap=8, align="left"):
     for i, b in enumerate(blocks):
-        y = _render_block(d, b, fonts, x, y, max_w)
+        y = _render_block(d, b, fonts, x, y, max_w, align=align)
         if i < len(blocks) - 1:
             y += block_gap
     return y
 
 
 # Back-compat alias
-def _render_md(d, blocks, fonts, x, y, max_w):
-    return _md_render(d, blocks, fonts, x, y, max_w)
+def _render_md(d, blocks, fonts, x, y, max_w, align="left"):
+    return _md_render(d, blocks, fonts, x, y, max_w, align=align)
 
 
 # ---------------------------------------------------------------------------
@@ -535,18 +549,13 @@ def create_label_classic(common_name, latin_name, date_str,
 
 def create_label_circular(common_name, latin_name, date_str,
                           variety=None, nickname=None, extra_notes=None):
-    """Circular label. Nickname is the hero name; extra notes (MD) appear below the circle."""
+    """Circular label. Nickname is the hero name; extra notes (MD) render inside
+    the circle, below the header, fitted to the largest width the circle allows."""
     diameter  = int(PRINTER_WIDTH * 0.66)
-    md_fonts  = _build_md_fonts(14)
 
     md_segs  = _parse_md(extra_notes.strip()) if extra_notes else []
-    note_w   = PRINTER_WIDTH - 40
 
-    tmp = PIL.Image.new("1", (1, 1))
-    td  = PIL.ImageDraw.Draw(tmp)
-    note_h = (_md_height(td, md_segs, md_fonts, note_w) + 14) if md_segs else 0
-
-    total_h = diameter + 20 + note_h
+    total_h = diameter + 20
     img = PIL.Image.new("1", (PRINTER_WIDTH, total_h), 1)
     d   = PIL.ImageDraw.Draw(img)
 
@@ -571,8 +580,45 @@ def create_label_circular(common_name, latin_name, date_str,
     sub_h      = (_text_h(d, sub, sub_font) + 4) if sub else 0
     var_h      = (_text_h(d, variety, var_font) + 4) if variety else 0
 
-    inner_h = hero_h + 6 + sub_h + latin_h + var_h + 6 + date_h
-    y = cy - inner_h // 2
+    head_h = hero_h + 6 + sub_h + latin_h + var_h + 6 + date_h
+
+    # Fit the note inside the circle. The usable half-width at a vertical
+    # distance |dy| from the centre is sqrt(usable_r^2 - dy^2); since the note
+    # sits below the header, its bottom edge is the narrowest constraint. Solve
+    # width and height together by iterating, shrinking the font if it can't fit.
+    usable_r  = r - 14
+    note_gap  = 10          # space between date and the divider rule
+    sep_h     = 12          # space taken by the divider rule + following gap
+    chrome    = note_gap + sep_h
+    note_fonts = None
+    note_w_fit = 0
+    note_h     = 0
+    if md_segs:
+        for body_size in (14, 13, 12, 11, 10):
+            # Render the note in italic so it reads as an annotation, distinct
+            # from the printed facts above it.
+            base  = _build_md_fonts(body_size)
+            fonts = {**base, "regular": base["italic"], "bullet": base["italic"]}
+            w = int(usable_r * 1.7)
+            for _ in range(8):
+                w = max(50, min(w, int(2 * usable_r)))
+                nh = _md_height(d, md_segs, fonts, w)
+                total_inner = head_h + chrome + nh
+                top = cy - total_inner // 2
+                far = max(abs((top + total_inner) - cy), abs((top + head_h + chrome) - cy))
+                new_w = 50 if far >= usable_r else int(2 * (usable_r ** 2 - far ** 2) ** 0.5)
+                if abs(new_w - w) <= 4:
+                    w = new_w
+                    break
+                w = new_w
+            nh = _md_height(d, md_segs, fonts, w)
+            if head_h + chrome + nh <= 2 * usable_r and w >= 60:
+                note_fonts, note_w_fit, note_h = fonts, w, nh
+                break
+            note_fonts, note_w_fit, note_h = fonts, max(60, w), nh  # keep last as fallback
+
+    total_inner = head_h + (chrome + note_h if md_segs else 0)
+    y = cy - total_inner // 2
 
     d.multiline_text((cx, y), hero_lines, font=name_font, fill=0, anchor="ma", align="center")
     y += hero_h + 6
@@ -589,10 +635,14 @@ def create_label_circular(common_name, latin_name, date_str,
         y += var_h + 2
 
     d.text((cx, y), date_str, font=date_font, fill=0, anchor="ma")
+    y += date_h
 
     if md_segs:
-        y = diameter + 20 + 8
-        _render_md(d, md_segs, md_fonts, 20, y, note_w)
+        y += note_gap
+        div_w = min(note_w_fit, int(usable_r))
+        d.line([(cx - div_w // 2, y), (cx + div_w // 2, y)], fill=0, width=1)
+        y += sep_h
+        _md_render(d, md_segs, note_fonts, cx - note_w_fit // 2, y, note_w_fit, align="center")
 
     return img
 
@@ -700,13 +750,6 @@ def create_label_detailed_v(common_name, latin_name, date_str,
     sub_h      = (_text_h(td, sub, sub_font) + 4) if sub else 0
     var_h      = (_text_h(td, variety, var_font) + 4) if variety else 0
 
-    icon_w_pin = ICON_S + 6
-
-    loc_h = 0
-    if location:
-        loc_wrapped = _wrap(location, info_r, inner_w - icon_w_pin)
-        loc_h = _ml_h(td, loc_wrapped, info_r) + 6
-
     plant_segs = _parse_md(notes.strip()) if notes and notes.strip() else []
     # Drop the leading H1: the hero name already provides the title.
     if plant_segs and plant_segs[0]["type"] == "h1":
@@ -716,11 +759,11 @@ def create_label_detailed_v(common_name, latin_name, date_str,
     extra_segs  = _parse_md(extra_notes.strip()) if extra_notes and extra_notes.strip() else []
     extra_note_h = (_md_height(td, extra_segs, md_fonts, inner_w) + 6) if extra_segs else 0
 
-    has_info = loc_h or plant_note_h or extra_note_h
+    has_info = plant_note_h or extra_note_h
     info_gap = 20 if has_info else 0
 
     total_h = (pad_t + hero_h + 8 + sub_h + latin_h + var_h
-               + info_gap + loc_h + plant_note_h + extra_note_h
+               + info_gap + plant_note_h + extra_note_h
                + 20 + date_h + pad_b)
 
     img = PIL.Image.new("1", (W, total_h), 1)
@@ -751,13 +794,6 @@ def create_label_detailed_v(common_name, latin_name, date_str,
         y += 8
         d.line([(div_m, y), (W - div_m, y)], fill=0, width=1)
         y += 12
-
-        if location:
-            loc_wrapped = _wrap(location, info_r, inner_w - icon_w_pin)
-            fh = _text_h(d, "A", info_r)
-            _icon_pin(img, d, tx, y + max(0, (fh - ICON_S) // 2), ICON_S)
-            d.multiline_text((tx + icon_w_pin, y), loc_wrapped, font=info_r, fill=0)
-            y += _ml_h(d, loc_wrapped, info_r) + 6
 
         if plant_segs:
             y = _md_render(d, plant_segs, md_fonts, tx, y, inner_w) + 6
@@ -873,12 +909,6 @@ def create_label_detailed_h(common_name, latin_name, date_str,
     hy += 6
     d.line([(hx + 12, hy), (hx + HEADER_W - 12, hy)], fill=0, width=1)
     hy += 10
-
-    if location:
-        loc_wrapped = _wrap(location, info_r, HEADER_W - 22)
-        _icon_pin(img, d, hx + 2, hy + 1, ICON_S)
-        d.multiline_text((hx + 22, hy), loc_wrapped, font=info_r, fill=0)
-        hy += _ml_h(td, loc_wrapped, info_r) + 6
 
     # Date pinned to bottom of header column
     date_w_px = _text_w(td, date_str, date_font)
