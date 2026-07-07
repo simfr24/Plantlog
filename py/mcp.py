@@ -119,18 +119,19 @@ def _notes_format_guide(lang_name: str) -> str:
 def _build_tools(lang_name: str) -> list:
     NOTES_FORMAT_GUIDE = _notes_format_guide(lang_name)
     LANG_HINT = _language_directive(lang_name)
-    return _TOOLS_TEMPLATE(NOTES_FORMAT_GUIDE, LANG_HINT)
+    return _TOOLS_TEMPLATE(NOTES_FORMAT_GUIDE, LANG_HINT, lang_name)
 
 
-def _TOOLS_TEMPLATE(NOTES_FORMAT_GUIDE, LANG_HINT):
+def _TOOLS_TEMPLATE(NOTES_FORMAT_GUIDE, LANG_HINT, LANG_NAME):
     return [
     {
         "name": "list_plants",
-        "description": "Return your plants. Defaults to all active plants (living, stashed, ordered) — excludes dead plants. Pass include_dead=true to also include dead plants.",
+        "description": "Return your plants. Defaults to living plants only — excludes the graveyard (dead) and the stash (stashed + ordered). Pass include_dead=true to also include dead plants, and/or include_stash=true to also include stashed and ordered plants.",
         "inputSchema": {
             "type": "object",
             "properties": {
                 "include_dead": {"type": "boolean", "description": "Also include dead plants (graveyard)."},
+                "include_stash": {"type": "boolean", "description": "Also include stashed and ordered plants (the stash)."},
             },
             "required": [],
         },
@@ -361,14 +362,38 @@ def _TOOLS_TEMPLATE(NOTES_FORMAT_GUIDE, LANG_HINT):
     },
     {
         "name": "print_label",
-        "description": "Queue a label print job for a plant on the server's Bluetooth printer.",
+        "description": (
+            "Queue a label print job for a plant on the server's Bluetooth printer. "
+            "All styles support extra_notes (a short free-form Markdown aside printed "
+            "on the label, e.g. a personal note or reminder) except 'qr', which has no "
+            "room for it."
+        ),
         "inputSchema": {
             "type": "object",
             "properties": {
-                "plant_id": {"type": "integer"},
-                "style":    {"type": "string", "enum": ["classic", "circular", "minimal", "detailed_v", "detailed_h", "qr", "stake_wrap"], "default": "classic"},
+                "plant_id":    {"type": "integer"},
+                "style":       {"type": "string", "enum": ["classic", "circular", "minimal", "detailed_v", "detailed_h", "qr", "stake_wrap"], "default": "classic"},
+                "extra_notes": {"type": "string", "description": f"Short Markdown aside printed on the label, in {LANG_NAME} unless asked otherwise. Ignored by the 'qr' style."},
             },
             "required": ["plant_id"],
+        },
+    },
+    {
+        "name": "print_freetext_label",
+        "description": (
+            "Queue a free-text label print job not tied to any plant (gift tags, jar "
+            "labels, sticky notes, etc.) on the server's Bluetooth printer. Renders a "
+            "title, optional subtitle, optional Markdown body, and an optional QR code."
+        ),
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "title":    {"type": "string", "description": f"Main heading, printed large. Write in {LANG_NAME} unless asked otherwise."},
+                "subtitle": {"type": "string", "description": f"Optional smaller line under the title. Write in {LANG_NAME} unless asked otherwise."},
+                "body":     {"type": "string", "description": f"Optional free-form Markdown body text. Write in {LANG_NAME} unless asked otherwise."},
+                "qr":       {"type": "string", "description": "Optional data to encode as a QR code (URL or plain text)."},
+            },
+            "required": ["title"],
         },
     },
     ]
@@ -484,8 +509,11 @@ def _call_tool(name: str, args: dict, user: dict) -> str:
     if name == "list_plants":
         plants = load_data(uid)
         include_dead = args.get("include_dead", False)
+        include_stash = args.get("include_stash", False)
         if not include_dead:
             plants = [p for p in plants if (p.get("state") or {}).get("code") != "dead"]
+        if not include_stash:
+            plants = [p for p in plants if (p.get("state") or {}).get("code") not in ("stash", "ordered")]
         return json.dumps([_plant_summary(p) for p in plants], indent=2)
 
     if name == "get_plant":
@@ -680,10 +708,28 @@ def _call_tool(name: str, args: dict, user: dict) -> str:
         if p is None or p["user_id"] != uid:
             raise ValueError("Plant not found.")
         style = args.get("style", "classic")
+        extra_notes = args.get("extra_notes") or None
         with get_conn() as conn:
             cur = conn.execute(
-                "INSERT INTO print_jobs (user_id, plant_id, style) VALUES (?,?,?)",
-                (uid, plant_id, style),
+                "INSERT INTO print_jobs (user_id, plant_id, style, extra_notes, lang) VALUES (?,?,?,?,?)",
+                (uid, plant_id, style, extra_notes, user.get("lang")),
+            )
+            job_id = cur.lastrowid
+            conn.commit()
+        return json.dumps({"ok": True, "job_id": job_id})
+
+    if name == "print_freetext_label":
+        title = (args.get("title") or "").strip()
+        if not title:
+            raise ValueError("title is required.")
+        subtitle = (args.get("subtitle") or "").strip() or None
+        body = (args.get("body") or "").strip() or None
+        qr = (args.get("qr") or "").strip() or None
+        with get_conn() as conn:
+            cur = conn.execute(
+                """INSERT INTO print_jobs (user_id, kind, style, title, subtitle, body, qr)
+                   VALUES (?, 'freetext', 'freetext', ?, ?, ?, ?)""",
+                (uid, title, subtitle, body, qr),
             )
             job_id = cur.lastrowid
             conn.commit()
