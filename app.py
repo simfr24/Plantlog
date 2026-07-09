@@ -872,7 +872,11 @@ def _make_label_image(plant, style, extra_notes=None, base_url=None,
     notes       = _tr_label(plant.get("notes"), target_lang, source_lang) or None
     extra_notes = _tr_label(extra_notes, target_lang, source_lang) or None
     history     = plant.get("history") or []
-    date_str    = _format_date(history[0]["start"] if history else None)
+    # Prefer the sown/planted date over the (earlier) order/acquire date, so the
+    # label reflects when the plant actually started growing.
+    label_ev    = next((e for e in history if e["action"] in ("sow", "plant")), None) \
+                  or (history[0] if history else None)
+    date_str    = _format_date(label_ev["start"] if label_ev else None)
 
     if style == "circular":
         return create_label_circular(common, latin, date_str, variety, nickname, extra_notes)
