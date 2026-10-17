@@ -383,17 +383,16 @@ def _TOOLS_TEMPLATE(NOTES_FORMAT_GUIDE, LANG_HINT, LANG_NAME):
         "description": (
             "Queue a free-text label print job not tied to any plant (gift tags, jar "
             "labels, sticky notes, etc.) on the server's Bluetooth printer. Renders a "
-            "title, optional subtitle, optional Markdown body, and an optional QR code."
+            "title, subtitle, Markdown body and QR code — all optional, but at least one is required."
         ),
         "inputSchema": {
             "type": "object",
             "properties": {
-                "title":    {"type": "string", "description": f"Main heading, printed large. Write in {LANG_NAME} unless asked otherwise."},
+                "title":    {"type": "string", "description": f"Optional main heading, printed large. Write in {LANG_NAME} unless asked otherwise."},
                 "subtitle": {"type": "string", "description": f"Optional smaller line under the title. Write in {LANG_NAME} unless asked otherwise."},
                 "body":     {"type": "string", "description": f"Optional free-form Markdown body text. Write in {LANG_NAME} unless asked otherwise."},
                 "qr":       {"type": "string", "description": "Optional data to encode as a QR code (URL or plain text)."},
             },
-            "required": ["title"],
         },
     },
     ]
@@ -719,12 +718,12 @@ def _call_tool(name: str, args: dict, user: dict) -> str:
         return json.dumps({"ok": True, "job_id": job_id})
 
     if name == "print_freetext_label":
-        title = (args.get("title") or "").strip()
-        if not title:
-            raise ValueError("title is required.")
+        title = (args.get("title") or "").strip() or None
         subtitle = (args.get("subtitle") or "").strip() or None
         body = (args.get("body") or "").strip() or None
         qr = (args.get("qr") or "").strip() or None
+        if not (title or subtitle or body or qr):
+            raise ValueError("At least one of title, subtitle, body or qr is required.")
         with get_conn() as conn:
             cur = conn.execute(
                 """INSERT INTO print_jobs (user_id, kind, style, title, subtitle, body, qr)

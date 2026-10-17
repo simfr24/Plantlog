@@ -355,7 +355,7 @@ translations = {
     "freetext_label_refresh": "Обновить предпросмотр",
     "freetext_label_print": "Печать",
     "freetext_label_preview": "Предпросмотр",
-    "freetext_label_title_required": "Заголовок обязателен.",
+    "freetext_label_title_required": "Заполните хотя бы одно поле.",
     "freetext_label_queuing": "Постановка задания в очередь…",
     "freetext_label_queued": "В очереди",
     "freetext_label_open": "Напечатать свободную этикетку",

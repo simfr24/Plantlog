@@ -355,7 +355,7 @@ translations = {
     "freetext_label_refresh": "Actualiser l'aperçu",
     "freetext_label_print": "Imprimer",
     "freetext_label_preview": "Aperçu",
-    "freetext_label_title_required": "Le titre est obligatoire.",
+    "freetext_label_title_required": "Remplissez au moins un champ.",
     "freetext_label_queuing": "Envoi à l'imprimante…",
     "freetext_label_queued": "En file d'attente",
     "freetext_label_open": "Imprimer une étiquette libre",

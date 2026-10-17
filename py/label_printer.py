@@ -1106,52 +1106,80 @@ def create_label_qr(common_name, latin_name, date_str, plant_url,
 # Free-text label (non-plant)
 # ---------------------------------------------------------------------------
 
+def _wrap_fit(text, variant, size, min_size, max_w):
+    """Wrap *text*, shrinking the font from *size* down to *min_size* until the
+    longest word fits on a line. Words still too wide at *min_size* are split
+    across lines character by character. Returns (font, wrapped_text)."""
+    words = text.split()
+    font = _get_font(variant, size)
+    while size > min_size and any(font.getlength(w) > max_w for w in words):
+        size -= 2
+        font = _get_font(variant, size)
+    pieces = []
+    for w in words:
+        while font.getlength(w) > max_w and len(w) > 1:
+            n = len(w) - 1
+            while n > 1 and font.getlength(w[:n]) > max_w:
+                n -= 1
+            pieces.append(w[:n])
+            w = w[n:]
+        pieces.append(w)
+    lines = [""]
+    for piece in pieces:
+        test = f"{lines[-1]} {piece}".strip()
+        if font.getlength(test) <= max_w or not lines[-1]:
+            lines[-1] = test
+        else:
+            lines.append(piece)
+    return font, "\n".join(lines)
+
+
 def create_label_freetext(title, subtitle=None, body_md=None, qr_data=None):
-    """Classic double-border label with a title, optional subtitle, MD body, and
-    an optional QR code.
+    """Classic double-border label with an optional title, subtitle, MD body,
+    and QR code — any combination of them.
 
     Intended for non-plant uses (gift tags, jar labels, notes, etc.)."""
     W = PRINTER_WIDTH
     margin, pad_t, pad_b = 20, 32, 28
 
-    title_font = _get_font("bold",    40)
-    sub_font   = _get_font("italic",  22)
-    md_fonts   = _build_md_fonts(16)
+    md_fonts = _build_md_fonts(16)
 
     tmp = PIL.Image.new("1", (1, 1))
     td  = PIL.ImageDraw.Draw(tmp)
 
     inner_w = W - margin * 2 - 24
 
-    title       = (title or "").strip() or " "
-    title_lines = _wrap(title, title_font, inner_w)
-    title_bb    = td.multiline_textbbox((0, 0), title_lines, font=title_font, align="center")
-    title_w     = title_bb[2] - title_bb[0]
-    # multiline_text() anchors at the ascender top, so glyphs reach down to
-    # bbox[3]; advance by the full bottom (not bbox[3]-bbox[1]) or the divider
-    # rule ends up drawn inside the title.
-    title_h     = title_bb[3]
+    def _centered_block(text, variant, size, min_size):
+        text = (text or "").strip()
+        if not text:
+            return None
+        font, wrapped = _wrap_fit(text, variant, size, min_size, inner_w)
+        bb = td.multiline_textbbox((0, 0), wrapped, font=font, align="center")
+        # multiline_text() anchors at the ascender top, so glyphs reach down to
+        # bbox[3]; advance by the full bottom (not bbox[3]-bbox[1]) or the
+        # following element ends up drawn inside the text.
+        return font, wrapped, bb[0], bb[2] - bb[0], bb[3]
 
-    sub = (subtitle or "").strip() or None
-    if sub:
-        sub_wrapped = _wrap(sub, sub_font, inner_w)
-        sub_bb      = td.multiline_textbbox((0, 0), sub_wrapped, font=sub_font, align="center")
-        sub_w_px    = sub_bb[2] - sub_bb[0]
-        sub_h_px    = sub_bb[3]
-    else:
-        sub_wrapped = None
-        sub_w_px = sub_h_px = 0
+    title_blk = _centered_block(title,    "bold",   40, 20)
+    sub_blk   = _centered_block(subtitle, "italic", 22, 14)
 
     md_segs = _parse_md(body_md.strip()) if body_md and body_md.strip() else []
     body_h  = _md_height(td, md_segs, md_fonts, inner_w) if md_segs else 0
 
-    rule_h = 14 if md_segs else 0
+    has_head = bool(title_blk or sub_blk)
+    gap_sub  = 10 if (title_blk and sub_blk) else 0
+    rule_h   = 14 if (md_segs and has_head) else 0
 
     qr_data = (qr_data or "").strip() or None
     qr_size = ((int(W * 0.5) // 4) * 4) if qr_data else 0
-    qr_h    = (18 + qr_size) if qr_data else 0
+    qr_gap  = 18 if (qr_data and (has_head or md_segs)) else 0
 
-    total_h = pad_t + title_h + (10 + sub_h_px if sub else 0) + rule_h + body_h + qr_h + pad_b
+    total_h = (pad_t
+               + (title_blk[4] if title_blk else 0)
+               + gap_sub + (sub_blk[4] if sub_blk else 0)
+               + rule_h + body_h
+               + qr_gap + qr_size
+               + pad_b)
     img = PIL.Image.new("1", (W, total_h), 1)
     d   = PIL.ImageDraw.Draw(img)
 
@@ -1161,26 +1189,26 @@ def create_label_freetext(title, subtitle=None, body_md=None, qr_data=None):
     _square_notches(d, bx0 + 6, by0 + 6, bx1 - 6, by1 - 6)
 
     y = pad_t
-    d.multiline_text(((W - title_w) // 2, y), title_lines,
-                     font=title_font, fill=0, align="center")
-    y += title_h
-
-    if sub:
-        y += 10
-        d.multiline_text(((W - sub_w_px) // 2, y), sub_wrapped,
-                         font=sub_font, fill=0, align="center")
-        y += sub_h_px
+    for blk, gap in ((title_blk, 0), (sub_blk, gap_sub)):
+        if not blk:
+            continue
+        font, wrapped, x_off, w, h = blk
+        y += gap
+        d.multiline_text(((W - w) // 2 - x_off, y), wrapped,
+                         font=font, fill=0, align="center")
+        y += h
 
     if md_segs:
-        div_m = margin + 15
-        y += 6
-        d.line([(div_m, y), (W - div_m, y)], fill=0, width=1)
-        d.line([(div_m, y + 2), (W - div_m, y + 2)], fill=0, width=1)
-        y += 8
+        if has_head:
+            div_m = margin + 15
+            y += 6
+            d.line([(div_m, y), (W - div_m, y)], fill=0, width=1)
+            d.line([(div_m, y + 2), (W - div_m, y + 2)], fill=0, width=1)
+            y += 8
         y = _render_md(d, md_segs, md_fonts, margin + 15, y, inner_w)
 
     if qr_data:
-        y += 18
+        y += qr_gap
         qr_img = _make_qr_image(qr_data, qr_size)
         img.paste(qr_img, ((W - qr_size) // 2, y))
 

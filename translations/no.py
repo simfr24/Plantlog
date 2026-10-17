@@ -314,7 +314,7 @@ translations = {
     'freetext_label_refresh': 'Oppdater forhåndsvisning',
     'freetext_label_print': 'Skriv ut',
     'freetext_label_preview': 'Forhåndsvisning',
-    'freetext_label_title_required': 'Tittel er påkrevd.',
+    'freetext_label_title_required': 'Fyll ut minst ett felt.',
     'freetext_label_queuing': 'Legger utskriftsjobb i kø …',
     'freetext_label_queued': 'I kø',
     'freetext_label_open': 'Skriv ut en fritekstetikett',

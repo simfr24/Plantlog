@@ -101,14 +101,17 @@
     debounce = setTimeout(refresh, 350);
   }
 
-  [titleEl, subtitleEl, bodyEl, qrEl].forEach(el => el.addEventListener('input', scheduleRefresh));
+  [titleEl, subtitleEl, bodyEl, qrEl].forEach(el => el.addEventListener('input', () => {
+    status.innerHTML = '';
+    scheduleRefresh();
+  }));
   refreshBtn.addEventListener('click', refresh);
 
   printBtn.addEventListener('click', async () => {
     const title = titleEl.value.trim();
-    if (!title) {
+    if (![titleEl, subtitleEl, bodyEl, qrEl].some(el => el.value.trim())) {
       status.innerHTML = '<span class="text-danger">' +
-        "{{ t.get('freetext_label_title_required', 'Title is required.') }}" +
+        "{{ t.get('freetext_label_title_required', 'Fill in at least one field.') }}" +
         '</span>';
       titleEl.focus();
       return;

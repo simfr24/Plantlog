@@ -963,12 +963,12 @@ def freetext_label_preview():
 @login_required
 def freetext_label_print():
     data     = request.get_json(silent=True) or {}
-    title    = (data.get("title") or "").strip()
+    title    = (data.get("title") or "").strip() or None
     subtitle = (data.get("subtitle") or "").strip() or None
     body     = (data.get("body") or "").strip() or None
     qr       = (data.get("qr") or "").strip() or None
-    if not title:
-        return jsonify({"error": "title required"}), 400
+    if not (title or subtitle or body or qr):
+        return jsonify({"error": "nothing to print"}), 400
     with get_conn() as conn:
         cur = conn.execute(
             """INSERT INTO print_jobs (user_id, kind, style, title, subtitle, body, qr)

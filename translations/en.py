@@ -355,7 +355,7 @@ translations = {
     "freetext_label_refresh": "Refresh preview",
     "freetext_label_print": "Print",
     "freetext_label_preview": "Preview",
-    "freetext_label_title_required": "Title is required.",
+    "freetext_label_title_required": "Fill in at least one field.",
     "freetext_label_queuing": "Queuing print job…",
     "freetext_label_queued": "Queued",
     "freetext_label_open": "Print a free-text label",
